@@ -31,6 +31,15 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'destroy'])->name('candidatos.destroy');
     });
 
+    // Feed Social Multired & Fast-Flow Entry Desk
+    Route::get('/feed', [\App\Http\Controllers\PublicacionController::class, 'feed'])->name('feed');
+    Route::get('/fast-flow', [\App\Http\Controllers\PublicacionController::class, 'fastFlow'])->name('fast-flow');
+
+    Route::middleware(['can_write'])->group(function () {
+        Route::post('/fast-flow', [\App\Http\Controllers\PublicacionController::class, 'store'])->name('fast-flow.store');
+        Route::delete('/publicaciones/{publicacion}', [\App\Http\Controllers\PublicacionController::class, 'destroy'])->name('publicaciones.destroy');
+    });
+
     // Gestión de Usuarios (Exclusivo Administrador)
     Route::middleware(['is_admin'])->group(function () {
         Route::resource('usuarios', UserController::class)->except(['create', 'edit', 'show']);
