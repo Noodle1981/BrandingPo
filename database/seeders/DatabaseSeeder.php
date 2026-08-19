@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             PoliticaSeeder::class,
             PublicacionSeeder::class,
             MediosAndCrisisSeeder::class,
+            CalendarioAndBriefingSeeder::class,
         ]);
     }
 }

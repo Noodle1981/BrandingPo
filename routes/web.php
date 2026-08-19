@@ -61,6 +61,27 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/predictor', [\App\Http\Controllers\AnalyticsController::class, 'index'])->name('predictor.index');
     Route::post('/analytics/predict', [\App\Http\Controllers\AnalyticsController::class, 'predictApi'])->name('analytics.predict');
 
+    // Calendario & Agenda de Campaña
+    Route::get('/calendario', [\App\Http\Controllers\CalendarioController::class, 'index'])->name('calendario.index');
+    Route::middleware(['can_write'])->group(function () {
+        Route::post('/calendario', [\App\Http\Controllers\CalendarioController::class, 'store'])->name('calendario.store');
+        Route::delete('/calendario/{evento}', [\App\Http\Controllers\CalendarioController::class, 'destroy'])->name('calendario.destroy');
+    });
+
+    // Control Presupuestario & Finanzas de Campaña
+    Route::get('/presupuesto', [\App\Http\Controllers\PresupuestoController::class, 'index'])->name('presupuesto.index');
+    Route::middleware(['can_write'])->group(function () {
+        Route::post('/presupuesto', [\App\Http\Controllers\PresupuestoController::class, 'store'])->name('presupuesto.store');
+        Route::delete('/presupuesto/{partida}', [\App\Http\Controllers\PresupuestoController::class, 'destroy'])->name('presupuesto.destroy');
+    });
+
+    // Briefings & Informes Ejecutivos
+    Route::get('/briefings', [\App\Http\Controllers\BriefingController::class, 'index'])->name('briefings.index');
+    Route::get('/briefings/{informe}', [\App\Http\Controllers\BriefingController::class, 'show'])->name('briefings.show');
+    Route::middleware(['can_write'])->group(function () {
+        Route::post('/briefings', [\App\Http\Controllers\BriefingController::class, 'store'])->name('briefings.store');
+    });
+
     // Gestión de Usuarios (Exclusivo Administrador)
     Route::middleware(['is_admin'])->group(function () {
         Route::resource('usuarios', UserController::class)->except(['create', 'edit', 'show']);
