@@ -77,9 +77,12 @@ Route::middleware(['auth'])->group(function () {
 
     // Briefings & Informes Ejecutivos
     Route::get('/briefings', [\App\Http\Controllers\BriefingController::class, 'index'])->name('briefings.index');
+    Route::get('/briefing', [\App\Http\Controllers\BriefingController::class, 'index']);
     Route::get('/briefings/{informe}', [\App\Http\Controllers\BriefingController::class, 'show'])->name('briefings.show');
+    Route::get('/briefing/{informe}', [\App\Http\Controllers\BriefingController::class, 'show']);
     Route::middleware(['can_write'])->group(function () {
         Route::post('/briefings', [\App\Http\Controllers\BriefingController::class, 'store'])->name('briefings.store');
+        Route::post('/briefing', [\App\Http\Controllers\BriefingController::class, 'store']);
     });
 
     // Gestión de Usuarios (Exclusivo Administrador)

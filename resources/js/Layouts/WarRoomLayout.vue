@@ -20,7 +20,8 @@ import {
   Eye,
   CheckCircle2,
   AlertCircle,
-  Info
+  Info,
+  DollarSign
 } from 'lucide-vue-next';
 import ThemeToggle from '../Components/ThemeToggle.vue';
 import Badge from '../Components/Badge.vue';
@@ -44,8 +45,9 @@ const navigation = computed(() => [
   { name: 'Candidatos & Perfiles', href: '/candidatos', icon: Users, current: route().current('candidatos*') },
   { name: 'Observatorio de Medios', href: '/medios', icon: Newspaper, current: route().current('medios*') },
   { name: 'Centro de Crisis', href: '/crisis', icon: AlertTriangle, current: route().current('crisis*') },
-  { name: 'Calendario & Pauta', href: '/presupuesto', icon: Calendar, current: route().current('presupuesto*') },
-  { name: 'Briefing Ejecutivo', href: '/briefing', icon: FileText, current: route().current('briefing*') },
+  { name: 'Calendario & Agenda', href: '/calendario', icon: Calendar, current: route().current('calendario*') },
+  { name: 'Presupuesto & Pauta', href: '/presupuesto', icon: DollarSign, current: route().current('presupuesto*') },
+  { name: 'Briefings Ejecutivos', href: '/briefings', icon: FileText, current: route().current('briefing*') || route().current('briefings*') },
   ...(isAdmin.value ? [{ name: 'Usuarios & Roles', href: '/usuarios', icon: UserCheck, current: route().current('usuarios*') }] : []),
 ]);
 
