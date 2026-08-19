@@ -40,6 +40,22 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/publicaciones/{publicacion}', [\App\Http\Controllers\PublicacionController::class, 'destroy'])->name('publicaciones.destroy');
     });
 
+    // Observatorio de Medios & Clipping
+    Route::get('/medios', [\App\Http\Controllers\MediosController::class, 'index'])->name('medios.index');
+    Route::middleware(['can_write'])->group(function () {
+        Route::post('/medios/clipping', [\App\Http\Controllers\MediosController::class, 'storeNota'])->name('medios.clipping.store');
+        Route::delete('/medios/clipping/{nota}', [\App\Http\Controllers\MediosController::class, 'destroyNota'])->name('medios.clipping.destroy');
+    });
+
+    // Centro de Situación de Crisis & Matriz de Alianzas
+    Route::get('/crisis', [\App\Http\Controllers\CrisisController::class, 'index'])->name('crisis.index');
+    Route::middleware(['can_write'])->group(function () {
+        Route::post('/crisis', [\App\Http\Controllers\CrisisController::class, 'storeCrisis'])->name('crisis.store');
+        Route::put('/crisis/{crisis}', [\App\Http\Controllers\CrisisController::class, 'updateCrisis'])->name('crisis.update');
+        Route::post('/crisis/alianza', [\App\Http\Controllers\CrisisController::class, 'storeAlianza'])->name('crisis.alianza.store');
+        Route::delete('/crisis/alianza/{alianza}', [\App\Http\Controllers\CrisisController::class, 'destroyAlianza'])->name('crisis.alianza.destroy');
+    });
+
     // Gestión de Usuarios (Exclusivo Administrador)
     Route::middleware(['is_admin'])->group(function () {
         Route::resource('usuarios', UserController::class)->except(['create', 'edit', 'show']);
