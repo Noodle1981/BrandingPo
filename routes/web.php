@@ -56,6 +56,11 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/crisis/alianza/{alianza}', [\App\Http\Controllers\CrisisController::class, 'destroyAlianza'])->name('crisis.alianza.destroy');
     });
 
+    // War Room Analytics & Predictor de Pauta
+    Route::get('/analytics', [\App\Http\Controllers\AnalyticsController::class, 'index'])->name('analytics.index');
+    Route::get('/predictor', [\App\Http\Controllers\AnalyticsController::class, 'index'])->name('predictor.index');
+    Route::post('/analytics/predict', [\App\Http\Controllers\AnalyticsController::class, 'predictApi'])->name('analytics.predict');
+
     // Gestión de Usuarios (Exclusivo Administrador)
     Route::middleware(['is_admin'])->group(function () {
         Route::resource('usuarios', UserController::class)->except(['create', 'edit', 'show']);
