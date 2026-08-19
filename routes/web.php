@@ -21,6 +21,16 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('Dashboard');
     });
 
+    // Gestión de Candidatos y Perfiles Políticos
+    Route::get('/candidatos', [\App\Http\Controllers\CandidatoController::class, 'index'])->name('candidatos.index');
+    Route::get('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'show'])->name('candidatos.show');
+
+    Route::middleware(['can_write'])->group(function () {
+        Route::post('/candidatos', [\App\Http\Controllers\CandidatoController::class, 'store'])->name('candidatos.store');
+        Route::put('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'update'])->name('candidatos.update');
+        Route::delete('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'destroy'])->name('candidatos.destroy');
+    });
+
     // Gestión de Usuarios (Exclusivo Administrador)
     Route::middleware(['is_admin'])->group(function () {
         Route::resource('usuarios', UserController::class)->except(['create', 'edit', 'show']);
