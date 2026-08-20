@@ -549,7 +549,10 @@ const getSocialMeta = (key) => {
             </div>
 
             <!-- Tabla Única de Métricas del Punto Cero -->
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 font-mono pt-2">
+            <div
+              class="grid gap-4 font-mono pt-2"
+              :class="currentRed.key === 'facebook' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-4'"
+            >
               <!-- Seguidores -->
               <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-cyan-500/40 text-center space-y-1">
                 <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
@@ -580,8 +583,11 @@ const getSocialMeta = (key) => {
                 <span class="text-[10px] text-slate-400 block font-mono">Cuentas seguidas</span>
               </div>
 
-              <!-- Publicaciones Totales -->
-              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1">
+              <!-- Publicaciones Totales (Oculto en Facebook porque no aplica) -->
+              <div
+                v-if="currentRed.key !== 'facebook'"
+                class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1"
+              >
                 <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
                   📄 Publicaciones Totales
                 </span>
