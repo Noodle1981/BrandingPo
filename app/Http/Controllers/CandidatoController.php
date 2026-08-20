@@ -231,9 +231,9 @@ class CandidatoController extends Controller
                 'foto_perfil_url' => $validated['foto_perfil_url'] ?? null,
                 'esta_activo' => $validated['esta_activo'],
                 'esta_verificado' => $validated['esta_verificado'],
-                'seguidores_actuales' => (int)($validated['seguidores_actuales'] ?? 0),
-                'seguidos_actuales' => (int)($validated['seguidos_actuales'] ?? 0),
-                'publicaciones_totales' => (int)($validated['publicaciones_totales'] ?? 0),
+                'seguidores_actuales' => (int)($validated['seguidores_actuales'] ?? $validated['seguidores_punto_cero'] ?? 0),
+                'seguidos_actuales' => (int)($validated['seguidos_actuales'] ?? $validated['seguidos_punto_cero'] ?? 0),
+                'publicaciones_totales' => (int)($validated['publicaciones_totales'] ?? $validated['publicaciones_punto_cero'] ?? 0),
                 'fecha_punto_cero' => $validated['fecha_punto_cero'] ?? now(),
                 'seguidores_punto_cero' => (int)($validated['seguidores_punto_cero'] ?? $validated['seguidores_actuales'] ?? 0),
                 'seguidos_punto_cero' => (int)($validated['seguidos_punto_cero'] ?? $validated['seguidos_actuales'] ?? 0),
@@ -241,6 +241,13 @@ class CandidatoController extends Controller
                 'notas_punto_cero' => $validated['notas_punto_cero'] ?? null,
             ]
         );
+
+        if (!empty($validated['foto_perfil_url'])) {
+            $candidato = Candidato::find($validated['candidato_id']);
+            if ($candidato) {
+                $candidato->update(['avatar_url' => $validated['foto_perfil_url']]);
+            }
+        }
 
         return redirect()->back()
             ->with('success', "Canal {$validated['plataforma']} configurado y Punto Cero establecido.");

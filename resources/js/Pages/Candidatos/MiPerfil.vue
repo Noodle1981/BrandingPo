@@ -1,29 +1,24 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { Head, useForm, router, Link } from '@inertiajs/vue3';
+import { ref, computed, watch } from 'vue';
+import { Head, useForm, Link } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import Badge from '../../Components/Badge.vue';
 import {
   Sparkles,
   Users,
-  Eye,
-  CheckCircle2,
-  AlertCircle,
   Link2,
   ExternalLink,
   ShieldCheck,
   Flag,
   Calendar,
   Save,
-  Plus,
-  Trash2,
   Edit3,
   MapPin,
   Vote,
-  Layers,
-  ArrowUpRight,
   TrendingUp,
-  Image as ImageIcon
+  Image as ImageIcon,
+  CheckCircle,
+  AlertCircle
 } from '@lucide/vue';
 
 const props = defineProps({
@@ -65,9 +60,9 @@ const formRed = useForm({
   seguidos_actuales: currentRed.value?.seguidos_actuales || 0,
   publicaciones_totales: currentRed.value?.publicaciones_totales || 0,
   fecha_punto_cero: currentRed.value?.fecha_punto_cero || new Date().toISOString().slice(0, 10),
-  seguidores_punto_cero: currentRed.value?.seguidores_punto_cero || 0,
-  seguidos_punto_cero: currentRed.value?.seguidos_punto_cero || 0,
-  publicaciones_punto_cero: currentRed.value?.publicaciones_punto_cero || 0,
+  seguidores_punto_cero: currentRed.value?.seguidores_punto_cero || currentRed.value?.seguidores_actuales || 0,
+  seguidos_punto_cero: currentRed.value?.seguidos_punto_cero || currentRed.value?.seguidos_actuales || 0,
+  publicaciones_punto_cero: currentRed.value?.publicaciones_punto_cero || currentRed.value?.publicaciones_totales || 0,
   notas_punto_cero: currentRed.value?.notas_punto_cero || '',
 });
 
@@ -86,23 +81,26 @@ const selectPlatform = (platformKey) => {
     formRed.seguidos_actuales = red.seguidos_actuales || 0;
     formRed.publicaciones_totales = red.publicaciones_totales || 0;
     formRed.fecha_punto_cero = red.fecha_punto_cero || new Date().toISOString().slice(0, 10);
-    formRed.seguidores_punto_cero = red.seguidores_punto_cero || 0;
-    formRed.seguidos_punto_cero = red.seguidos_punto_cero || 0;
-    formRed.publicaciones_punto_cero = red.publicaciones_punto_cero || 0;
+    formRed.seguidores_punto_cero = red.seguidores_punto_cero || red.seguidores_actuales || 0;
+    formRed.seguidos_punto_cero = red.seguidos_punto_cero || red.seguidos_actuales || 0;
+    formRed.publicaciones_punto_cero = red.publicaciones_punto_cero || red.publicaciones_totales || 0;
     formRed.notas_punto_cero = red.notas_punto_cero || '';
+    scrapeMessage.value = '';
   }
 };
 
 const isScraping = ref(false);
 const scrapeMessage = ref('');
+const scrapeSuccess = ref(false);
 
 const fetchScrapedData = async () => {
   if (!formRed.url_perfil) {
     scrapeMessage.value = 'Por favor pega el enlace del perfil primero.';
+    scrapeSuccess.value = false;
     return;
   }
   isScraping.value = true;
-  scrapeMessage.value = 'Extrayendo foto y atributos públicos del perfil...';
+  scrapeMessage.value = 'Leyendo foto, seguidores, seguidos y publicaciones desde la red social...';
 
   try {
     const response = await fetch('/perfiles-sociales/scrape', {
@@ -122,30 +120,44 @@ const fetchScrapedData = async () => {
     if (data) {
       if (data.handle_usuario) formRed.handle_usuario = data.handle_usuario;
       if (data.foto_perfil_url) formRed.foto_perfil_url = data.foto_perfil_url;
+      
       if (data.seguidores !== null && data.seguidores !== undefined) {
-        formRed.seguidores_actuales = data.seguidores;
-        if (!formRed.seguidores_punto_cero) formRed.seguidores_punto_cero = data.seguidores;
+        formRed.seguidores_actuales = Number(data.seguidores);
+        formRed.seguidores_punto_cero = Number(data.seguidores);
       }
       if (data.seguidos !== null && data.seguidos !== undefined) {
-        formRed.seguidos_actuales = data.seguidos;
-        if (!formRed.seguidos_punto_cero) formRed.seguidos_punto_cero = data.seguidos;
+        formRed.seguidos_actuales = Number(data.seguidos);
+        formRed.seguidos_punto_cero = Number(data.seguidos);
       }
       if (data.publicaciones !== null && data.publicaciones !== undefined) {
-        formRed.publicaciones_totales = data.publicaciones;
-        if (!formRed.publicaciones_punto_cero) formRed.publicaciones_punto_cero = data.publicaciones;
+        formRed.publicaciones_totales = Number(data.publicaciones);
+        formRed.publicaciones_punto_cero = Number(data.publicaciones);
       }
-      scrapeMessage.value = data.mensaje || '¡Lectura completada!';
+      
+      formRed.esta_activo = true;
+      scrapeSuccess.value = true;
+      scrapeMessage.value = data.mensaje || '¡Datos extraídos con éxito!';
     }
   } catch (err) {
-    scrapeMessage.value = 'No se pudo conectar con el lector automático. Puedes ingresar los números manualmente.';
+    scrapeSuccess.value = false;
+    scrapeMessage.value = 'No se pudo conectar con el lector. Puedes ingresar los números manualmente.';
   } finally {
     isScraping.value = false;
   }
 };
 
 const savePerfilSocial = () => {
+  // Sincronizar Punto Cero con actuales si están en 0
+  if (!formRed.seguidores_punto_cero) formRed.seguidores_punto_cero = formRed.seguidores_actuales;
+  if (!formRed.seguidos_punto_cero) formRed.seguidos_punto_cero = formRed.seguidos_actuales;
+  if (!formRed.publicaciones_punto_cero) formRed.publicaciones_punto_cero = formRed.publicaciones_totales;
+
   formRed.post('/perfiles-sociales', {
     preserveScroll: true,
+    onSuccess: () => {
+      scrapeMessage.value = '¡Canal guardado correctamente!';
+      scrapeSuccess.value = true;
+    }
   });
 };
 
@@ -204,7 +216,7 @@ const tabBadgeStyle = (colorEstado) => {
   <Head :title="`Perfil Propio: ${candidato.nombre_completo}`" />
 
   <WarRoomLayout>
-    <!-- 1. Header del Candidato Propio / Cliente -->
+    <!-- 1. Header Principal del Cliente de Campaña -->
     <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
         <div class="flex items-start sm:items-center gap-4">
@@ -268,7 +280,7 @@ const tabBadgeStyle = (colorEstado) => {
         </div>
       </div>
 
-      <!-- Semáforo de Redes Sociales Leyenda Informativa -->
+      <!-- Semáforo de Canales -->
       <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3 text-xs">
         <span class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 font-mono uppercase text-[11px]">
           <ShieldCheck class="w-4 h-4 text-cyan-500" />
@@ -306,7 +318,6 @@ const tabBadgeStyle = (colorEstado) => {
               : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
           ]"
         >
-          <!-- Color Status Dot -->
           <span
             class="w-3 h-3 rounded-full shrink-0 shadow-xs"
             :class="{
@@ -327,7 +338,7 @@ const tabBadgeStyle = (colorEstado) => {
         </button>
       </div>
 
-      <!-- 3. Formulario & Configuración de la Red Seleccionada (Punto Cero / Baseline) -->
+      <!-- 3. TABLA / FICHA UNIFICADA DEL CANAL DIGITAL Y PUNTO CERO -->
       <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
         <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
           <div>
@@ -337,10 +348,10 @@ const tabBadgeStyle = (colorEstado) => {
                 'bg-amber-500': currentRed.color_estado === 'naranja',
                 'bg-rose-500': currentRed.color_estado === 'rojo',
               }"></span>
-              <span>Canal: {{ currentRed.nombre }}</span>
+              <span>Ficha Única: {{ currentRed.nombre }}</span>
             </h2>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Configuración de acceso, estado de verificación y línea de base inicial (Punto Cero).
+              Enlace, estado de verificación, foto de perfil y punto de partida (Punto Cero).
             </p>
           </div>
 
@@ -353,224 +364,174 @@ const tabBadgeStyle = (colorEstado) => {
         </div>
 
         <form @submit.prevent="savePerfilSocial" class="space-y-6">
-          <!-- A. Estado & Enlaces de la Cuenta -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <!-- Switches de Estado -->
-            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3.5">
-              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono">
-                Estado de la Cuenta en {{ currentRed.nombre }}
-              </h3>
+          <!-- A. Enlace, Lector Automático y Estados -->
+          <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
+            <!-- Enlace con Botón Auto-Lector -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  1. Enlace Directo al Perfil de {{ currentRed.nombre }} (URL)
+                </label>
+                <button
+                  type="button"
+                  @click="fetchScrapedData"
+                  :disabled="isScraping || !formRed.url_perfil"
+                  class="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  title="Leer automáticamente foto, seguidores, seguidos y publicaciones con 1 clic"
+                >
+                  <Sparkles class="w-3.5 h-3.5" />
+                  <span>{{ isScraping ? 'Leyendo datos...' : '⚡ Leer Datos & Foto con 1 Clic' }}</span>
+                </button>
+              </div>
 
-              <!-- Switch Activa -->
-              <label class="flex items-center justify-between cursor-pointer">
-                <div>
-                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">¿El candidato tiene esta red activa?</span>
-                  <span class="text-[11px] text-slate-400">Si está activa saldrá en 🟠 naranja</span>
-                </div>
+              <div class="relative">
                 <input
-                  v-model="formRed.esta_activo"
-                  type="checkbox"
-                  class="w-5 h-5 rounded-md text-cyan-500 focus:ring-cyan-500"
+                  v-model="formRed.url_perfil"
+                  type="url"
+                  placeholder="https://www.instagram.com/federico__sisterna/"
+                  class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
                 />
-              </label>
+                <Link2 class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              </div>
 
-              <!-- Switch Verificada -->
-              <label class="flex items-center justify-between cursor-pointer pt-2 border-t border-slate-200 dark:border-slate-800">
-                <div>
-                  <span class="text-xs font-bold text-blue-500 dark:text-blue-400 block">¿Cuenta Verificada / Certificada oficialmente?</span>
-                  <span class="text-[11px] text-slate-400">Si está verificada saldrá en 🔵 azul</span>
-                </div>
-                <input
-                  v-model="formRed.esta_verificado"
-                  type="checkbox"
-                  class="w-5 h-5 rounded-md text-blue-500 focus:ring-blue-500"
-                />
-              </label>
+              <div v-if="scrapeMessage" class="mt-2 flex items-center gap-2 text-xs font-mono" :class="scrapeSuccess ? 'text-emerald-500' : 'text-amber-500'">
+                <CheckCircle v-if="scrapeSuccess" class="w-4 h-4" />
+                <AlertCircle v-else class="w-4 h-4" />
+                <span>{{ scrapeMessage }}</span>
+              </div>
             </div>
 
-            <!-- Handle & Enlace -->
-            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+            <!-- Handle & Switches -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-200 dark:border-slate-800">
               <div>
                 <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Usuario / Handle en {{ currentRed.nombre }} *
+                  Usuario / Handle *
                 </label>
                 <input
                   v-model="formRed.handle_usuario"
                   type="text"
                   required
-                  placeholder="ej. @martinrodriguez_ok"
-                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+                  placeholder="ej. @federico__sisterna"
+                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Enlace directo al Perfil (URL)
-                  </label>
-                  <button
-                    type="button"
-                    @click="fetchScrapedData"
-                    :disabled="isScraping || !formRed.url_perfil"
-                    class="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-500 dark:text-cyan-400 font-bold text-[11px] font-mono flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
-                    title="Intentar leer automáticamente foto, seguidores, seguidos y publicaciones"
-                  >
-                    <Sparkles class="w-3.5 h-3.5" />
-                    <span>{{ isScraping ? 'Leyendo perfil...' : '⚡ Leer Datos & Foto' }}</span>
-                  </button>
+              <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">Canal Activo</span>
+                  <span class="text-[10px] text-amber-500 font-semibold">🟠 Pestaña Naranja</span>
                 </div>
+                <input
+                  v-model="formRed.esta_activo"
+                  type="checkbox"
+                  class="w-5 h-5 rounded text-cyan-500"
+                />
+              </div>
+
+              <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span class="text-xs font-bold text-blue-500 dark:text-blue-400 block">Cuenta Verificada</span>
+                  <span class="text-[10px] text-blue-400 font-semibold">🔵 Pestaña Azul</span>
+                </div>
+                <input
+                  v-model="formRed.esta_verificado"
+                  type="checkbox"
+                  class="w-5 h-5 rounded text-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- B. FOTO DE PERFIL & TABLA ÚNICA DE NÚMEROS (PUNTO CERO) -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono flex items-center gap-2">
+              <Flag class="w-4 h-4 text-cyan-500" />
+              <span>2. Foto de Perfil & Punto Cero (Línea de Base de Inicio)</span>
+            </h3>
+
+            <!-- Preview Foto & Input URL -->
+            <div class="flex items-center gap-4 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex-wrap">
+              <div class="relative shrink-0">
+                <img
+                  :src="formRed.foto_perfil_url || candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(formRed.handle_usuario || 'User')}&background=0f172a&color=06b6d4`"
+                  alt="Foto Perfil"
+                  class="w-16 h-16 rounded-2xl object-cover border-2 border-cyan-500 shadow-sm"
+                />
+              </div>
+              <div class="flex-1 min-w-[240px]">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Foto de Perfil (URL Extraída)
+                </label>
                 <div class="relative">
                   <input
-                    v-model="formRed.url_perfil"
+                    v-model="formRed.foto_perfil_url"
                     type="url"
-                    placeholder="https://www.instagram.com/usuario/"
-                    class="w-full pl-8 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+                    placeholder="https://..."
+                    class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100"
                   />
-                  <Link2 class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                </div>
-                <p v-if="scrapeMessage" class="text-[11px] font-mono text-cyan-500 mt-1">
-                  {{ scrapeMessage }}
-                </p>
-              </div>
-
-              <!-- Foto de Perfil URL -->
-              <div>
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  URL Foto de Perfil (Opcional)
-                </label>
-                <div class="flex items-center gap-2">
-                  <div class="relative flex-1">
-                    <input
-                      v-model="formRed.foto_perfil_url"
-                      type="url"
-                      placeholder="https://..."
-                      class="w-full pl-8 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
-                    />
-                    <ImageIcon class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  </div>
-                  <img
-                    v-if="formRed.foto_perfil_url"
-                    :src="formRed.foto_perfil_url"
-                    alt="Preview"
-                    class="w-8 h-8 rounded-full object-cover border border-slate-300 dark:border-slate-700 shadow-xs"
-                  />
+                  <ImageIcon class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- B. 🏁 PUNTO CERO / PUNTO ALFA (Línea de Base Inicial del Nacimiento) -->
-          <div class="p-5 rounded-3xl bg-gradient-to-br from-slate-900 to-cyan-950 text-white border border-cyan-500/30 shadow-md space-y-4">
-            <div class="flex items-center justify-between flex-wrap gap-2">
-              <div class="flex items-center gap-2">
-                <Flag class="w-5 h-5 text-cyan-400" />
-                <h3 class="font-bold text-sm sm:text-base text-white">
-                  Punto Cero / Punto Alfa (Línea de Base Inicial de Campaña)
-                </h3>
-              </div>
-              <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 uppercase">
-                Punto de Partida
-              </span>
-            </div>
-
-            <p class="text-xs text-slate-300 leading-relaxed">
-              Registra los números exactos con los que <strong>nace la auditoría de esta red social</strong> (ej: 64 publicaciones, 1.360 seguidores, 578 seguidos) para medir el crecimiento neto de campaña a partir de esta fecha.
-            </p>
-
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 font-mono">
-              <!-- Publicaciones Iniciales -->
-              <div class="p-3 rounded-2xl bg-white/5 border border-white/10">
-                <label class="block text-[10px] uppercase text-slate-300 mb-1">Publicaciones Iniciales</label>
-                <input
-                  v-model.number="formRed.publicaciones_punto_cero"
-                  type="number"
-                  min="0"
-                  placeholder="ej. 64"
-                  class="w-full px-2.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/20 text-sm font-bold text-white text-center focus:ring-2 focus:ring-cyan-400"
-                />
-              </div>
-
-              <!-- Seguidores Iniciales -->
-              <div class="p-3 rounded-2xl bg-white/5 border border-white/10">
-                <label class="block text-[10px] uppercase text-slate-300 mb-1">Seguidores (Punto Alfa)</label>
-                <input
-                  v-model.number="formRed.seguidores_punto_cero"
-                  type="number"
-                  min="0"
-                  placeholder="ej. 1360"
-                  class="w-full px-2.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/20 text-sm font-bold text-cyan-300 text-center focus:ring-2 focus:ring-cyan-400"
-                />
-              </div>
-
-              <!-- Seguidos Iniciales -->
-              <div class="p-3 rounded-2xl bg-white/5 border border-white/10">
-                <label class="block text-[10px] uppercase text-slate-300 mb-1">Seguidos Iniciales</label>
-                <input
-                  v-model.number="formRed.seguidos_punto_cero"
-                  type="number"
-                  min="0"
-                  placeholder="ej. 578"
-                  class="w-full px-2.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/20 text-sm font-bold text-white text-center focus:ring-2 focus:ring-cyan-400"
-                />
-              </div>
-
-              <!-- Fecha Punto Cero -->
-              <div class="p-3 rounded-2xl bg-white/5 border border-white/10">
-                <label class="block text-[10px] uppercase text-slate-300 mb-1">Fecha de Inicio</label>
-                <input
-                  v-model="formRed.fecha_punto_cero"
-                  type="date"
-                  class="w-full px-2.5 py-1.5 rounded-xl bg-slate-900/80 border border-white/20 text-xs font-bold text-white text-center focus:ring-2 focus:ring-cyan-400"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- C. 📈 ESTADO ACTUAL & SEGUIMIENTO EN TIEMPO REAL -->
-          <div class="p-5 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono flex items-center gap-1.5">
-                <TrendingUp class="w-4 h-4 text-emerald-500" />
-                <span>Estado Actual & Crecimiento Acumulado</span>
-              </h3>
-              <span class="text-xs text-slate-400 font-mono">Actualiza con la última lectura</span>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
-              <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Seguidores Actuales</label>
+            <!-- Tabla Única de Métricas del Punto Cero -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 font-mono pt-2">
+              <!-- Seguidores -->
+              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-cyan-500/40 text-center space-y-1">
+                <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
+                  👥 Seguidores Iniciales
+                </span>
                 <input
                   v-model.number="formRed.seguidores_actuales"
                   type="number"
                   min="0"
-                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-900 dark:text-slate-100"
+                  placeholder="ej. 1359"
+                  class="w-full text-center px-2 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-lg font-extrabold text-cyan-600 dark:text-cyan-400"
                 />
-                <span class="text-[10px] text-emerald-500 font-bold block mt-1">
-                  Ganados desde el inicio: +{{ (formRed.seguidores_actuales || 0) - (formRed.seguidores_punto_cero || 0) }}
-                </span>
+                <span class="text-[10px] text-slate-400 block font-mono">Punto Alfa de Inicio</span>
               </div>
 
-              <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Seguidos Actuales</label>
+              <!-- Seguidos -->
+              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1">
+                <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
+                  🔄 Seguidos
+                </span>
                 <input
                   v-model.number="formRed.seguidos_actuales"
                   type="number"
                   min="0"
-                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-900 dark:text-slate-100"
+                  placeholder="ej. 588"
+                  class="w-full text-center px-2 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-lg font-extrabold text-slate-800 dark:text-slate-200"
                 />
+                <span class="text-[10px] text-slate-400 block font-mono">Cuentas seguidas</span>
               </div>
 
-              <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Publicaciones Totales</label>
+              <!-- Publicaciones Totales -->
+              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1">
+                <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
+                  📄 Publicaciones Totales
+                </span>
                 <input
                   v-model.number="formRed.publicaciones_totales"
                   type="number"
                   min="0"
-                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm font-bold text-slate-900 dark:text-slate-100"
+                  placeholder="ej. 64"
+                  class="w-full text-center px-2 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-lg font-extrabold text-slate-800 dark:text-slate-200"
                 />
-                <span class="text-[10px] text-cyan-500 font-bold block mt-1">
-                  Nuevas en campaña: +{{ (formRed.publicaciones_totales || 0) - (formRed.publicaciones_punto_cero || 0) }}
+                <span class="text-[10px] text-slate-400 block font-mono">Posts al comenzar</span>
+              </div>
+
+              <!-- Fecha Punto Cero -->
+              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1">
+                <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
+                  📅 Fecha de Comienzo
                 </span>
+                <input
+                  v-model="formRed.fecha_punto_cero"
+                  type="date"
+                  class="w-full text-center px-2 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200"
+                />
+                <span class="text-[10px] text-slate-400 block font-mono">Nacimiento de auditoría</span>
               </div>
             </div>
           </div>
@@ -580,10 +541,10 @@ const tabBadgeStyle = (colorEstado) => {
             <button
               type="submit"
               :disabled="formRed.processing"
-              class="px-6 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow-md shadow-cyan-500/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-102"
+              class="px-7 py-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-sm shadow-md shadow-cyan-500/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-102"
             >
               <Save class="w-4 h-4" />
-              <span>{{ formRed.processing ? 'Guardando...' : `Guardar Configuración de ${currentRed.nombre}` }}</span>
+              <span>{{ formRed.processing ? 'Guardando...' : `Guardar y Establecer Punto Cero en ${currentRed.nombre}` }}</span>
             </button>
           </div>
         </form>
