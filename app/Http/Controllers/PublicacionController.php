@@ -219,6 +219,53 @@ class PublicacionController extends Controller
     }
 
     /**
+     * Actualizar una publicación existente.
+     */
+    public function update(Request $request, Publicacion $publicacion): RedirectResponse
+    {
+        $validated = $request->validate([
+            'contenido_resumen' => ['required', 'string'],
+            'url_post' => ['nullable', 'url', 'max:1000'],
+            'media_url' => ['nullable', 'url', 'max:1000'],
+            'tipo_formato' => ['required', 'string'],
+            'tipo_pauta' => ['required', 'in:organico,pauta_paga'],
+            'monto_invertido_pauta' => ['nullable', 'numeric', 'min:0'],
+            'total_vistas' => ['nullable', 'integer', 'min:0'],
+            'total_likes' => ['nullable', 'integer', 'min:0'],
+            'total_comentarios' => ['nullable', 'integer', 'min:0'],
+            'total_compartidos' => ['nullable', 'integer', 'min:0'],
+            'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
+        ]);
+
+        $totalLikes = (int)($validated['total_likes'] ?? $publicacion->total_likes);
+        $humor = (int)($validated['termometro_humor_social'] ?? $publicacion->termometro_humor_social);
+        $sentimiento = $humor >= 4 ? 'positivo' : ($humor === 3 ? 'neutro' : 'negativo');
+
+        $publicacion->update([
+            'contenido_resumen' => $validated['contenido_resumen'],
+            'url_post' => $validated['url_post'] ?? null,
+            'media_url' => $validated['media_url'] ?? null,
+            'tipo_formato' => $validated['tipo_formato'],
+            'tipo_pauta' => $validated['tipo_pauta'],
+            'monto_invertido_pauta' => $validated['tipo_pauta'] === 'pauta_paga' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
+            'total_vistas' => (int)($validated['total_vistas'] ?? $publicacion->total_vistas),
+            'total_likes' => $totalLikes,
+            'total_comentarios' => (int)($validated['total_comentarios'] ?? $publicacion->total_comentarios),
+            'total_compartidos' => (int)($validated['total_compartidos'] ?? $publicacion->total_compartidos),
+            'reacciones_detalladas' => [
+                'me_gusta' => (int)($totalLikes * 0.7),
+                'me_encanta' => (int)($totalLikes * 0.2),
+                'me_enoja' => (int)($totalLikes * 0.1),
+            ],
+            'sentimiento_predominante' => $sentimiento,
+            'termometro_humor_social' => $humor,
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Publicación actualizada correctamente.');
+    }
+
+    /**
      * Eliminar publicación.
      */
     public function destroy(Publicacion $publicacion): RedirectResponse

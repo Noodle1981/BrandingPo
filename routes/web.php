@@ -32,6 +32,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware(['can_write'])->group(function () {
         Route::post('/fast-flow', [\App\Http\Controllers\PublicacionController::class, 'store'])->name('fast-flow.store');
+        Route::put('/publicaciones/{publicacion}', [\App\Http\Controllers\PublicacionController::class, 'update'])->name('publicaciones.update');
         Route::delete('/publicaciones/{publicacion}', [\App\Http\Controllers\PublicacionController::class, 'destroy'])->name('publicaciones.destroy');
     });
 

@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
-import { Eye, MessageCircle, Share2, Sparkles, DollarSign, Star } from '@lucide/vue';
+import { router, useForm } from '@inertiajs/vue3';
+import { Eye, MessageCircle, Share2, Sparkles, DollarSign, Star, Edit3, Trash2, X, Check, Link2 } from '@lucide/vue';
 import Badge from './Badge.vue';
 import MediaEmbed from './MediaEmbed.vue';
 
@@ -16,6 +17,57 @@ const props = defineProps({
 });
 
 const showComments = ref(false);
+const isEditing = ref(false);
+
+const editForm = useForm({
+  contenido_resumen: props.post.contenido_resumen || '',
+  url_post: props.post.url_post || '',
+  media_url: props.post.media_url || '',
+  tipo_formato: props.post.tipo_formato || 'Reel',
+  tipo_pauta: props.post.tipo_pauta || 'organico',
+  monto_invertido_pauta: props.post.monto_invertido_pauta || 0,
+  total_vistas: props.post.total_vistas || 0,
+  total_likes: props.post.total_likes || 0,
+  total_comentarios: props.post.total_comentarios || 0,
+  total_compartidos: props.post.total_compartidos || 0,
+  termometro_humor_social: props.post.termometro_humor_social || 4,
+});
+
+const openEditModal = () => {
+  editForm.contenido_resumen = props.post.contenido_resumen || '';
+  editForm.url_post = props.post.url_post || '';
+  editForm.media_url = props.post.media_url || '';
+  editForm.tipo_formato = props.post.tipo_formato || 'Reel';
+  editForm.tipo_pauta = props.post.tipo_pauta || 'organico';
+  editForm.monto_invertido_pauta = props.post.monto_invertido_pauta || 0,
+  editForm.total_vistas = props.post.total_vistas || 0;
+  editForm.total_likes = props.post.total_likes || 0;
+  editForm.total_comentarios = props.post.total_comentarios || 0;
+  editForm.total_compartidos = props.post.total_compartidos || 0;
+  editForm.termometro_humor_social = props.post.termometro_humor_social || 4;
+  isEditing.value = true;
+};
+
+const closeEditModal = () => {
+  isEditing.value = false;
+};
+
+const saveEdit = () => {
+  editForm.put(`/publicaciones/${props.post.id}`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      isEditing.value = false;
+    }
+  });
+};
+
+const deletePost = () => {
+  if (confirm('¿Estás seguro de que deseas eliminar esta publicación?')) {
+    router.delete(`/publicaciones/${props.post.id}`, {
+      preserveScroll: true,
+    });
+  }
+};
 
 const formatNumber = (num) => {
   if (num === null || num === undefined) return '0';
@@ -28,10 +80,12 @@ const formatCurrency = (amount) => {
   if (!amount) return '$0';
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(amount);
 };
+
+const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', 'Shorts', 'Articulo'];
 </script>
 
 <template>
-  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:shadow-md dark:shadow-none hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200">
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:shadow-md dark:shadow-none hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 relative">
     <!-- Header -->
     <div class="p-4 sm:p-5 flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80">
       <div class="flex items-center gap-3">
@@ -65,19 +119,41 @@ const formatCurrency = (amount) => {
             />
           </div>
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {{ post.perfil_social?.handle_usuario || '@cuenta' }} • {{ post.fecha_relativa || post.fecha_publicacion }}
+            {{ post.perfil_social?.handle_usuario || '@cuenta' }} &bull; {{ post.fecha_relativa || post.fecha_publicacion }}
           </p>
         </div>
       </div>
 
-      <!-- Social Network & Pauta Badges -->
-      <div class="flex flex-col items-end gap-1.5">
-        <Badge :variant="post.plataforma || post.perfil_social?.plataforma || 'facebook'" size="sm" />
-        <Badge
-          variant="pauta"
-          :value="post.tipo_pauta || 'organico'"
-          size="sm"
-        />
+      <!-- Social Network, Pauta Badges & Edit Button -->
+      <div class="flex items-center gap-2">
+        <div class="flex flex-col items-end gap-1.5">
+          <Badge :variant="post.plataforma || post.perfil_social?.plataforma || 'facebook'" size="sm" />
+          <Badge
+            variant="pauta"
+            :value="post.tipo_pauta || 'organico'"
+            size="sm"
+          />
+        </div>
+
+        <!-- Edit & Delete Buttons -->
+        <div v-if="canWrite" class="flex items-center gap-1 ml-1">
+          <button
+            type="button"
+            @click="openEditModal"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Editar publicación"
+          >
+            <Edit3 class="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            @click="deletePost"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Eliminar publicación"
+          >
+            <Trash2 class="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
 
@@ -190,6 +266,161 @@ const formatCurrency = (amount) => {
         >
           💬 "{{ comentario }}"
         </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal Dialog -->
+    <div
+      v-if="isEditing"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
+    >
+      <div class="w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <Edit3 class="w-5 h-5 text-cyan-500" />
+            <h3 class="font-bold text-base text-slate-900 dark:text-slate-100">
+              Editar Publicación
+            </h3>
+          </div>
+          <button
+            type="button"
+            @click="closeEditModal"
+            class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+
+        <form @submit.prevent="saveEdit" class="space-y-4">
+          <!-- URL / Link -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Enlace del Post / Video (URL)
+            </label>
+            <div class="relative">
+              <input
+                v-model="editForm.url_post"
+                type="url"
+                placeholder="https://www.facebook.com/..."
+                class="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-cyan-500"
+              />
+              <Link2 class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            </div>
+          </div>
+
+          <!-- Text Content -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Texto o Resumen del Post *
+            </label>
+            <textarea
+              v-model="editForm.contenido_resumen"
+              required
+              rows="3"
+              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+            ></textarea>
+          </div>
+
+          <!-- Formato & Pauta -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Formato
+              </label>
+              <select
+                v-model="editForm.tipo_formato"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+              >
+                <option v-for="f in formatos" :key="f" :value="f">{{ f }}</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Distribución
+              </label>
+              <select
+                v-model="editForm.tipo_pauta"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+              >
+                <option value="organico">Orgánico</option>
+                <option value="pauta_paga">Pauta Paga</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Inversión si es pauta paga -->
+          <div v-if="editForm.tipo_pauta === 'pauta_paga'">
+            <label class="block text-xs font-bold text-violet-600 dark:text-violet-400 mb-1">
+              Monto Invertido en Pauta ($ ARS)
+            </label>
+            <input
+              v-model="editForm.monto_invertido_pauta"
+              type="number"
+              min="0"
+              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-violet-600 dark:text-violet-400"
+            />
+          </div>
+
+          <!-- Metrics Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Likes</label>
+              <input
+                v-model="editForm.total_likes"
+                type="number"
+                min="0"
+                class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Vistas</label>
+              <input
+                v-model="editForm.total_vistas"
+                type="number"
+                min="0"
+                class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Comentarios</label>
+              <input
+                v-model="editForm.total_comentarios"
+                type="number"
+                min="0"
+                class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Shares</label>
+              <input
+                v-model="editForm.total_compartidos"
+                type="number"
+                min="0"
+                class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              @click="closeEditModal"
+              class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              :disabled="editForm.processing"
+              class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shadow-sm flex items-center gap-1.5"
+            >
+              <Check class="w-3.5 h-3.5" />
+              <span>{{ editForm.processing ? 'Guardando...' : 'Guardar Cambios' }}</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
