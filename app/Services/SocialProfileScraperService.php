@@ -36,14 +36,14 @@ class SocialProfileScraperService
             switch ($plataforma) {
                 case 'instagram':
                     return $this->scrapeInstagram($url, $result);
+                case 'facebook':
+                    return $this->scrapeFacebook($url, $result);
                 case 'tiktok':
                     return $this->scrapeTikTok($url, $result);
                 case 'youtube':
                     return $this->scrapeYouTube($url, $result);
                 case 'x_twitter':
                     return $this->scrapeXTwitter($url, $result);
-                case 'facebook':
-                    return $this->scrapeFacebook($url, $result);
                 default:
                     return $this->scrapeOpenGraphGenerico($url, $result);
             }
@@ -66,7 +66,6 @@ class SocialProfileScraperService
             $result['handle_usuario'] = '@' . ltrim($username, '@');
         }
 
-        // WhatsApp / TwitterBot UA recibe los metadatos OpenGraph limpios de Instagram
         $response = Http::withHeaders([
             'User-Agent' => 'Twitterbot/1.0',
             'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -88,21 +87,16 @@ class SocialProfileScraperService
             $result['raw_description'] = $description;
         }
 
-        // Parsear: "1,359 Followers, 588 Following, 64 Posts - See Instagram photos and videos from Fede Sisterna (@federico__sisterna)"
         if ($description) {
-            // Seguidores
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:Followers|seguidores)/i', $description, $m)) {
+            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Followers|seguidores)/i', $description, $m)) {
                 $result['seguidores'] = $this->parseFormattedNumber($m[1]);
             }
-            // Seguidos
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:Following|seguidos)/i', $description, $m)) {
+            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Following|seguidos)/i', $description, $m)) {
                 $result['seguidos'] = $this->parseFormattedNumber($m[1]);
             }
-            // Publicaciones / Posts
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:Posts|publicaciones)/i', $description, $m)) {
+            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Posts|publicaciones)/i', $description, $m)) {
                 $result['publicaciones'] = $this->parseFormattedNumber($m[1]);
             }
-            // Nombre de la persona desde "from [Nombre] (@usuario)"
             if (preg_match('/from\s+([^(@•]+)/i', $description, $nm)) {
                 $result['nombre_completo'] = trim(html_entity_decode($nm[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
             }
@@ -130,6 +124,70 @@ class SocialProfileScraperService
     }
 
     /**
+     * Extractor para Facebook (Páginas y Perfiles públicos).
+     */
+    protected function scrapeFacebook(string $url, array $result): array
+    {
+        preg_match('/facebook\.com\/([a-zA-Z0-9_\.\-]+)/i', $url, $handleMatch);
+        $username = $handleMatch[1] ?? '';
+        if ($username && !in_array(strtolower($username), ['pages', 'profile.php', 'groups'])) {
+            $result['handle_usuario'] = '@' . ltrim($username, '@');
+        }
+
+        $response = Http::withHeaders([
+            'User-Agent' => 'Twitterbot/1.0',
+            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
+        ])->timeout(8)->get($url);
+
+        if (!$response->successful()) {
+            $response = Http::withHeaders([
+                'User-Agent' => 'facebookexternalhit/1.1',
+            ])->timeout(8)->get($url);
+        }
+
+        $html = $response->body();
+
+        // 1. Extraer Foto de perfil (og:image)
+        if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i', $html, $imgMatch)) {
+            $result['foto_perfil_url'] = html_entity_decode($imgMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        // 2. Extraer Título (Nombre)
+        if (preg_match('/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i', $html, $titleMatch)) {
+            $title = html_entity_decode($titleMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (preg_match('/^([^|•\-]+)/', $title, $tm)) {
+                $result['nombre_completo'] = trim($tm[1]);
+            }
+        }
+
+        // 3. Extraer Descripción y métricas
+        $description = '';
+        if (preg_match('/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]+)"/i', $html, $descMatch)) {
+            $description = html_entity_decode($descMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $result['raw_description'] = $description;
+        }
+
+        if ($description) {
+            // "9466 Me gusta" o "9,4 mil seguidores" o "9.4K followers"
+            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:seguidores|followers|me gusta|likes)/i', $description, $m)) {
+                $result['seguidores'] = $this->parseFormattedNumber($m[1]);
+            }
+            // "58 seguidos" o "58 following"
+            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:seguidos|following)/i', $description, $m)) {
+                $result['seguidos'] = $this->parseFormattedNumber($m[1]);
+            }
+        }
+
+        $result['success'] = !empty($result['foto_perfil_url']) || !is_null($result['seguidores']) || !empty($result['handle_usuario']);
+        $result['mensaje'] = $result['success']
+            ? '¡Datos de Facebook leídos exitosamente!'
+            : 'Facebook protegió la lectura. Puedes completar los números manualmente.';
+
+        return $result;
+    }
+
+    /**
      * Extractor para TikTok.
      */
     protected function scrapeTikTok(string $url, array $result): array
@@ -147,10 +205,10 @@ class SocialProfileScraperService
 
         if (preg_match('/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]+)"/i', $html, $descMatch)) {
             $desc = html_entity_decode($descMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:Followers|Seguidores)/i', $desc, $m)) {
+            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Followers|Seguidores)/i', $desc, $m)) {
                 $result['seguidores'] = $this->parseFormattedNumber($m[1]);
             }
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:Likes|Me gusta)/i', $desc, $m)) {
+            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Likes|Me gusta)/i', $desc, $m)) {
                 $result['total_likes'] = $this->parseFormattedNumber($m[1]);
             }
         }
@@ -208,20 +266,6 @@ class SocialProfileScraperService
     }
 
     /**
-     * Extractor para Facebook.
-     */
-    protected function scrapeFacebook(string $url, array $result): array
-    {
-        preg_match('/facebook\.com\/([a-zA-Z0-9_\.\-]+)/i', $url, $handleMatch);
-        if (!empty($handleMatch[1])) {
-            $result['handle_usuario'] = '@' . $handleMatch[1];
-        }
-        $result['success'] = !empty($result['handle_usuario']);
-        $result['mensaje'] = 'Perfil de Facebook vinculado.';
-        return $result;
-    }
-
-    /**
      * Fallback OpenGraph genérico.
      */
     protected function scrapeOpenGraphGenerico(string $url, array $result): array
@@ -241,24 +285,34 @@ class SocialProfileScraperService
     }
 
     /**
-     * Parsear cadenas numéricas como "1,359", "1.359", "14.5K", "1.2M".
+     * Parsear cadenas numéricas como "9,4 mil", "9466", "1.359", "14.5K", "1.2M".
      */
     protected function parseFormattedNumber(string $str): int
     {
-        $str = trim(str_replace([' ', ','], '', $str));
+        $str = trim(strtolower($str));
 
-        if (preg_match('/^([\d\.]+)[Kk]$/', $str, $m)) {
-            return (int)((float)$m[1] * 1000);
+        // Formato en español "9,4 mil" o "9.4 mil"
+        if (preg_match('/([\d\.,]+)\s*mil/i', $str, $m)) {
+            $num = (float)str_replace(',', '.', $m[1]);
+            return (int)round($num * 1000);
         }
 
-        if (preg_match('/^([\d\.]+)[Mm]$/', $str, $m)) {
-            return (int)((float)$m[1] * 1000000);
+        if (preg_match('/^([\d\.,]+)[Kk]$/', $str, $m)) {
+            $num = (float)str_replace(',', '.', $m[1]);
+            return (int)round($num * 1000);
         }
 
-        if (substr_count($str, '.') === 1 && strlen(substr($str, strpos($str, '.') + 1)) === 3) {
-            $str = str_replace('.', '', $str);
+        if (preg_match('/^([\d\.,]+)[Mm]$/', $str, $m)) {
+            $num = (float)str_replace(',', '.', $m[1]);
+            return (int)round($num * 1000000);
         }
 
-        return (int)filter_var($str, FILTER_SANITIZE_NUMBER_INT);
+        // Si tiene formato "9.466" o "1,359"
+        $clean = str_replace([' ', ','], '', $str);
+        if (substr_count($clean, '.') === 1 && strlen(substr($clean, strpos($clean, '.') + 1)) === 3) {
+            $clean = str_replace('.', '', $clean);
+        }
+
+        return (int)filter_var($clean, FILTER_SANITIZE_NUMBER_INT);
     }
 }
