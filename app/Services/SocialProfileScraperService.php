@@ -49,46 +49,46 @@ class SocialProfileScraperService
             }
         } catch (\Throwable $e) {
             Log::warning("Error scraping perfil social ({$url}): " . $e->getMessage());
-            $result['mensaje'] = 'No se pudo leer automáticamente debido a protecciones de la red social. Puedes ingresar los números manualmente.';
+            $result['mensaje'] = 'Error de conexión. Puedes completar los números manualmente.';
             return $result;
         }
     }
 
     /**
-     * Extractor para Instagram (Meta tags & OpenGraph).
-     * Formato clásico: "1,360 Followers, 578 Following, 64 Posts - See Instagram photos and videos..."
+     * Extractor para Instagram (usando User-Agents que reciben metadatos completos).
      */
     protected function scrapeInstagram(string $url, array $result): array
     {
-        // Extraer handle de la URL
+        // 1. Extraer username de la URL
         preg_match('/instagram\.com\/([a-zA-Z0-9_\.\-]+)/i', $url, $handleMatch);
         $username = $handleMatch[1] ?? '';
         if ($username) {
             $result['handle_usuario'] = '@' . ltrim($username, '@');
         }
 
+        // WhatsApp / TwitterBot UA recibe los metadatos OpenGraph limpios de Instagram
         $response = Http::withHeaders([
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
+            'User-Agent' => 'Twitterbot/1.0',
+            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language' => 'en-US,en;q=0.9',
         ])->timeout(8)->get($url);
 
         if (!$response->successful()) {
-            // Intentar con bot user-agent
             $response = Http::withHeaders([
-                'User-Agent' => 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+                'User-Agent' => 'WhatsApp/2.21.12.21 A',
             ])->timeout(8)->get($url);
         }
 
         $html = $response->body();
 
-        // 1. Extraer og:description / meta description
+        // 2. Extraer og:description / meta description
         $description = '';
-        if (preg_match('/<meta\s+(?:property|name)=["\'](?:og:description|description)["\']\s+content=["\']([^"\']+)["\']/i', $html, $descMatch)) {
-            $description = html_entity_decode($descMatch[1]);
+        if (preg_match('/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]+)"/i', $html, $descMatch)) {
+            $description = html_entity_decode($descMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             $result['raw_description'] = $description;
         }
 
-        // Parsear: "1,360 Followers, 578 Following, 64 Posts" o en español "1.360 seguidores, 578 seguidos, 64 publicaciones"
+        // Parsear: "1,359 Followers, 588 Following, 64 Posts - See Instagram photos and videos from Fede Sisterna (@federico__sisterna)"
         if ($description) {
             // Seguidores
             if (preg_match('/([\d\.,KMkm]+)\s*(?:Followers|seguidores)/i', $description, $m)) {
@@ -102,26 +102,29 @@ class SocialProfileScraperService
             if (preg_match('/([\d\.,KMkm]+)\s*(?:Posts|publicaciones)/i', $description, $m)) {
                 $result['publicaciones'] = $this->parseFormattedNumber($m[1]);
             }
+            // Nombre de la persona desde "from [Nombre] (@usuario)"
+            if (preg_match('/from\s+([^(@•]+)/i', $description, $nm)) {
+                $result['nombre_completo'] = trim(html_entity_decode($nm[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            }
         }
 
-        // 2. Extraer Foto de perfil (og:image)
-        if (preg_match('/<meta\s+property=["\']og:image["\']\s+content=["\']([^"\']+)["\']/i', $html, $imgMatch)) {
-            $result['foto_perfil_url'] = html_entity_decode($imgMatch[1]);
+        // 3. Extraer Foto de perfil (og:image)
+        if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i', $html, $imgMatch)) {
+            $result['foto_perfil_url'] = html_entity_decode($imgMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
-        // 3. Extraer Nombre / Título
-        if (preg_match('/<meta\s+property=["\']og:title["\']\s+content=["\']([^"\']+)["\']/i', $html, $titleMatch)) {
-            $title = html_entity_decode($titleMatch[1]);
-            // Ejemplo: "Federico Sisterna (@federico__sisterna) • Instagram photos and videos"
-            if (preg_match('/^([^(•]+)/', $title, $tm)) {
+        // 4. Extraer og:title
+        if (preg_match('/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i', $html, $titleMatch)) {
+            $title = html_entity_decode($titleMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (empty($result['nombre_completo']) && preg_match('/^([^(•]+)/', $title, $tm)) {
                 $result['nombre_completo'] = trim($tm[1]);
             }
         }
 
-        $result['success'] = !empty($result['foto_perfil_url']) || !is_null($result['seguidores']) || !empty($result['handle_usuario']);
+        $result['success'] = !empty($result['foto_perfil_url']) || !is_null($result['seguidores']);
         $result['mensaje'] = $result['success']
-            ? '¡Datos extraídos con éxito desde Instagram!'
-            : 'Instagram protegió la lectura directa. Puedes completar los campos manualmente.';
+            ? '¡Datos de Instagram leídos exitosamente!'
+            : 'Instagram protegió la lectura. Puedes completar los números manualmente.';
 
         return $result;
     }
@@ -137,13 +140,13 @@ class SocialProfileScraperService
         }
 
         $response = Http::withHeaders([
-            'User-Agent' => 'facebookexternalhit/1.1',
+            'User-Agent' => 'Twitterbot/1.0',
         ])->timeout(8)->get($url);
 
         $html = $response->body();
 
-        if (preg_match('/<meta\s+(?:property|name)=["\'](?:og:description|description)["\']\s+content=["\']([^"\']+)["\']/i', $html, $descMatch)) {
-            $desc = html_entity_decode($descMatch[1]);
+        if (preg_match('/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]+)"/i', $html, $descMatch)) {
+            $desc = html_entity_decode($descMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             if (preg_match('/([\d\.,KMkm]+)\s*(?:Followers|Seguidores)/i', $desc, $m)) {
                 $result['seguidores'] = $this->parseFormattedNumber($m[1]);
             }
@@ -152,11 +155,12 @@ class SocialProfileScraperService
             }
         }
 
-        if (preg_match('/<meta\s+property=["\']og:image["\']\s+content=["\']([^"\']+)["\']/i', $html, $imgMatch)) {
-            $result['foto_perfil_url'] = html_entity_decode($imgMatch[1]);
+        if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i', $html, $imgMatch)) {
+            $result['foto_perfil_url'] = html_entity_decode($imgMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
         $result['success'] = true;
+        $result['mensaje'] = '¡Datos de TikTok leídos exitosamente!';
         return $result;
     }
 
@@ -176,15 +180,16 @@ class SocialProfileScraperService
 
         $html = $response->body();
 
-        if (preg_match('/<meta\s+property=["\']og:image["\']\s+content=["\']([^"\']+)["\']/i', $html, $imgMatch)) {
-            $result['foto_perfil_url'] = html_entity_decode($imgMatch[1]);
+        if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i', $html, $imgMatch)) {
+            $result['foto_perfil_url'] = html_entity_decode($imgMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
-        if (preg_match('/<meta\s+property=["\']og:title["\']\s+content=["\']([^"\']+)["\']/i', $html, $titleMatch)) {
-            $result['nombre_completo'] = html_entity_decode($titleMatch[1]);
+        if (preg_match('/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i', $html, $titleMatch)) {
+            $result['nombre_completo'] = html_entity_decode($titleMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
         $result['success'] = true;
+        $result['mensaje'] = '¡Datos de YouTube leídos exitosamente!';
         return $result;
     }
 
@@ -198,6 +203,7 @@ class SocialProfileScraperService
             $result['handle_usuario'] = '@' . $handleMatch[1];
         }
         $result['success'] = !empty($result['handle_usuario']);
+        $result['mensaje'] = 'Usuario de X / Twitter extraído.';
         return $result;
     }
 
@@ -211,6 +217,7 @@ class SocialProfileScraperService
             $result['handle_usuario'] = '@' . $handleMatch[1];
         }
         $result['success'] = !empty($result['handle_usuario']);
+        $result['mensaje'] = 'Perfil de Facebook vinculado.';
         return $result;
     }
 
@@ -220,13 +227,13 @@ class SocialProfileScraperService
     protected function scrapeOpenGraphGenerico(string $url, array $result): array
     {
         $response = Http::withHeaders([
-            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'User-Agent' => 'Twitterbot/1.0',
         ])->timeout(6)->get($url);
 
         $html = $response->body();
 
-        if (preg_match('/<meta\s+property=["\']og:image["\']\s+content=["\']([^"\']+)["\']/i', $html, $imgMatch)) {
-            $result['foto_perfil_url'] = html_entity_decode($imgMatch[1]);
+        if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i', $html, $imgMatch)) {
+            $result['foto_perfil_url'] = html_entity_decode($imgMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
         $result['success'] = true;
@@ -234,7 +241,7 @@ class SocialProfileScraperService
     }
 
     /**
-     * Parsear cadenas numéricas como "1,360", "1.360", "14.5K", "1.2M".
+     * Parsear cadenas numéricas como "1,359", "1.359", "14.5K", "1.2M".
      */
     protected function parseFormattedNumber(string $str): int
     {
@@ -248,7 +255,6 @@ class SocialProfileScraperService
             return (int)((float)$m[1] * 1000000);
         }
 
-        // Si tiene puntos como separador de miles: "1.360"
         if (substr_count($str, '.') === 1 && strlen(substr($str, strpos($str, '.') + 1)) === 3) {
             $str = str_replace('.', '', $str);
         }
