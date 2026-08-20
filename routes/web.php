@@ -13,13 +13,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // --- Rutas Protegidas (Requieren autenticación) ---
 Route::middleware(['auth'])->group(function () {
-    Route::get('/', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
-
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    });
+    Route::get('/', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index']);
 
     // Gestión de Candidatos y Perfiles Políticos
     Route::get('/candidatos', [\App\Http\Controllers\CandidatoController::class, 'index'])->name('candidatos.index');

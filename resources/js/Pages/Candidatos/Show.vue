@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import Badge from '../../Components/Badge.vue';
@@ -13,7 +13,7 @@ import {
   ExternalLink,
   Shield,
   BarChart2
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 
 defineProps({
   candidato: {

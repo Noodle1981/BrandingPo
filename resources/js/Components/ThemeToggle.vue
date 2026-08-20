@@ -1,6 +1,6 @@
-﻿<script setup>
+<script setup>
 import { ref, onMounted } from 'vue';
-import { Sun, Moon } from 'lucide-vue-next';
+import { Sun, Moon } from '@lucide/vue';
 
 const isDark = ref(true);
 

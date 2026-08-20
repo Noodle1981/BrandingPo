@@ -22,7 +22,7 @@ import {
   AlertCircle,
   Info,
   DollarSign
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import ThemeToggle from '../Components/ThemeToggle.vue';
 import Badge from '../Components/Badge.vue';
 

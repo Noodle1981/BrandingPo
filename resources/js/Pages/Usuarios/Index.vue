@@ -1,9 +1,9 @@
-﻿<script setup>
+<script setup>
 import { ref } from 'vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import Badge from '../../Components/Badge.vue';
-import { Users, UserPlus, Shield, Edit2, Trash2, CheckCircle, X, ShieldAlert } from 'lucide-vue-next';
+import { Users, UserPlus, Shield, Edit2, Trash2, CheckCircle, X, ShieldAlert } from '@lucide/vue';
 
 const props = defineProps({
   usuarios: {

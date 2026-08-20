@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 
 const props = defineProps({
   candidatos: {

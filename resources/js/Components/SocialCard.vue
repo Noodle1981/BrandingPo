@@ -1,6 +1,6 @@
-﻿<script setup>
+<script setup>
 import { ref } from 'vue';
-import { Eye, MessageCircle, Share2, Sparkles, DollarSign, Star } from 'lucide-vue-next';
+import { Eye, MessageCircle, Share2, Sparkles, DollarSign, Star } from '@lucide/vue';
 import Badge from './Badge.vue';
 
 const props = defineProps({

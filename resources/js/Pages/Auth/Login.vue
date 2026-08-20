@@ -1,7 +1,7 @@
-﻿<script setup>
+<script setup>
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
-import { Radio, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, Eye, Sparkles } from 'lucide-vue-next';
+import { Radio, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, Eye, Sparkles } from '@lucide/vue';
 import ThemeToggle from '../../Components/ThemeToggle.vue';
 import Badge from '../../Components/Badge.vue';
 

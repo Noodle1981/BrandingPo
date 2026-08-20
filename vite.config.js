@@ -35,7 +35,7 @@ export default defineConfig({
                     if (id.includes('node_modules/chart.js') || id.includes('node_modules/vue-chartjs')) {
                         return 'vendor-charts';
                     }
-                    if (id.includes('node_modules/lucide-vue-next')) {
+                    if (id.includes('node_modules/@lucide/vue')) {
                         return 'vendor-icons';
                     }
                 },

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, computed } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
@@ -15,7 +15,7 @@ import {
   Tv,
   Megaphone,
   DollarSign
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 
 const props = defineProps({
   eventos: {

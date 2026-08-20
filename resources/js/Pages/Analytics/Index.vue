@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, watch, onMounted } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
@@ -21,7 +21,7 @@ import {
   Heart,
   Share2,
   MessageCircle
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 
 const props = defineProps({
   metricas_generales: {

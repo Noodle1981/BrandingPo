@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import {
   FileText,
@@ -10,7 +10,7 @@ import {
   DollarSign,
   TrendingUp,
   ShieldCheck
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 
 defineProps({
   informe: {

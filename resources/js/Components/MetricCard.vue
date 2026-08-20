@@ -1,5 +1,5 @@
-﻿<script setup>
-import { TrendingUp, TrendingDown, Minus } from 'lucide-vue-next';
+<script setup>
+import { TrendingUp, TrendingDown, Minus } from '@lucide/vue';
 
 defineProps({
   title: {
