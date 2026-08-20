@@ -13,8 +13,10 @@ import {
   Eye,
   CheckCircle2,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  Link2
 } from '@lucide/vue';
+import MediaEmbed from '../../Components/MediaEmbed.vue';
 
 const props = defineProps({
   candidatos: {
@@ -38,6 +40,8 @@ const form = useForm({
   candidato_id: props.candidatos[0]?.id || '',
   perfil_social_id: props.candidatos[0]?.perfiles_sociales?.[0]?.id || '',
   eje_tematico_id: props.ejes[0]?.id || '',
+  url_post: '',
+  media_url: '',
   fecha_publicacion: new Date().toISOString().slice(0, 16),
   tipo_formato: 'Reel',
   tipo_pauta: 'organico', // 'organico' | 'pauta_paga'
@@ -61,9 +65,44 @@ const availableProfiles = computed(() => {
   return selectedCandidate.value?.perfiles_sociales || [];
 });
 
+const currentPlatform = computed(() => {
+  const p = availableProfiles.value.find(prof => prof.id == form.perfil_social_id);
+  return p ? p.plataforma : 'facebook';
+});
+
 watch(() => form.candidato_id, () => {
   if (availableProfiles.value.length > 0) {
     form.perfil_social_id = availableProfiles.value[0].id;
+  }
+});
+
+// Autodetección inteligente al pegar un enlace
+watch(() => form.url_post, (newUrl) => {
+  if (!newUrl) return;
+  const url = newUrl.toLowerCase();
+  
+  if (url.includes('facebook.com') || url.includes('fb.watch')) {
+    const fb = availableProfiles.value.find(p => p.plataforma === 'facebook');
+    if (fb) form.perfil_social_id = fb.id;
+    if (url.includes('photo') || url.includes('set=')) form.tipo_formato = 'Foto';
+    else if (url.includes('watch') || url.includes('reel') || url.includes('video')) form.tipo_formato = 'Video';
+  } else if (url.includes('instagram.com')) {
+    const ig = availableProfiles.value.find(p => p.plataforma === 'instagram');
+    if (ig) form.perfil_social_id = ig.id;
+    if (url.includes('/reel/')) form.tipo_formato = 'Reel';
+    else if (url.includes('/p/')) form.tipo_formato = 'Foto';
+  } else if (url.includes('tiktok.com')) {
+    const tt = availableProfiles.value.find(p => p.plataforma === 'tiktok');
+    if (tt) form.perfil_social_id = tt.id;
+    form.tipo_formato = 'Reel';
+  } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    const yt = availableProfiles.value.find(p => p.plataforma === 'youtube');
+    if (yt) form.perfil_social_id = yt.id;
+    form.tipo_formato = url.includes('/shorts/') ? 'Shorts' : 'Video';
+  } else if (url.includes('x.com') || url.includes('twitter.com')) {
+    const tw = availableProfiles.value.find(p => p.plataforma === 'x_twitter');
+    if (tw) form.perfil_social_id = tw.id;
+    form.tipo_formato = 'Tweet';
   }
 });
 
@@ -93,6 +132,8 @@ const submitFastFlow = () => {
   form.post('/fast-flow', {
     preserveScroll: true,
     onSuccess: () => {
+      form.url_post = '';
+      form.media_url = '';
       form.contenido_resumen = '';
       form.comentario_destacado = '';
       form.figura_acompanante = '';
@@ -256,7 +297,35 @@ const formatNumber = (num) => {
             </div>
           </div>
 
-          <!-- Step 4: Post Content Textarea -->
+          <!-- Step 4: URL / Link del Post (Facebook, Instagram, YouTube, TikTok, X, Fotos) -->
+          <div class="space-y-2">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              Enlace directo del Post / Video / Foto (URL)
+            </label>
+            <div class="relative">
+              <input
+                v-model="form.url_post"
+                type="url"
+                placeholder="Pega aquí el link de Facebook, Instagram, YouTube, TikTok o X..."
+                class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-xs sm:text-sm focus:ring-2 focus:ring-cyan-500 font-mono"
+              />
+              <Link2 class="w-4 h-4 text-cyan-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            <!-- Live Media Preview if URL is pasted -->
+            <div v-if="form.url_post" class="mt-2.5">
+              <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                Previsualización del Contenido Multimedia:
+              </span>
+              <MediaEmbed
+                :url="form.url_post"
+                :formato="form.tipo_formato"
+                :plataforma="currentPlatform"
+              />
+            </div>
+          </div>
+
+          <!-- Step 5: Post Content Textarea -->
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">

@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { Eye, MessageCircle, Share2, Sparkles, DollarSign, Star } from '@lucide/vue';
 import Badge from './Badge.vue';
+import MediaEmbed from './MediaEmbed.vue';
 
 const props = defineProps({
   post: {
@@ -86,30 +87,19 @@ const formatCurrency = (amount) => {
         {{ post.contenido_resumen }}
       </p>
 
-      <!-- Media Preview Placeholder / Image -->
-      <div
-        v-if="post.media_url || post.tipo_formato"
-        class="mt-3.5 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 relative group aspect-video flex items-center justify-center"
-      >
-        <img
-          v-if="post.media_url"
-          :src="post.media_url"
-          alt="Contenido"
-          class="w-full h-full object-cover group-hover:scale-101 transition-transform duration-300"
+      <!-- Media Embed / Preview -->
+      <div class="mt-3.5 relative">
+        <MediaEmbed
+          :url="post.url_post"
+          :media-url="post.media_url"
+          :formato="post.tipo_formato || 'Post'"
+          :plataforma="post.plataforma || post.perfil_social?.plataforma || 'facebook'"
         />
-        <div v-else class="text-center p-6">
-          <span class="inline-block px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider font-semibold font-mono">
-            Formato: {{ post.tipo_formato }}
-          </span>
-          <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">
-            Vista previa de publicación interactiva
-          </p>
-        </div>
 
         <!-- Paid Ads Overlay Tag if with budget -->
         <div
           v-if="post.tipo_pauta === 'pauta_paga' && post.monto_invertido_pauta"
-          class="absolute top-2.5 right-2.5 bg-violet-600/90 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md"
+          class="absolute top-2.5 right-2.5 bg-violet-600/90 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md z-10"
         >
           <DollarSign class="w-3.5 h-3.5" />
           <span>Invertido: {{ formatCurrency(post.monto_invertido_pauta) }}</span>
