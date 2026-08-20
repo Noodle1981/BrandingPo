@@ -284,17 +284,17 @@ const tabBadgeStyle = (colorEstado) => {
           Semáforo de Canales Digitales:
         </span>
         <div class="flex items-center gap-4 flex-wrap font-mono text-[11px]">
-          <span class="inline-flex items-center gap-1.5 text-blue-400 font-semibold">
+          <span class="inline-flex items-center gap-1.5 text-blue-500 dark:text-blue-400 font-semibold">
             <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-            🔵 Certificada / Verificada
+            Certificada / Verificada
           </span>
-          <span class="inline-flex items-center gap-1.5 text-amber-400 font-semibold">
+          <span class="inline-flex items-center gap-1.5 text-amber-500 dark:text-amber-400 font-semibold">
             <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-            🟠 Vinculada / Activa
+            Vinculada / Activa
           </span>
-          <span class="inline-flex items-center gap-1.5 text-rose-400 font-semibold">
+          <span class="inline-flex items-center gap-1.5 text-rose-500 dark:text-rose-400 font-semibold">
             <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-            🔴 No Vinculada / Inactiva
+            No Vinculada / Inactiva
           </span>
         </div>
       </div>
