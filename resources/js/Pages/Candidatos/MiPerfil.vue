@@ -89,6 +89,26 @@ const selectPlatform = (platformKey) => {
   }
 };
 
+watch(() => props.redes, (newRedes) => {
+  if (!newRedes || !newRedes.length) return;
+  const current = newRedes.find(r => r.key === selectedPlatformKey.value);
+  if (current) {
+    formRed.handle_usuario = current.handle_usuario || '';
+    formRed.url_perfil = current.url_perfil || '';
+    formRed.foto_perfil_url = current.foto_perfil_url || '';
+    formRed.esta_activo = current.esta_activo ?? true;
+    formRed.esta_verificado = current.esta_verificado ?? false;
+    formRed.seguidores_actuales = current.seguidores_actuales || 0;
+    formRed.seguidos_actuales = current.seguidos_actuales || 0;
+    formRed.publicaciones_totales = current.publicaciones_totales || 0;
+    formRed.fecha_punto_cero = current.fecha_punto_cero || new Date().toISOString().slice(0, 10);
+    formRed.seguidores_punto_cero = current.seguidores_punto_cero || 0;
+    formRed.seguidos_punto_cero = current.seguidos_punto_cero || 0;
+    formRed.publicaciones_punto_cero = current.publicaciones_punto_cero || 0;
+    formRed.notas_punto_cero = current.notas_punto_cero || '';
+  }
+}, { deep: true });
+
 const isScraping = ref(false);
 const scrapeMessage = ref('');
 const scrapeSuccess = ref(false);
