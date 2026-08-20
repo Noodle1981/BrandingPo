@@ -227,9 +227,6 @@ const tabBadgeStyle = (colorEstado) => {
               class="w-20 h-20 rounded-2xl object-cover border-2 shadow-md"
               :style="{ borderColor: candidato.color_hex || '#06b6d4' }"
             />
-            <div class="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-cyan-500 text-slate-950 font-extrabold text-[10px] uppercase font-mono tracking-wider shadow-sm">
-              CLIENTE OFICIAL
-            </div>
           </div>
 
           <div>
