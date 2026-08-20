@@ -308,11 +308,57 @@ class CandidatoController extends Controller
     }
 
     /**
-     * Ficha técnica de un candidato.
+     * Ficha técnica y gestión de canales / Punto Cero de un candidato rival.
      */
     public function show(Candidato $candidato): Response
     {
         $candidato->load(['cicloCampana', 'territorio', 'perfilesSociales']);
+
+        $plataformasEstandar = [
+            'instagram' => ['nombre' => 'Instagram', 'formato_default' => 'Reel'],
+            'facebook' => ['nombre' => 'Facebook', 'formato_default' => 'Post/Foto'],
+            'tiktok' => ['nombre' => 'TikTok', 'formato_default' => 'Video Corto'],
+            'x_twitter' => ['nombre' => 'X (Twitter)', 'formato_default' => 'Tweet'],
+            'youtube' => ['nombre' => 'YouTube', 'formato_default' => 'Video/Shorts'],
+            'linkedin' => ['nombre' => 'LinkedIn', 'formato_default' => 'Artículo'],
+        ];
+
+        $redesMapeadas = collect($plataformasEstandar)->map(function ($info, $key) use ($candidato) {
+            $perfil = $candidato->perfilesSociales->firstWhere('plataforma', $key);
+
+            $estaActivo = $perfil ? (bool)$perfil->esta_activo : false;
+            $estaVerificado = $perfil ? (bool)$perfil->esta_verificado : false;
+            $colorEstado = $estaVerificado ? 'azul' : ($estaActivo ? 'naranja' : 'rojo');
+
+            $seguidoresActuales = $perfil ? (int)$perfil->seguidores_actuales : 0;
+            $seguidoresBaseline = $perfil ? (int)$perfil->seguidores_punto_cero : 0;
+            $postsActuales = $perfil ? (int)$perfil->publicaciones_totales : 0;
+            $postsBaseline = $perfil ? (int)$perfil->publicaciones_punto_cero : 0;
+
+            return [
+                'key' => $key,
+                'nombre' => $info['nombre'],
+                'color_estado' => $colorEstado,
+                'perfil_id' => $perfil?->id,
+                'existe' => (bool)$perfil,
+                'esta_activo' => $estaActivo,
+                'esta_verificado' => $estaVerificado,
+                'handle_usuario' => $perfil?->handle_usuario ?? '',
+                'url_perfil' => $perfil?->url_perfil ?? '',
+                'foto_perfil_url' => $perfil?->foto_perfil_url ?? $candidato->avatar_url,
+                'seguidores_actuales' => $seguidoresActuales,
+                'seguidos_actuales' => $perfil ? (int)$perfil->seguidos_actuales : 0,
+                'publicaciones_totales' => $postsActuales,
+                'fecha_punto_cero' => $perfil?->fecha_punto_cero ? $perfil->fecha_punto_cero->format('Y-m-d') : date('Y-m-d'),
+                'seguidores_punto_cero' => $seguidoresBaseline,
+                'seguidos_punto_cero' => $perfil ? (int)$perfil->seguidos_punto_cero : 0,
+                'publicaciones_punto_cero' => $postsBaseline,
+                'notas_punto_cero' => $perfil?->notas_punto_cero ?? '',
+            ];
+        })->values();
+
+        $ciclos = CicloCampana::orderByDesc('anio')->get(['id', 'anio', 'nombre', 'es_activo']);
+        $territorios = Territorio::orderBy('nombre')->get(['id', 'nombre', 'tipo', 'poblacion_total', 'padron_electoral']);
 
         return Inertia::render('Candidatos/Show', [
             'candidato' => [
@@ -325,11 +371,15 @@ class CandidatoController extends Controller
                 'es_propio' => $candidato->es_propio,
                 'avatar_url' => $candidato->avatar_url,
                 'bio_resumen' => $candidato->bio_resumen,
-                'ciclo_campana' => $candidato->cicloCampana,
+                'ciclo_campana_id' => $candidato->ciclo_campana_id,
+                'territorio_id' => $candidato->territorio_id,
                 'territorio' => $candidato->territorio,
-                'perfiles_sociales' => $candidato->perfilesSociales,
-                'total_seguidores' => $candidato->perfilesSociales->sum('seguidores_actuales'),
+                'total_seguidores' => $candidato->perfilesSociales->where('esta_activo', true)->sum('seguidores_actuales'),
+                'total_publicaciones' => $candidato->perfilesSociales->where('esta_activo', true)->sum('publicaciones_totales'),
             ],
+            'redes' => $redesMapeadas,
+            'ciclos' => $ciclos,
+            'territorios' => $territorios,
         ]);
     }
 
@@ -363,8 +413,8 @@ class CandidatoController extends Controller
             'bio_resumen' => $validated['bio_resumen'] ?? null,
         ]);
 
-        return redirect()->route('candidatos.index')
-            ->with('success', "Candidato opositor {$candidato->nombre_completo} registrado exitosamente.");
+        return redirect()->route('candidatos.show', $candidato->id)
+            ->with('success', "Candidato rival {$candidato->nombre_completo} registrado. Ahora puedes vincular sus redes sociales y Punto Cero.");
     }
 
     /**
