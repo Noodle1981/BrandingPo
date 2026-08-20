@@ -89,29 +89,57 @@ class PoliticaSeeder extends Seeder
 
         // 4. Candidatos Políticos Representativos
 
-        // Candidato 1: PROPIO (Intendente en gestión / Reelección)
+        // Candidato 1: PROPIO (Cliente de Campaña Oficial)
         $propio = Candidato::updateOrCreate(
             [
-                'nombre_completo' => 'Martín Rodríguez',
-                'ciclo_campana_id' => $ciclo2025->id,
+                'es_propio' => true,
             ],
             [
+                'nombre_completo' => 'Federico Sisterna',
+                'ciclo_campana_id' => $ciclo2025->id,
                 'territorio_id' => $territorio->id,
-                'partido_coalicion' => 'Hacemos Ciudad / Frente Cívico',
-                'cargo_aspirado' => 'Intendente Municipal (Reelección)',
-                'estado_politico' => 'en_funciones',
+                'partido_coalicion' => 'Frente de Campaña Oficial',
+                'cargo_aspirado' => 'Candidato a Intendente',
+                'estado_politico' => 'candidato',
                 'color_hex' => '#06b6d4',
                 'es_propio' => true,
-                'avatar_url' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-                'bio_resumen' => 'Intendente en ejercicio. Eje en obras de infraestructura barrial, sustentabilidad y digitalización de trámites municipales.',
+                'avatar_url' => 'https://scontent.cdninstagram.com/v/t51.82787-19/541928148_18336738628206464_5488714422900118483_n.jpg?stp=dst-jpg_s100x100_tt6&_nc_cat=108&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=3mQFxO7NnK4Q7kNvwFw4QeW&_nc_oc=Adod8T-HS0B_BkCVPoo2_FImtN4Y0lf0TeMr5jMEhUNep3dnRnYnEXT2wTMikDkzl2M&_nc_zt=24&_nc_ht=scontent.cdninstagram.com&_nc_gid=FnkUXnCqw-YKKl56nsQKXw&_nc_ss=7ba02&oh=00_AQGKUir4NYPBzJIu1gzxWnAOpDQe6WFLCgQanRsIrCthdA&oe=6A8D181F',
+                'bio_resumen' => 'Perfil del candidato oficial de campaña. Auditoría y seguimiento de crecimiento desde el Punto Cero.',
             ]
         );
 
         $redesPropio = [
-            ['plataforma' => 'facebook', 'handle_usuario' => '@martinrodriguez.oficial', 'seguidores_actuales' => 78500, 'publicaciones_totales' => 342],
-            ['plataforma' => 'instagram', 'handle_usuario' => '@martinrodriguez_ok', 'seguidores_actuales' => 64200, 'publicaciones_totales' => 418],
-            ['plataforma' => 'x_twitter', 'handle_usuario' => '@mrodriguez_ar', 'seguidores_actuales' => 28400, 'publicaciones_totales' => 890],
-            ['plataforma' => 'tiktok', 'handle_usuario' => '@martin.rodriguez', 'seguidores_actuales' => 27300, 'publicaciones_totales' => 124],
+            [
+                'plataforma' => 'instagram',
+                'handle_usuario' => '@federico__sisterna',
+                'url_perfil' => 'https://www.instagram.com/federico__sisterna/',
+                'foto_perfil_url' => $propio->avatar_url,
+                'esta_activo' => true,
+                'esta_verificado' => false,
+                'seguidores_actuales' => 1359,
+                'seguidos_actuales' => 588,
+                'publicaciones_totales' => 64,
+                'fecha_punto_cero' => now()->toDateString(),
+                'seguidores_punto_cero' => 1359,
+                'seguidos_punto_cero' => 588,
+                'publicaciones_punto_cero' => 64,
+                'notas_punto_cero' => 'Punto Cero oficial inicial: 64 publicaciones, 1.359 seguidores, 588 seguidos.',
+            ],
+            [
+                'plataforma' => 'facebook',
+                'handle_usuario' => '@federico.sisterna.oficial',
+                'url_perfil' => '',
+                'foto_perfil_url' => $propio->avatar_url,
+                'esta_activo' => false,
+                'esta_verificado' => false,
+                'seguidores_actuales' => 0,
+                'seguidos_actuales' => 0,
+                'publicaciones_totales' => 0,
+                'fecha_punto_cero' => now()->toDateString(),
+                'seguidores_punto_cero' => 0,
+                'seguidos_punto_cero' => 0,
+                'publicaciones_punto_cero' => 0,
+            ],
         ];
         foreach ($redesPropio as $r) {
             PerfilSocial::updateOrCreate(
