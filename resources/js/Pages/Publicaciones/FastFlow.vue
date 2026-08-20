@@ -49,6 +49,13 @@ const form = useForm({
   vistas_organicas: 15000,
   vistas_pagadas: 0,
   contenido_resumen: '',
+  me_gusta: 850,
+  me_encanta: 240,
+  me_importa: 60,
+  me_divierte: 30,
+  me_asombra: 15,
+  me_entristece: 2,
+  me_enoja: 3,
   total_likes: 1200,
   total_comentarios: 45,
   total_compartidos: 80,
@@ -114,6 +121,36 @@ watch(() => form.tipo_pauta, (newVal) => {
     form.monto_invertido_pauta = 25000;
     form.vistas_pagadas = 40000;
   }
+});
+
+// Auto-suma de reacciones y cálculo de índice emocional en tiempo real
+const totalReaccionesCalculadas = computed(() => {
+  return Number(form.me_gusta || 0) +
+    Number(form.me_encanta || 0) +
+    Number(form.me_importa || 0) +
+    Number(form.me_divierte || 0) +
+    Number(form.me_asombra || 0) +
+    Number(form.me_entristece || 0) +
+    Number(form.me_enoja || 0);
+});
+
+watch(totalReaccionesCalculadas, (val) => {
+  form.total_likes = val;
+});
+
+const aiSentimentInfo = computed(() => {
+  const tot = totalReaccionesCalculadas.value;
+  if (tot === 0) return { aprobacion: 0, label: 'Sin datos', badgeClass: 'bg-slate-500/15 text-slate-400', isCrisis: false };
+  const pos = Number(form.me_gusta || 0) + Number(form.me_encanta || 0) + Number(form.me_importa || 0);
+  const neg = Number(form.me_enoja || 0) + Number(form.me_entristece || 0);
+  const ratio = Math.round(((pos - neg) / tot) * 100);
+  const isCrisis = (Number(form.me_enoja || 0) / tot) >= 0.15;
+
+  if (ratio >= 60) return { aprobacion: ratio, label: 'Muy Favorable (IA)', badgeClass: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40', isCrisis };
+  if (ratio >= 20) return { aprobacion: ratio, label: 'Favorable (IA)', badgeClass: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40', isCrisis };
+  if (ratio >= -15) return { aprobacion: ratio, label: 'Neutro (IA)', badgeClass: 'bg-slate-500/20 text-slate-300 border border-slate-500/40', isCrisis };
+  if (ratio >= -45) return { aprobacion: ratio, label: 'Desfavorable (IA)', badgeClass: 'bg-amber-500/20 text-amber-400 border border-amber-500/40', isCrisis };
+  return { aprobacion: ratio, label: 'Alerta Crítica / Hate (IA)', badgeClass: 'bg-rose-500/20 text-rose-400 border border-rose-500/40', isCrisis: true };
 });
 
 const formatos = [
@@ -405,47 +442,148 @@ const formatNumber = (num) => {
             </div>
           </div>
 
-          <!-- Step 6: Reactions & Metrics Row -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Total Likes / Reacciones</label>
-              <input
-                v-model="form.total_likes"
-                type="number"
-                min="0"
-                class="w-full px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold"
-              />
+          <!-- Step 6: Bandeja de Conteo de Emociones (Emoji por Emoji) & IA Sentiment -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
+                  Conteo de Emociones & Reacciones (Uno por Uno)
+                </span>
+                <span class="text-[11px] text-slate-400">
+                  Total auto-calculado: <strong class="text-cyan-500 font-mono">{{ formatNumber(totalReaccionesCalculadas) }}</strong>
+                </span>
+              </div>
+
+              <!-- Real-time AI Sentiment Badge -->
+              <div class="flex items-center gap-2">
+                <span
+                  class="px-2.5 py-1 rounded-full text-xs font-bold font-mono shadow-2xs"
+                  :class="aiSentimentInfo.badgeClass"
+                >
+                  {{ aiSentimentInfo.label }} ({{ aiSentimentInfo.aprobacion > 0 ? '+' : '' }}{{ aiSentimentInfo.aprobacion }}%)
+                </span>
+                <span
+                  v-if="aiSentimentInfo.isCrisis"
+                  class="px-2 py-0.5 rounded-md bg-rose-500 text-white text-[10px] font-bold uppercase font-mono animate-pulse"
+                >
+                  ⚠️ Alerta de Crisis
+                </span>
+              </div>
             </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Comentarios</label>
-              <input
-                v-model="form.total_comentarios"
-                type="number"
-                min="0"
-                class="w-full px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold"
-              />
+
+            <!-- Emoji Inputs Grid -->
+            <div class="grid grid-cols-3 sm:grid-cols-7 gap-2 pt-1 font-mono">
+              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                <span class="text-base block mb-1" title="Me gusta">👍</span>
+                <span class="text-[10px] text-slate-400 block mb-0.5">Likes</span>
+                <input
+                  v-model.number="form.me_gusta"
+                  type="number"
+                  min="0"
+                  class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold"
+                />
+              </div>
+
+              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                <span class="text-base block mb-1" title="Me encanta">❤️</span>
+                <span class="text-[10px] text-slate-400 block mb-0.5">Encanta</span>
+                <input
+                  v-model.number="form.me_encanta"
+                  type="number"
+                  min="0"
+                  class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-rose-500"
+                />
+              </div>
+
+              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                <span class="text-base block mb-1" title="Me importa">🥰</span>
+                <span class="text-[10px] text-slate-400 block mb-0.5">Importa</span>
+                <input
+                  v-model.number="form.me_importa"
+                  type="number"
+                  min="0"
+                  class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-amber-500"
+                />
+              </div>
+
+              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                <span class="text-base block mb-1" title="Me divierte">😂</span>
+                <span class="text-[10px] text-slate-400 block mb-0.5">Risa</span>
+                <input
+                  v-model.number="form.me_divierte"
+                  type="number"
+                  min="0"
+                  class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-amber-400"
+                />
+              </div>
+
+              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                <span class="text-base block mb-1" title="Me asombra">😮</span>
+                <span class="text-[10px] text-slate-400 block mb-0.5">Asombra</span>
+                <input
+                  v-model.number="form.me_asombra"
+                  type="number"
+                  min="0"
+                  class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-blue-400"
+                />
+              </div>
+
+              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                <span class="text-base block mb-1" title="Me entristece">😢</span>
+                <span class="text-[10px] text-slate-400 block mb-0.5">Triste</span>
+                <input
+                  v-model.number="form.me_entristece"
+                  type="number"
+                  min="0"
+                  class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-blue-500"
+                />
+              </div>
+
+              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                <span class="text-base block mb-1" title="Me enoja">😡</span>
+                <span class="text-[10px] text-slate-400 block mb-0.5">Enojo</span>
+                <input
+                  v-model.number="form.me_enoja"
+                  type="number"
+                  min="0"
+                  class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-rose-600"
+                />
+              </div>
             </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Compartidos</label>
-              <input
-                v-model="form.total_compartidos"
-                type="number"
-                min="0"
-                class="w-full px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold"
-              />
-            </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Humor Social (1 a 5★)</label>
-              <select
-                v-model="form.termometro_humor_social"
-                class="w-full px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-amber-500"
-              >
-                <option :value="5">⭐⭐⭐⭐⭐ (5) Muy Favorable</option>
-                <option :value="4">⭐⭐⭐⭐ (4) Favorable</option>
-                <option :value="3">⭐⭐⭐ (3) Neutro</option>
-                <option :value="2">⭐⭐ (2) Crítico</option>
-                <option :value="1">⭐ (1) Muy Crítico</option>
-              </select>
+
+            <!-- Additional Metrics: Comments, Shares, Thermometer -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Comentarios</label>
+                <input
+                  v-model.number="form.total_comentarios"
+                  type="number"
+                  min="0"
+                  class="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold"
+                />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Compartidos</label>
+                <input
+                  v-model.number="form.total_compartidos"
+                  type="number"
+                  min="0"
+                  class="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold"
+                />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Humor Social (1 a 5★)</label>
+                <select
+                  v-model.number="form.termometro_humor_social"
+                  class="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-amber-500"
+                >
+                  <option :value="5">⭐⭐⭐⭐⭐ (5) Muy Favorable</option>
+                  <option :value="4">⭐⭐⭐⭐ (4) Favorable</option>
+                  <option :value="3">⭐⭐⭐ (3) Neutro</option>
+                  <option :value="2">⭐⭐ (2) Crítico</option>
+                  <option :value="1">⭐ (1) Muy Crítico</option>
+                </select>
+              </div>
             </div>
           </div>
 

@@ -159,6 +159,13 @@ class PublicacionController extends Controller
             'vistas_pagadas' => ['nullable', 'integer', 'min:0'],
             'contenido_resumen' => ['required', 'string'],
             'total_likes' => ['nullable', 'integer', 'min:0'],
+            'me_gusta' => ['nullable', 'integer', 'min:0'],
+            'me_encanta' => ['nullable', 'integer', 'min:0'],
+            'me_importa' => ['nullable', 'integer', 'min:0'],
+            'me_divierte' => ['nullable', 'integer', 'min:0'],
+            'me_asombra' => ['nullable', 'integer', 'min:0'],
+            'me_entristece' => ['nullable', 'integer', 'min:0'],
+            'me_enoja' => ['nullable', 'integer', 'min:0'],
             'total_comentarios' => ['nullable', 'integer', 'min:0'],
             'total_compartidos' => ['nullable', 'integer', 'min:0'],
             'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
@@ -173,7 +180,6 @@ class PublicacionController extends Controller
         $vistasOrg = (int)($validated['vistas_organicas'] ?? 0);
         $vistasPag = (int)($validated['vistas_pagadas'] ?? 0);
         $totalVistas = $vistasOrg + $vistasPag;
-        $totalLikes = (int)($validated['total_likes'] ?? 0);
 
         $comentariosDestacados = ! empty($validated['comentario_destacado'])
             ? [$validated['comentario_destacado']]
@@ -183,8 +189,7 @@ class PublicacionController extends Controller
             ? array_map('trim', explode(',', $validated['figura_acompanante']))
             : [];
 
-        $humor = (int)($validated['termometro_humor_social'] ?? 3);
-        $sentimiento = $humor >= 4 ? 'positivo' : ($humor === 3 ? 'neutro' : 'negativo');
+        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int)($validated['total_likes'] ?? 0));
 
         Publicacion::create([
             'candidato_id' => $validated['candidato_id'],
@@ -200,18 +205,15 @@ class PublicacionController extends Controller
             'vistas_pagadas' => $vistasPag,
             'contenido_resumen' => $validated['contenido_resumen'],
             'total_vistas' => $totalVistas,
-            'total_likes' => $totalLikes,
+            'total_likes' => $aiEmocional['total_likes'],
             'total_comentarios' => (int)($validated['total_comentarios'] ?? 0),
             'total_compartidos' => (int)($validated['total_compartidos'] ?? 0),
-            'reacciones_detalladas' => [
-                'me_gusta' => (int)($totalLikes * 0.7),
-                'me_encanta' => (int)($totalLikes * 0.2),
-                'me_enoja' => (int)($totalLikes * 0.1),
-            ],
-            'sentimiento_predominante' => $sentimiento,
+            'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
+            'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
             'figuras_acompanantes' => $figuras,
             'comentarios_destacados' => $comentariosDestacados,
-            'termometro_humor_social' => $humor,
+            'termometro_humor_social' => $validated['termometro_humor_social'] ?? $aiEmocional['termometro_humor_social'],
+            'insights_internos_propios' => $aiEmocional['insights_internos_propios'],
         ]);
 
         return redirect()->back()
@@ -232,14 +234,19 @@ class PublicacionController extends Controller
             'monto_invertido_pauta' => ['nullable', 'numeric', 'min:0'],
             'total_vistas' => ['nullable', 'integer', 'min:0'],
             'total_likes' => ['nullable', 'integer', 'min:0'],
+            'me_gusta' => ['nullable', 'integer', 'min:0'],
+            'me_encanta' => ['nullable', 'integer', 'min:0'],
+            'me_importa' => ['nullable', 'integer', 'min:0'],
+            'me_divierte' => ['nullable', 'integer', 'min:0'],
+            'me_asombra' => ['nullable', 'integer', 'min:0'],
+            'me_entristece' => ['nullable', 'integer', 'min:0'],
+            'me_enoja' => ['nullable', 'integer', 'min:0'],
             'total_comentarios' => ['nullable', 'integer', 'min:0'],
             'total_compartidos' => ['nullable', 'integer', 'min:0'],
             'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
         ]);
 
-        $totalLikes = (int)($validated['total_likes'] ?? $publicacion->total_likes);
-        $humor = (int)($validated['termometro_humor_social'] ?? $publicacion->termometro_humor_social);
-        $sentimiento = $humor >= 4 ? 'positivo' : ($humor === 3 ? 'neutro' : 'negativo');
+        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int)($validated['total_likes'] ?? $publicacion->total_likes));
 
         $publicacion->update([
             'contenido_resumen' => $validated['contenido_resumen'],
@@ -249,20 +256,94 @@ class PublicacionController extends Controller
             'tipo_pauta' => $validated['tipo_pauta'],
             'monto_invertido_pauta' => $validated['tipo_pauta'] === 'pauta_paga' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
             'total_vistas' => (int)($validated['total_vistas'] ?? $publicacion->total_vistas),
-            'total_likes' => $totalLikes,
+            'total_likes' => $aiEmocional['total_likes'],
             'total_comentarios' => (int)($validated['total_comentarios'] ?? $publicacion->total_comentarios),
             'total_compartidos' => (int)($validated['total_compartidos'] ?? $publicacion->total_compartidos),
-            'reacciones_detalladas' => [
-                'me_gusta' => (int)($totalLikes * 0.7),
-                'me_encanta' => (int)($totalLikes * 0.2),
-                'me_enoja' => (int)($totalLikes * 0.1),
-            ],
-            'sentimiento_predominante' => $sentimiento,
-            'termometro_humor_social' => $humor,
+            'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
+            'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
+            'termometro_humor_social' => $validated['termometro_humor_social'] ?? $aiEmocional['termometro_humor_social'],
+            'insights_internos_propios' => array_merge($publicacion->insights_internos_propios ?? [], $aiEmocional['insights_internos_propios']),
         ]);
 
         return redirect()->back()
             ->with('success', 'Publicación actualizada correctamente.');
+    }
+
+    /**
+     * Motor de Inteligencia Emocional & Sentimiento Cuantificado.
+     */
+    private function calcularInteligenciaEmocional(array $data, int $totalLikesFallback = 0): array
+    {
+        $meGusta = (int)($data['me_gusta'] ?? 0);
+        $meEncanta = (int)($data['me_encanta'] ?? 0);
+        $meImporta = (int)($data['me_importa'] ?? 0);
+        $meDivierte = (int)($data['me_divierte'] ?? 0);
+        $meAsombra = (int)($data['me_asombra'] ?? 0);
+        $meEntristece = (int)($data['me_entristece'] ?? 0);
+        $meEnoja = (int)($data['me_enoja'] ?? 0);
+
+        $totalReacciones = $meGusta + $meEncanta + $meImporta + $meDivierte + $meAsombra + $meEntristece + $meEnoja;
+
+        if ($totalReacciones === 0 && $totalLikesFallback > 0) {
+            $totalReacciones = $totalLikesFallback;
+            $meGusta = (int)($totalLikesFallback * 0.7);
+            $meEncanta = (int)($totalLikesFallback * 0.2);
+            $meEnoja = (int)($totalLikesFallback * 0.1);
+        }
+
+        $positivas = $meGusta + $meEncanta + $meImporta;
+        $negativas = $meEnoja + $meEntristece;
+        $humorViral = $meDivierte;
+
+        $indiceAprobacion = $totalReacciones > 0
+            ? round((($positivas - $negativas) / $totalReacciones) * 100, 1)
+            : 0;
+
+        $ratioIndignacion = $totalReacciones > 0
+            ? round(($meEnoja / $totalReacciones) * 100, 1)
+            : 0;
+
+        $alertaCrisis = $ratioIndignacion >= 15.0;
+
+        if ($indiceAprobacion >= 65) {
+            $termometro = 5;
+            $sentimiento = 'positivo';
+        } elseif ($indiceAprobacion >= 30) {
+            $termometro = 4;
+            $sentimiento = 'positivo';
+        } elseif ($indiceAprobacion >= -10) {
+            $termometro = 3;
+            $sentimiento = 'neutro';
+        } elseif ($indiceAprobacion >= -40) {
+            $termometro = 2;
+            $sentimiento = 'negativo';
+        } else {
+            $termometro = 1;
+            $sentimiento = 'negativo';
+        }
+
+        return [
+            'total_likes' => $totalReacciones,
+            'reacciones_detalladas' => [
+                'me_gusta' => $meGusta,
+                'me_encanta' => $meEncanta,
+                'me_importa' => $meImporta,
+                'me_divierte' => $meDivierte,
+                'me_asombra' => $meAsombra,
+                'me_entristece' => $meEntristece,
+                'me_enoja' => $meEnoja,
+            ],
+            'sentimiento_predominante' => $sentimiento,
+            'termometro_humor_social' => $termometro,
+            'insights_internos_propios' => [
+                'indice_aprobacion_neta' => $indiceAprobacion,
+                'ratio_indignacion' => $ratioIndignacion,
+                'alerta_crisis' => $alertaCrisis,
+                'total_reacciones_positivas' => $positivas,
+                'total_reacciones_negativas' => $negativas,
+                'total_reacciones_humor' => $humorViral,
+            ],
+        ];
     }
 
     /**

@@ -1,7 +1,7 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
-import { Eye, MessageCircle, Share2, Sparkles, DollarSign, Star, Edit3, Trash2, X, Check, Link2 } from '@lucide/vue';
+import { Eye, MessageCircle, Share2, Sparkles, DollarSign, Star, Edit3, Trash2, X, Check, Link2, Activity } from '@lucide/vue';
 import Badge from './Badge.vue';
 import MediaEmbed from './MediaEmbed.vue';
 
@@ -19,6 +19,31 @@ const props = defineProps({
 const showComments = ref(false);
 const isEditing = ref(false);
 
+const parseReacciones = (r, totalLikes = 0) => {
+  if (r && typeof r === 'object') {
+    return {
+      me_gusta: Number(r.me_gusta ?? Math.round(totalLikes * 0.7)),
+      me_encanta: Number(r.me_encanta ?? Math.round(totalLikes * 0.2)),
+      me_importa: Number(r.me_importa ?? 0),
+      me_divierte: Number(r.me_divierte ?? 0),
+      me_asombra: Number(r.me_asombra ?? 0),
+      me_entristece: Number(r.me_entristece ?? 0),
+      me_enoja: Number(r.me_enoja ?? Math.round(totalLikes * 0.1)),
+    };
+  }
+  return {
+    me_gusta: Math.round(totalLikes * 0.7),
+    me_encanta: Math.round(totalLikes * 0.2),
+    me_importa: 0,
+    me_divierte: 0,
+    me_asombra: 0,
+    me_entristece: 0,
+    me_enoja: Math.round(totalLikes * 0.1),
+  };
+};
+
+const initialReacciones = parseReacciones(props.post.reacciones_detalladas, props.post.total_likes);
+
 const editForm = useForm({
   contenido_resumen: props.post.contenido_resumen || '',
   url_post: props.post.url_post || '',
@@ -27,20 +52,59 @@ const editForm = useForm({
   tipo_pauta: props.post.tipo_pauta || 'organico',
   monto_invertido_pauta: props.post.monto_invertido_pauta || 0,
   total_vistas: props.post.total_vistas || 0,
+  me_gusta: initialReacciones.me_gusta,
+  me_encanta: initialReacciones.me_encanta,
+  me_importa: initialReacciones.me_importa,
+  me_divierte: initialReacciones.me_divierte,
+  me_asombra: initialReacciones.me_asombra,
+  me_entristece: initialReacciones.me_entristece,
+  me_enoja: initialReacciones.me_enoja,
   total_likes: props.post.total_likes || 0,
   total_comentarios: props.post.total_comentarios || 0,
   total_compartidos: props.post.total_compartidos || 0,
   termometro_humor_social: props.post.termometro_humor_social || 4,
 });
 
+const editTotalReacciones = computed(() => {
+  return Number(editForm.me_gusta || 0) +
+    Number(editForm.me_encanta || 0) +
+    Number(editForm.me_importa || 0) +
+    Number(editForm.me_divierte || 0) +
+    Number(editForm.me_asombra || 0) +
+    Number(editForm.me_entristece || 0) +
+    Number(editForm.me_enoja || 0);
+});
+
+watch(editTotalReacciones, (val) => {
+  editForm.total_likes = val;
+});
+
+const editAiSentiment = computed(() => {
+  const tot = editTotalReacciones.value;
+  if (tot === 0) return { aprobacion: 0, label: 'Sin datos', isCrisis: false };
+  const pos = Number(editForm.me_gusta || 0) + Number(editForm.me_encanta || 0) + Number(editForm.me_importa || 0);
+  const neg = Number(editForm.me_enoja || 0) + Number(editForm.me_entristece || 0);
+  const ratio = Math.round(((pos - neg) / tot) * 100);
+  const isCrisis = (Number(editForm.me_enoja || 0) / tot) >= 0.15;
+  return { aprobacion: ratio, isCrisis };
+});
+
 const openEditModal = () => {
+  const r = parseReacciones(props.post.reacciones_detalladas, props.post.total_likes);
   editForm.contenido_resumen = props.post.contenido_resumen || '';
   editForm.url_post = props.post.url_post || '';
   editForm.media_url = props.post.media_url || '';
   editForm.tipo_formato = props.post.tipo_formato || 'Reel';
   editForm.tipo_pauta = props.post.tipo_pauta || 'organico';
-  editForm.monto_invertido_pauta = props.post.monto_invertido_pauta || 0,
+  editForm.monto_invertido_pauta = props.post.monto_invertido_pauta || 0;
   editForm.total_vistas = props.post.total_vistas || 0;
+  editForm.me_gusta = r.me_gusta;
+  editForm.me_encanta = r.me_encanta;
+  editForm.me_importa = r.me_importa;
+  editForm.me_divierte = r.me_divierte;
+  editForm.me_asombra = r.me_asombra;
+  editForm.me_entristece = r.me_entristece;
+  editForm.me_enoja = r.me_enoja;
   editForm.total_likes = props.post.total_likes || 0;
   editForm.total_comentarios = props.post.total_comentarios || 0;
   editForm.total_compartidos = props.post.total_compartidos || 0;
@@ -80,6 +144,10 @@ const formatCurrency = (amount) => {
   if (!amount) return '$0';
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(amount);
 };
+
+const currentReacciones = computed(() => {
+  return parseReacciones(props.post.reacciones_detalladas, props.post.total_likes);
+});
 
 const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', 'Shorts', 'Articulo'];
 </script>
@@ -140,15 +208,15 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
           <button
             type="button"
             @click="openEditModal"
-            class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            title="Editar publicación"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Editar publicación y conteo de emociones"
           >
             <Edit3 class="w-4 h-4" />
           </button>
           <button
             type="button"
             @click="deletePost"
-            class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title="Eliminar publicación"
           >
             <Trash2 class="w-4 h-4" />
@@ -195,19 +263,31 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
       </div>
     </div>
 
-    <!-- Reactions & Metrics Bar -->
+    <!-- Reactions & Metrics Bar (Emoji por Emoji Cuantificado) -->
     <div class="px-4 sm:px-5 py-3 bg-slate-50/70 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-400">
-      <!-- Native Emojis Counter -->
-      <div class="flex items-center gap-2">
-        <div class="flex -space-x-1 items-center">
-          <span class="inline-block" title="Me gusta">👍</span>
-          <span class="inline-block" title="Me encanta">❤️</span>
-          <span class="inline-block" title="Me divierte">😂</span>
-          <span class="inline-block" title="Me asombra">😮</span>
-          <span class="inline-block" title="Me enoja">😡</span>
+      <!-- Detailed Emoji Breakdown -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-2 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-[11px] shadow-2xs">
+          <span class="font-bold text-slate-800 dark:text-slate-200 mr-1">{{ formatNumber(post.total_likes || 0) }}</span>
+          <span v-if="currentReacciones.me_gusta" title="Me gusta" class="inline-flex items-center gap-0.5">👍 {{ formatNumber(currentReacciones.me_gusta) }}</span>
+          <span v-if="currentReacciones.me_encanta" title="Me encanta" class="inline-flex items-center gap-0.5 text-rose-500">❤️ {{ formatNumber(currentReacciones.me_encanta) }}</span>
+          <span v-if="currentReacciones.me_importa" title="Me importa" class="inline-flex items-center gap-0.5 text-amber-500">🥰 {{ formatNumber(currentReacciones.me_importa) }}</span>
+          <span v-if="currentReacciones.me_divierte" title="Me divierte" class="inline-flex items-center gap-0.5 text-amber-400">😂 {{ formatNumber(currentReacciones.me_divierte) }}</span>
+          <span v-if="currentReacciones.me_asombra" title="Me asombra" class="inline-flex items-center gap-0.5 text-blue-400">😮 {{ formatNumber(currentReacciones.me_asombra) }}</span>
+          <span v-if="currentReacciones.me_entristece" title="Me entristece" class="inline-flex items-center gap-0.5 text-blue-500">😢 {{ formatNumber(currentReacciones.me_entristece) }}</span>
+          <span v-if="currentReacciones.me_enoja" title="Me enoja" class="inline-flex items-center gap-0.5 text-rose-600 font-bold">😡 {{ formatNumber(currentReacciones.me_enoja) }}</span>
         </div>
-        <span class="font-bold text-slate-800 dark:text-slate-200 font-mono">
-          {{ formatNumber(post.total_likes || 0) }}
+
+        <span
+          v-if="post.sentimiento_predominante"
+          class="text-[10px] font-bold px-2 py-0.5 rounded-md font-mono uppercase"
+          :class="{
+            'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400': post.sentimiento_predominante === 'positivo',
+            'bg-slate-500/15 text-slate-600 dark:text-slate-400': post.sentimiento_predominante === 'neutro',
+            'bg-rose-500/15 text-rose-600 dark:text-rose-400': post.sentimiento_predominante === 'negativo',
+          }"
+        >
+          IA: {{ post.sentimiento_predominante }}
         </span>
       </div>
 
@@ -221,7 +301,7 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
         <button
           type="button"
           @click="showComments = !showComments"
-          class="flex items-center gap-1 hover:text-cyan-500 transition-colors"
+          class="flex items-center gap-1 hover:text-cyan-500 transition-colors cursor-pointer"
           title="Ver comentarios destacados"
         >
           <MessageCircle class="w-4 h-4 text-blue-500" />
@@ -269,7 +349,7 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
       </div>
     </div>
 
-    <!-- Edit Modal Dialog -->
+    <!-- Edit Modal Dialog (Emoji por Emoji) -->
     <div
       v-if="isEditing"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
@@ -279,13 +359,13 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
           <div class="flex items-center gap-2">
             <Edit3 class="w-5 h-5 text-cyan-500" />
             <h3 class="font-bold text-base text-slate-900 dark:text-slate-100">
-              Editar Publicación
+              Editar Publicación & Emociones
             </h3>
           </div>
           <button
             type="button"
             @click="closeEditModal"
-            class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
           >
             <X class="w-5 h-5" />
           </button>
@@ -355,28 +435,58 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
               Monto Invertido en Pauta ($ ARS)
             </label>
             <input
-              v-model="editForm.monto_invertido_pauta"
+              v-model.number="editForm.monto_invertido_pauta"
               type="number"
               min="0"
               class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-violet-600 dark:text-violet-400"
             />
           </div>
 
-          <!-- Metrics Grid -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Likes</label>
-              <input
-                v-model="editForm.total_likes"
-                type="number"
-                min="0"
-                class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
-              />
+          <!-- Reacciones Emoji por Emoji -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="text-slate-700 dark:text-slate-300">Conteo de Emociones (👍 ❤️ 🥰 😂 😮 😢 😡)</span>
+              <span class="text-cyan-500 font-mono">Total: {{ formatNumber(editTotalReacciones) }}</span>
             </div>
+
+            <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 font-mono text-center">
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">👍</span>
+                <input v-model.number="editForm.me_gusta" type="number" min="0" class="w-full text-center text-xs font-bold" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">❤️</span>
+                <input v-model.number="editForm.me_encanta" type="number" min="0" class="w-full text-center text-xs font-bold text-rose-500" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">🥰</span>
+                <input v-model.number="editForm.me_importa" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-500" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">😂</span>
+                <input v-model.number="editForm.me_divierte" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-400" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">😮</span>
+                <input v-model.number="editForm.me_asombra" type="number" min="0" class="w-full text-center text-xs font-bold text-blue-400" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">😢</span>
+                <input v-model.number="editForm.me_entristece" type="number" min="0" class="w-full text-center text-xs font-bold text-blue-500" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">😡</span>
+                <input v-model.number="editForm.me_enoja" type="number" min="0" class="w-full text-center text-xs font-bold text-rose-600" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Views, Comments, Shares -->
+          <div class="grid grid-cols-3 gap-2.5">
             <div>
               <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Vistas</label>
               <input
-                v-model="editForm.total_vistas"
+                v-model.number="editForm.total_vistas"
                 type="number"
                 min="0"
                 class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
@@ -385,7 +495,7 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
             <div>
               <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Comentarios</label>
               <input
-                v-model="editForm.total_comentarios"
+                v-model.number="editForm.total_comentarios"
                 type="number"
                 min="0"
                 class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
@@ -394,7 +504,7 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
             <div>
               <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Shares</label>
               <input
-                v-model="editForm.total_compartidos"
+                v-model.number="editForm.total_compartidos"
                 type="number"
                 min="0"
                 class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
@@ -407,14 +517,14 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
             <button
               type="button"
               @click="closeEditModal"
-              class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold"
+              class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               :disabled="editForm.processing"
-              class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shadow-sm flex items-center gap-1.5"
+              class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer"
             >
               <Check class="w-3.5 h-3.5" />
               <span>{{ editForm.processing ? 'Guardando...' : 'Guardar Cambios' }}</span>
