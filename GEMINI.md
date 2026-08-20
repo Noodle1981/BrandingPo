@@ -9,7 +9,7 @@ Estas son las reglas y estándares obligatorios para el desarrollo de **Branding
 La interfaz de **BrandingPo** combina la potencia analítica de una **Sala de Situación (War Room)** con la familiaridad visual y dinamismo de un **Feed de Redes Sociales Moderno**.
 
 ### A. Soporte Dual: Modo Oscuro (War Room) & Modo Claro (Executive Light)
-- **Selector de Tema:** Toggle interactivo persistente (Sol/Luna) en la cabecera principal, sincronizado con preferencias del usuario.
+- **Selector de Tema:** Toggle interactivo persistente (Sol/Luna) en la cabecera principal, sincronizado con preferencias del usuario (`brandingpo_theme`).
 - **Modo Oscuro (Dark Slate - Predeterminado War Room):**
   - Fondo principal: `bg-slate-950` (`#020617` / `#0f172a`).
   - Tarjetas y Feeds: `bg-slate-900` (`#0f172a` / `#1e293b`) con bordes en `border-slate-800`.
@@ -19,27 +19,43 @@ La interfaz de **BrandingPo** combina la potencia analítica de una **Sala de Si
   - Tarjetas y Feeds: `bg-white` (`#ffffff`) con bordes sutiles en `border-slate-200` y sombras suaves (`shadow-sm` / `shadow-md`).
   - Textos: `text-slate-900` y secundarios en `text-slate-600`.
 - **Acentos y Semáforos de Estado (Compatibles en ambos modos):**
-  - **Cian / Azul Eléctrico (`#06b6d4` / `#3b82f6`):** Alcance, botones primarios y engagement.
+  - **Cian / Azul Eléctrico (`#06b6d4` / `#3b82f6`):** Alcance, candidato propio, botones primarios y engagement.
   - **Esmeralda / Verde (`#10b981`):** Crecimiento positivo, tono favorable, estado electo.
-  - **Ámbar / Naranja (`#f59e0b`):** Alertas moderadas, precandidato, pauta en revisión.
-  - **Carmesí / Rojo (`#ef4444`):** Crisis activa, tono crítico, alertas urgentes.
-  - **Violeta / Púrpura (`#8b5cf6`):** Predictor de IA, simulaciones algorítmicas de pauta.
+  - **Ámbar / Naranja (`#f59e0b`):** Pestañas activas, alertas moderadas, precandidato, pauta en revisión.
+  - **Carmesí / Rojo (`#ef4444`):** Pestañas inactivas, crisis activa, tono crítico, alertas urgentes.
+  - **Violeta / Púrpura (`#8b5cf6`):** Oposición, candidatos rivales, simulaciones algorítmicas de pauta.
 - **Identidad Oficial de Plataformas Sociales:**
   - Facebook (`#1877F2`), Instagram (`#E4405F`), X/Twitter (`#000000` / `#1DA1F2`), TikTok (`#00F2FE` / `#FF004F`), YouTube (`#FF0000`), LinkedIn (`#0A66C2`).
 
-### B. Componentes Estilo Red Social (Social Network UI)
-- **Feed Social Multired:** Visualización de posts en formato tarjeta de publicación con avatar del candidato, handle de la red, fecha relativa, badge oficial de la plataforma y preview de contenido (foto, carrusel, video o tweet).
-- **Barra de Reacciones Interactivas:** Barra inferior de cada post con recuento de reacciones con emojis nativos (👍 ❤️ 😂 😮 😡), comentarios y compartidos.
-- **Badge de Pauta vs. Orgánico:** Indicador visual claro cuando un post es orgánico o cuenta con pauta publicitaria paga (con monto invertido visible para usuarios autorizados).
-- **Sección de Comentarios Destacados:** Visualización de los comentarios top con indicador del termómetro de humor social (1 a 5 estrellas).
+### B. Módulos Estratégicos & Lógica de Negocio
+- **1. Punto Cero / Punto Alfa:**
+  - Toda red social del candidato propio o de rivales registra: seguidores iniciales, seguidos, publicaciones iniciales y fecha de inicio de auditoría para medir crecimiento neto.
+  - Las tablas deben ser adaptativas: en Facebook se oculta la tarjeta de publicaciones acumuladas ya que Facebook no la provee públicamente.
+- **2. Lector Automático de Redes (`SocialProfileScraperService`):**
+  - Extrae fotos de alta resolución, handles y métricas públicas con 1 clic mediante agentes especializados (Twitterbot, WhatsApp, FacebookBot).
+  - Toda imagen externa debe incluir `referrerpolicy="no-referrer"` para evitar bloqueos 403 de CDNs de Meta.
+- **3. Semáforo de Pestañas de Canales:**
+  - 🔵 **Azul (Verificada):** Cuenta oficialmente certificada por la red social.
+  - 🟠 **Naranja (Activa):** Cuenta vinculada y en uso activo de campaña.
+  - 🔴 **Roja (Inactiva):** Canal pendiente de creación o sin actividad.
+- **4. Cuantificación Emoji por Emoji (Fast-Flow):**
+  - Desglose granular: 👍, ❤️, 🥰, 😂, 😮, 😢, 😡.
+  - Cálculo de Índice de Aprobación Neta, Sentimiento Predominante y Termómetro de Humor Social (1 a 5 estrellas).
+  - Alerta roja inmediata si 😡 > 15%.
+- **5. Distinción de Pauta:**
+  - **Orgánica Pura:** Tracción natural sin inversión.
+  - **Orgánica Impulsada (Boosted Post):** Post orgánico potenciado con dinero tras registrar alto rendimiento.
+  - **Anuncio Directo / Dark Post:** Anuncio exclusivo de Ads Manager que no figura en el feed orgánico.
+- **6. Monitoreo de Medios & Prensa (Clipping):**
+  - Auditoría de notas periodísticas clasificadas por medio, periodista, candidato mencionado (Propio vs. Oposición) y tono editorial (Favorable / Neutral / Crítico).
 
 ### C. Tipografía, Espaciado y Micro-interacciones
-- Tipografía moderna (Inter o system-ui sans-serif), números tabulares monoespaciados para métricas y moneda.
+- Tipografía moderna (Inter o system-ui sans-serif), números tabulares monoespaciados (`font-mono`) para métricas y moneda.
 - Transiciones fluidas (`transition-all duration-200`) y micro-animaciones al alternar temas y al interactuar con el feed.
 
 ### D. Control de Permisos en la UI
-- **Visualizador:** Modo solo lectura limpio, sin botones rotos ni acciones de mutación.
-- **Consultor y Admin:** Acceso completo a carga Fast-Flow, edición de pauta, clipping y analítica.
+- **Visualizador (`visualizador`):** Modo solo lectura limpio, sin botones rotos ni acciones de mutación.
+- **Consultor (`consultor`) y Admin (`admin`):** Acceso completo a carga Fast-Flow, edición de pauta, clipping, Punto Cero y analítica.
 
 ---
 
@@ -48,7 +64,7 @@ La interfaz de **BrandingPo** combina la potencia analítica de una **Sala de Si
 - **Stack:** Laravel 11 + Inertia.js + Vue 3 (Composition API con `<script setup>`) + Tailwind CSS + SQLite.
 - **Documentación:** Todo el código (modelos, migraciones, controladores, componentes Vue y comentarios) debe estar en **español**.
 - **Tipado y Clean Code:** Usar Form Requests de Laravel para validación, Resources/Transformers para serializar datos hacia Inertia, y props tipadas con `defineProps` en Vue 3.
-- **Seguridad y Autorización:** Proteger cada endpoint con Gates/Policies de Laravel acordes al rol del usuario (`admin`, `consultor`, `visualizador`).
+- **Seguridad y Autorización:** Proteger cada endpoint con Gates/Policies de Laravel acordes al rol del usuario (`admin`, `consultor`, `visualizador`). Mantener el token CSRF configurado en `app.blade.php`.
 
 ---
 

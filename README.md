@@ -1,58 +1,122 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🏛️ BrandingPo - Sala de Situación (War Room) & Inteligencia Política
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> **Plataforma de Consultoría Estratégica, Auditoría Digital, Benchmarking Político y Monitoreo de Humor Social en Tiempo Real.**
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🌟 Visión del Producto
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+**BrandingPo** combina la potencia analítica de un **War Room Político** con el dinamismo visual de un **Feed de Redes Sociales Multired**. Permite a equipos de campaña, consultores y analistas auditar el crecimiento de su candidato desde el **Punto Cero (Línea de Base / Punto Alfa)**, medir las reacciones emocionales de la ciudadanía emoji por emoji, optimizar la inversión en pauta publicitaria y monitorear los movimientos de la oposición y de la prensa en un solo lugar.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 🎯 Módulos Principales
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 1. 👤 Mi Candidato & Auditoría de Punto Cero (`/mi-candidato`)
+- **Punto Alfa de Campaña:** Registro inicial de seguidores, seguidos, publicaciones totales y fecha de comienzo para auditar el crecimiento real día a día.
+- **Botonera Multired Centrada:** Pestañas para **Instagram, Facebook, TikTok, X (Twitter), YouTube y LinkedIn** con logos oficiales de cada plataforma.
+- **Semáforo de Canales Digitales:**
+  - 🔵 **Certificada / Verificada:** Cuenta con badge oficial de autenticidad.
+  - 🟠 **Vinculada / Activa:** Canal activo y operativo en campaña.
+  - 🔴 **No Vinculada / Inactiva:** Red social pendiente de creación o sin actividad.
+- **⚡ Lector Automático en 1 Clic (`SocialProfileScraperService`):**
+  - Extracción automática de foto de perfil en alta resolución, `@handle`, seguidores y publicaciones desde la URL pública sin APIs pagas.
+  - Soporte inteligente para páginas de **Facebook**, perfiles de **Instagram**, canales de **YouTube**, **TikTok** y **X**.
+- **Tabla Adaptativa:** Adaptación inteligente según la red (oculta publicaciones acumuladas en Facebook y mantiene las 4 métricas en Instagram/TikTok/X).
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### 2. 👥 Oposición & Rivales (`/candidatos`)
+- **Benchmarking Competitivo:** Vista exclusiva de la competencia política sin mezclar los datos del candidato propio.
+- **Auditoría de Rivales:** Misma botonera de semáforo de canales y Punto Cero independiente para contrastar el ritmo de crecimiento frente a los opositores.
 
-## Agentic Development
+---
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### 3. ⚡ Carga Ágil de Publicaciones (Fast-Flow - `/fast-flow`)
+- **Carga Ultrarrápida:** Registro de publicaciones con URL, título, eje temático (Seguridad, Salud, Obras, etc.) y formato (Reel, Carrusel, Tweet, Video).
+- **Cuantificación Emocional Granular (Emoji a Emoji):**
+  - Registro exacto de: 👍 Me gusta, ❤️ Me encanta, 🥰 Me importa, 😂 Me divierte, 😮 Me asombra, 😢 Me entristece, 😡 Me enoja.
+- **Motor de Inteligencia Emocional & IA:**
+  - Cálculo del **Índice de Aprobación Neta**.
+  - **Sentimiento Predominante:** Favorable, Neutral o Crítico.
+  - **Termómetro de Humor Social (1 a 5 estrellas).**
+  - **Detector Automático de Crisis:** Alerta roja inmediata si las reacciones de enojo (😡) superan el 15%.
+
+---
+
+### 4. 💰 Inteligencia de Pauta & Rendimiento (Orgánico vs. Ads)
+- **Tipos de Publicación Contemplados:**
+  1. **Orgánica Pura:** Tracción natural de la comunidad sin inversión.
+  2. **Orgánica Impulsada (Boosted Post):** Post orgánico con excelente recepción al que se le inyectó pauta para amplificar su impacto.
+  3. **Anuncio Directo / Dark Post:** Anuncio creado exclusivamente en Meta Ads Manager / TikTok Ads que no aparece en el feed del candidato ni del rival.
+- **Métricas Internas & Insights de Consultor:** Registro de visualizaciones, alcance real, reproducciones de video (views) y costos por interacción.
+
+---
+
+### 5. 📰 Sala de Prensa & Medios (Clipping Periodístico - `/clipping`)
+- **Monitoreo de Medios:** Registro de notas en portales web, diarios, radio y televisión.
+- **Tono Editorial:** Clasificación semafórica de la cobertura (🟢 Favorable, ⚪ Neutral, 🔴 Crítica).
+- **Impacto y Portada:** Detección de notas de tapa/portada y réplicas necesarias de campaña.
+
+---
+
+### 6. 📊 Dashboard Ejecutivo & Modo Dual (`/dashboard`)
+- **War Room Dual Theme:**
+  - **Modo Oscuro (War Room):** Fondo Slate-950 con acentos cian, esmeralda y violeta para salas de situación y trabajo nocturno.
+  - **Modo Claro (Executive Light):** Fondo Slate-50 y tarjetas blancas para lectura ejecutiva, reportes e impresión.
+- **Gráficos & KPIs:** Distribución de ejes temáticos, termómetro de humor social y ranking de publicaciones de mayor impacto.
+
+---
+
+## 🛠️ Stack Tecnológico
+
+- **Backend:** Laravel 11 (PHP 8.2+)
+- **Frontend:** Vue 3 (Composition API con `<script setup>`) + Inertia.js
+- **Estilos & UI:** Tailwind CSS + Lucide Icons
+- **Base de Datos:** SQLite (desarrollo ágil y portable)
+- **Build Tool:** Vite 8
+
+---
+
+## 🚀 Instalación y Puesta en Marcha
 
 ```bash
-composer require laravel/boost --dev
+# 1. Clonar el repositorio
+git clone https://github.com/Noodle1981/BrandingPo.git
+cd BrandingPo
 
-php artisan boost:install
+# 2. Instalar dependencias PHP y Node
+composer install
+npm install
+
+# 3. Configurar entorno
+cp .env.example .env
+php artisan key:generate
+
+# 4. Migrar y poblar base de datos con datos representativos
+php artisan migrate --seed
+
+# 5. Compilar assets frontend
+npm run build
+# o en modo desarrollo:
+npm run dev
+
+# 6. Servir la aplicación
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## 🔐 Roles y Permisos
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+| Rol | Acceso & Capacidades |
+| :--- | :--- |
+| **Administrador (`admin`)** | Control total del sistema, configuración de ciclos de campaña, territorios y usuarios. |
+| **Consultor (`consultor`)** | Carga y edición en Fast-Flow, auditoría de Punto Cero, gestión de pauta y clipping de medios. |
+| **Visualizador (`visualizador`)** | Acceso de solo lectura al War Room, métricas del Dashboard y reportes ejecutivos. |
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 📄 Licencia
 
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Desarrollado bajo licencia privativa para **BrandingPo** & Consultoría Política.
