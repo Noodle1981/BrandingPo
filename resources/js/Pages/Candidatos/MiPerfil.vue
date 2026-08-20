@@ -93,6 +93,56 @@ const selectPlatform = (platformKey) => {
   }
 };
 
+const isScraping = ref(false);
+const scrapeMessage = ref('');
+
+const fetchScrapedData = async () => {
+  if (!formRed.url_perfil) {
+    scrapeMessage.value = 'Por favor pega el enlace del perfil primero.';
+    return;
+  }
+  isScraping.value = true;
+  scrapeMessage.value = 'Extrayendo foto y atributos públicos del perfil...';
+
+  try {
+    const response = await fetch('/perfiles-sociales/scrape', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        url: formRed.url_perfil,
+        plataforma: formRed.plataforma,
+      }),
+    });
+
+    const data = await response.json();
+    if (data) {
+      if (data.handle_usuario) formRed.handle_usuario = data.handle_usuario;
+      if (data.foto_perfil_url) formRed.foto_perfil_url = data.foto_perfil_url;
+      if (data.seguidores !== null && data.seguidores !== undefined) {
+        formRed.seguidores_actuales = data.seguidores;
+        if (!formRed.seguidores_punto_cero) formRed.seguidores_punto_cero = data.seguidores;
+      }
+      if (data.seguidos !== null && data.seguidos !== undefined) {
+        formRed.seguidos_actuales = data.seguidos;
+        if (!formRed.seguidos_punto_cero) formRed.seguidos_punto_cero = data.seguidos;
+      }
+      if (data.publicaciones !== null && data.publicaciones !== undefined) {
+        formRed.publicaciones_totales = data.publicaciones;
+        if (!formRed.publicaciones_punto_cero) formRed.publicaciones_punto_cero = data.publicaciones;
+      }
+      scrapeMessage.value = data.mensaje || '¡Lectura completada!';
+    }
+  } catch (err) {
+    scrapeMessage.value = 'No se pudo conectar con el lector automático. Puedes ingresar los números manualmente.';
+  } finally {
+    isScraping.value = false;
+  }
+};
+
 const savePerfilSocial = () => {
   formRed.post('/perfiles-sociales', {
     preserveScroll: true,
@@ -354,9 +404,21 @@ const tabBadgeStyle = (colorEstado) => {
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Enlace directo al Perfil (URL)
-                </label>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Enlace directo al Perfil (URL)
+                  </label>
+                  <button
+                    type="button"
+                    @click="fetchScrapedData"
+                    :disabled="isScraping || !formRed.url_perfil"
+                    class="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-500 dark:text-cyan-400 font-bold text-[11px] font-mono flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+                    title="Intentar leer automáticamente foto, seguidores, seguidos y publicaciones"
+                  >
+                    <Sparkles class="w-3.5 h-3.5" />
+                    <span>{{ isScraping ? 'Leyendo perfil...' : '⚡ Leer Datos & Foto' }}</span>
+                  </button>
+                </div>
                 <div class="relative">
                   <input
                     v-model="formRed.url_perfil"
@@ -365,6 +427,33 @@ const tabBadgeStyle = (colorEstado) => {
                     class="w-full pl-8 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
                   />
                   <Link2 class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                </div>
+                <p v-if="scrapeMessage" class="text-[11px] font-mono text-cyan-500 mt-1">
+                  {{ scrapeMessage }}
+                </p>
+              </div>
+
+              <!-- Foto de Perfil URL -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  URL Foto de Perfil (Opcional)
+                </label>
+                <div class="flex items-center gap-2">
+                  <div class="relative flex-1">
+                    <input
+                      v-model="formRed.foto_perfil_url"
+                      type="url"
+                      placeholder="https://..."
+                      class="w-full pl-8 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+                    />
+                    <ImageIcon class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  </div>
+                  <img
+                    v-if="formRed.foto_perfil_url"
+                    :src="formRed.foto_perfil_url"
+                    alt="Preview"
+                    class="w-8 h-8 rounded-full object-cover border border-slate-300 dark:border-slate-700 shadow-xs"
+                  />
                 </div>
               </div>
             </div>

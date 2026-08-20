@@ -26,6 +26,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'update'])->name('candidatos.update');
         Route::delete('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'destroy'])->name('candidatos.destroy');
         Route::post('/perfiles-sociales', [\App\Http\Controllers\CandidatoController::class, 'storePerfilSocial'])->name('perfiles-sociales.store');
+        Route::post('/perfiles-sociales/scrape', [\App\Http\Controllers\CandidatoController::class, 'scrapePerfilSocial'])->name('perfiles-sociales.scrape');
         Route::put('/perfiles-sociales/{perfilSocial}', [\App\Http\Controllers\CandidatoController::class, 'updatePerfilSocial'])->name('perfiles-sociales.update');
         Route::delete('/perfiles-sociales/{perfilSocial}', [\App\Http\Controllers\CandidatoController::class, 'destroyPerfilSocial'])->name('perfiles-sociales.destroy');
     });

@@ -247,6 +247,21 @@ class CandidatoController extends Controller
     }
 
     /**
+     * Auto-extracción de datos desde el enlace público del perfil.
+     */
+    public function scrapePerfilSocial(Request $request, \App\Services\SocialProfileScraperService $scraper): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'url' => ['required', 'url'],
+            'plataforma' => ['required', 'string'],
+        ]);
+
+        $data = $scraper->scrapeProfile($request->input('url'), $request->input('plataforma'));
+
+        return response()->json($data);
+    }
+
+    /**
      * Actualizar perfil social existente.
      */
     public function updatePerfilSocial(Request $request, PerfilSocial $perfilSocial): RedirectResponse
