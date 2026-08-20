@@ -39,10 +39,11 @@ const toggleSidebar = () => {
 
 const navigation = computed(() => [
   { name: 'Sala de Situación', href: '/dashboard', icon: LayoutDashboard, current: route().current('dashboard') },
+  { name: 'Mi Candidato (Campaña)', href: '/mi-candidato', icon: Sparkles, current: route().current('mi-candidato*'), isNew: true },
+  { name: 'Oposición & Rivales', href: '/candidatos', icon: Users, current: route().current('candidatos*') },
   { name: 'Feed Social Multired', href: '/feed', icon: Radio, current: route().current('feed*') },
   { name: 'Carga Fast-Flow', href: '/fast-flow', icon: Zap, current: route().current('fast-flow*'), readOnlyBadge: !canWrite.value },
-  { name: 'Predictor de Pauta', href: '/predictor', icon: TrendingUp, current: route().current('predictor*'), isNew: true },
-  { name: 'Candidatos & Perfiles', href: '/candidatos', icon: Users, current: route().current('candidatos*') },
+  { name: 'Predictor de Pauta', href: '/predictor', icon: TrendingUp, current: route().current('predictor*') },
   { name: 'Observatorio de Medios', href: '/medios', icon: Newspaper, current: route().current('medios*') },
   { name: 'Centro de Crisis', href: '/crisis', icon: AlertTriangle, current: route().current('crisis*') },
   { name: 'Calendario & Agenda', href: '/calendario', icon: Calendar, current: route().current('calendario*') },

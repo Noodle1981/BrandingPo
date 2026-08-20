@@ -16,7 +16,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index']);
 
-    // Gestión de Candidatos y Perfiles Políticos
+    // Gestión del Perfil Propio (Cliente) y Oposición (Competencia)
+    Route::get('/mi-candidato', [\App\Http\Controllers\CandidatoController::class, 'miCandidato'])->name('mi-candidato');
     Route::get('/candidatos', [\App\Http\Controllers\CandidatoController::class, 'index'])->name('candidatos.index');
     Route::get('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'show'])->name('candidatos.show');
 
@@ -24,6 +25,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/candidatos', [\App\Http\Controllers\CandidatoController::class, 'store'])->name('candidatos.store');
         Route::put('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'update'])->name('candidatos.update');
         Route::delete('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'destroy'])->name('candidatos.destroy');
+        Route::post('/perfiles-sociales', [\App\Http\Controllers\CandidatoController::class, 'storePerfilSocial'])->name('perfiles-sociales.store');
+        Route::put('/perfiles-sociales/{perfilSocial}', [\App\Http\Controllers\CandidatoController::class, 'updatePerfilSocial'])->name('perfiles-sociales.update');
+        Route::delete('/perfiles-sociales/{perfilSocial}', [\App\Http\Controllers\CandidatoController::class, 'destroyPerfilSocial'])->name('perfiles-sociales.destroy');
     });
 
     // Feed Social Multired & Fast-Flow Entry Desk

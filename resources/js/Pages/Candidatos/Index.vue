@@ -141,20 +141,39 @@ const formatNumber = (num) => {
 </script>
 
 <template>
-  <Head title="Candidatos & Perfiles Políticos" />
+  <Head title="Oposición & Candidatos Rivales" />
 
   <WarRoomLayout>
+    <!-- Banner de Acceso a Mi Candidato -->
+    <div class="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-950 text-white border border-cyan-500/30 flex items-center justify-between flex-wrap gap-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+          <Sparkles class="w-5 h-5" />
+        </div>
+        <div>
+          <span class="text-xs font-bold text-cyan-300 block">PERFIL DE CAMPAÑA OFICIAL</span>
+          <p class="text-xs text-slate-300">¿Quieres gestionar tu propio candidato y sus redes sociales (Punto Cero)?</p>
+        </div>
+      </div>
+      <Link
+        href="/mi-candidato"
+        class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-xs transition-all hover:scale-102"
+      >
+        Ir a Mi Candidato &rarr;
+      </Link>
+    </div>
+
     <!-- Header with Action -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
         <div class="flex items-center gap-2">
-          <Users class="w-6 h-6 text-cyan-500" />
+          <Users class="w-6 h-6 text-purple-500" />
           <h1 class="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-            Candidatos & Actores Políticos
+            Oposición & Rivales Políticos (Competencia)
           </h1>
         </div>
         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Directorio estratégico de perfiles clasificados por ciclo de campaña y estado político.
+          Directorio de actores opositores para benchmarking digital y auditoría externa.
         </p>
       </div>
 
@@ -163,10 +182,10 @@ const formatNumber = (num) => {
           v-if="canWrite"
           type="button"
           @click="openCreateModal"
-          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm transition-all shadow-md shadow-cyan-500/20"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm transition-all shadow-md shadow-purple-600/20 cursor-pointer"
         >
           <UserPlus class="w-4 h-4" />
-          <span>Nuevo Candidato</span>
+          <span>Nuevo Candidato Rival</span>
         </button>
       </div>
     </div>
