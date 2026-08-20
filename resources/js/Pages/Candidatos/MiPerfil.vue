@@ -280,6 +280,7 @@ const getSocialMeta = (key) => {
             <img
               :src="candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(candidato.nombre_completo)}&background=0f172a&color=06b6d4`"
               :alt="candidato.nombre_completo"
+              referrerpolicy="no-referrer"
               class="w-20 h-20 rounded-2xl object-cover border-2 shadow-md"
               :style="{ borderColor: candidato.color_hex || '#06b6d4' }"
             />
@@ -529,6 +530,7 @@ const getSocialMeta = (key) => {
                 <img
                   :src="formRed.foto_perfil_url || candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(formRed.handle_usuario || 'User')}&background=0f172a&color=06b6d4`"
                   alt="Foto Perfil"
+                  referrerpolicy="no-referrer"
                   class="w-16 h-16 rounded-2xl object-cover border-2 border-cyan-500 shadow-sm"
                 />
               </div>
