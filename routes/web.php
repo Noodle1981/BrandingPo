@@ -31,6 +31,14 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/perfiles-sociales/{perfilSocial}', [\App\Http\Controllers\CandidatoController::class, 'destroyPerfilSocial'])->name('perfiles-sociales.destroy');
     });
 
+    // Inteligencia Demográfica & Mapa de Situación Territorial
+    Route::get('/territorios', [\App\Http\Controllers\TerritorioController::class, 'index'])->name('territorios.index');
+    Route::post('/territorios/auto-detect', [\App\Http\Controllers\TerritorioController::class, 'autoDetect'])->name('territorios.auto-detect');
+    Route::middleware(['can_write'])->group(function () {
+        Route::post('/territorios', [\App\Http\Controllers\TerritorioController::class, 'store'])->name('territorios.store');
+        Route::put('/territorios/{territorio}', [\App\Http\Controllers\TerritorioController::class, 'update'])->name('territorios.update');
+    });
+
     // Feed Social Multired & Fast-Flow Entry Desk
     Route::get('/feed', [\App\Http\Controllers\PublicacionController::class, 'feed'])->name('feed');
     Route::get('/fast-flow', [\App\Http\Controllers\PublicacionController::class, 'fastFlow'])->name('fast-flow');

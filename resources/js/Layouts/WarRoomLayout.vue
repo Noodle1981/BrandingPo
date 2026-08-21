@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
-  DollarSign
+  DollarSign,
+  MapPin
 } from '@lucide/vue';
 import ThemeToggle from '../Components/ThemeToggle.vue';
 import Badge from '../Components/Badge.vue';
@@ -41,6 +42,7 @@ const navigation = computed(() => [
   { name: 'Sala de Situación', href: '/dashboard', icon: LayoutDashboard, current: route().current('dashboard') },
   { name: 'Mi Candidato (Campaña)', href: '/mi-candidato', icon: Sparkles, current: route().current('mi-candidato*'), isNew: true },
   { name: 'Oposición & Rivales', href: '/candidatos', icon: Users, current: route().current('candidatos*') },
+  { name: 'Territorio & Demografía', href: '/territorios', icon: MapPin, current: route().current('territorios*'), isNew: true },
   { name: 'Feed Social Multired', href: '/feed', icon: Radio, current: route().current('feed*') },
   { name: 'Carga Fast-Flow', href: '/fast-flow', icon: Zap, current: route().current('fast-flow*'), readOnlyBadge: !canWrite.value },
   { name: 'Predictor de Pauta', href: '/predictor', icon: TrendingUp, current: route().current('predictor*') },
