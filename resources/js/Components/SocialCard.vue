@@ -381,7 +381,7 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
               <input
                 v-model="editForm.url_post"
                 type="url"
-                placeholder="https://www.facebook.com/..."
+                placeholder="https://..."
                 class="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-cyan-500"
               />
               <Link2 class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />

@@ -17,6 +17,8 @@ class PerfilSocial extends Model
         'url_perfil',
         'seguidores_actuales',
         'publicaciones_totales',
+        'me_gusta_totales',
+        'visualizaciones_totales',
         'esta_verificado',
         'esta_activo',
         'seguidos_actuales',
@@ -25,6 +27,8 @@ class PerfilSocial extends Model
         'seguidores_punto_cero',
         'seguidos_punto_cero',
         'publicaciones_punto_cero',
+        'me_gusta_punto_cero',
+        'visualizaciones_punto_cero',
         'notas_punto_cero',
         'demografia_interna_propia',
     ];
@@ -32,6 +36,8 @@ class PerfilSocial extends Model
     protected $casts = [
         'seguidores_actuales' => 'integer',
         'publicaciones_totales' => 'integer',
+        'me_gusta_totales' => 'integer',
+        'visualizaciones_totales' => 'integer',
         'seguidos_actuales' => 'integer',
         'esta_verificado' => 'boolean',
         'esta_activo' => 'boolean',
@@ -39,6 +45,8 @@ class PerfilSocial extends Model
         'seguidores_punto_cero' => 'integer',
         'seguidos_punto_cero' => 'integer',
         'publicaciones_punto_cero' => 'integer',
+        'me_gusta_punto_cero' => 'integer',
+        'visualizaciones_punto_cero' => 'integer',
         'demografia_interna_propia' => 'array',
     ];
 

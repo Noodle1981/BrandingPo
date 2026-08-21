@@ -62,10 +62,14 @@ const formRed = useForm({
   seguidores_actuales: currentRed.value?.seguidores_actuales || 0,
   seguidos_actuales: currentRed.value?.seguidos_actuales || 0,
   publicaciones_totales: currentRed.value?.publicaciones_totales || 0,
+  me_gusta_totales: currentRed.value?.me_gusta_totales || 0,
+  visualizaciones_totales: currentRed.value?.visualizaciones_totales || 0,
   fecha_punto_cero: currentRed.value?.fecha_punto_cero || new Date().toISOString().slice(0, 10),
   seguidores_punto_cero: currentRed.value?.seguidores_punto_cero || currentRed.value?.seguidores_actuales || 0,
   seguidos_punto_cero: currentRed.value?.seguidos_punto_cero || currentRed.value?.seguidos_actuales || 0,
   publicaciones_punto_cero: currentRed.value?.publicaciones_punto_cero || currentRed.value?.publicaciones_totales || 0,
+  me_gusta_punto_cero: currentRed.value?.me_gusta_punto_cero || currentRed.value?.me_gusta_totales || 0,
+  visualizaciones_punto_cero: currentRed.value?.visualizaciones_punto_cero || currentRed.value?.visualizaciones_totales || 0,
   notas_punto_cero: currentRed.value?.notas_punto_cero || '',
 });
 
@@ -83,10 +87,14 @@ const selectPlatform = (platformKey) => {
     formRed.seguidores_actuales = red.seguidores_actuales || 0;
     formRed.seguidos_actuales = red.seguidos_actuales || 0;
     formRed.publicaciones_totales = red.publicaciones_totales || 0;
+    formRed.me_gusta_totales = red.me_gusta_totales || 0;
+    formRed.visualizaciones_totales = red.visualizaciones_totales || 0;
     formRed.fecha_punto_cero = red.fecha_punto_cero || new Date().toISOString().slice(0, 10);
     formRed.seguidores_punto_cero = red.seguidores_punto_cero || red.seguidores_actuales || 0;
     formRed.seguidos_punto_cero = red.seguidos_punto_cero || red.seguidos_actuales || 0;
     formRed.publicaciones_punto_cero = red.publicaciones_punto_cero || red.publicaciones_totales || 0;
+    formRed.me_gusta_punto_cero = red.me_gusta_punto_cero || red.me_gusta_totales || 0;
+    formRed.visualizaciones_punto_cero = red.visualizaciones_punto_cero || red.visualizaciones_totales || 0;
     formRed.notas_punto_cero = red.notas_punto_cero || '';
     scrapeMessage.value = '';
   }
@@ -136,6 +144,14 @@ const fetchScrapedData = async () => {
         formRed.publicaciones_totales = Number(data.publicaciones);
         formRed.publicaciones_punto_cero = Number(data.publicaciones);
       }
+      if (data.me_gusta_totales !== null && data.me_gusta_totales !== undefined) {
+        formRed.me_gusta_totales = Number(data.me_gusta_totales);
+        formRed.me_gusta_punto_cero = Number(data.me_gusta_totales);
+      }
+      if (data.visualizaciones_totales !== null && data.visualizaciones_totales !== undefined) {
+        formRed.visualizaciones_totales = Number(data.visualizaciones_totales);
+        formRed.visualizaciones_punto_cero = Number(data.visualizaciones_totales);
+      }
       
       formRed.esta_activo = true;
       scrapeSuccess.value = true;
@@ -162,6 +178,8 @@ const savePerfilSocial = () => {
   if (!formRed.seguidores_punto_cero) formRed.seguidores_punto_cero = formRed.seguidores_actuales;
   if (!formRed.seguidos_punto_cero) formRed.seguidos_punto_cero = formRed.seguidos_actuales;
   if (!formRed.publicaciones_punto_cero) formRed.publicaciones_punto_cero = formRed.publicaciones_totales;
+  if (!formRed.me_gusta_punto_cero) formRed.me_gusta_punto_cero = formRed.me_gusta_totales;
+  if (!formRed.visualizaciones_punto_cero) formRed.visualizaciones_punto_cero = formRed.visualizaciones_totales;
 
   formRed.post('/perfiles-sociales', {
     preserveScroll: true,
@@ -253,6 +271,44 @@ const getSocialMeta = (key) => {
       };
     default:
       return { color: '#8b5cf6', bgLight: 'bg-purple-500/15' };
+  }
+};
+
+const getSocialPlaceholder = (key) => {
+  switch (key) {
+    case 'instagram':
+      return 'https://www.instagram.com/usuario/';
+    case 'facebook':
+      return 'https://www.facebook.com/usuario/';
+    case 'tiktok':
+      return 'https://www.tiktok.com/@usuario';
+    case 'x_twitter':
+      return 'https://x.com/usuario';
+    case 'youtube':
+      return 'https://www.youtube.com/@usuario';
+    case 'linkedin':
+      return 'https://www.linkedin.com/in/usuario/';
+    default:
+      return 'https://...';
+  }
+};
+
+const getHandlePlaceholder = (key) => {
+  switch (key) {
+    case 'instagram':
+      return 'ej. @usuario';
+    case 'facebook':
+      return 'ej. @usuario.oficial';
+    case 'tiktok':
+      return 'ej. @usuario';
+    case 'x_twitter':
+      return 'ej. @usuario';
+    case 'youtube':
+      return 'ej. @canal';
+    case 'linkedin':
+      return 'ej. in/usuario';
+    default:
+      return 'ej. @usuario';
   }
 };
 </script>
@@ -481,12 +537,12 @@ const getSocialMeta = (key) => {
         <!-- Tarjetas de Métricas Ejecutivas del Rival (Punto Cero vs Actual) -->
         <div
           class="grid gap-4 font-mono"
-          :class="currentRed.key === 'facebook' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'"
+          :class="currentRed.key === 'facebook' ? 'grid-cols-1 sm:grid-cols-3' : (currentRed.key === 'tiktok' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4')"
         >
-          <!-- Seguidores -->
+          <!-- Seguidores / Suscriptores / Contactos -->
           <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
             <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
-              <span>👥 Seguidores</span>
+              <span>👥 {{ currentRed.key === 'youtube' ? 'Suscriptores' : (currentRed.key === 'linkedin' ? 'Contactos / Red' : 'Seguidores') }}</span>
               <span
                 v-if="currentRed.crecimiento_neto_seguidores > 0"
                 class="text-purple-400 text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10"
@@ -503,8 +559,11 @@ const getSocialMeta = (key) => {
             </div>
           </div>
 
-          <!-- Cuentas Seguidas -->
-          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+          <!-- Cuentas Seguidas (Oculto en YouTube) -->
+          <div
+            v-if="currentRed.key !== 'youtube'"
+            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1"
+          >
             <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
               🔄 Seguidos
             </span>
@@ -517,13 +576,36 @@ const getSocialMeta = (key) => {
             </div>
           </div>
 
-          <!-- Publicaciones Totales (Oculto en Facebook) -->
+          <!-- Me Gusta Acumulados (Específico Cabecera TikTok) -->
+          <div
+            v-if="currentRed.key === 'tiktok'"
+            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-rose-500/30 space-y-1"
+          >
+            <span class="text-[11px] uppercase tracking-wider text-rose-500 font-bold block flex items-center justify-between">
+              <span>❤️ Me Gusta</span>
+              <span
+                v-if="currentRed.crecimiento_neto_me_gusta > 0"
+                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
+              >
+                +{{ Number(currentRed.crecimiento_neto_me_gusta).toLocaleString() }}
+              </span>
+            </span>
+            <div class="text-2xl font-extrabold text-rose-600 dark:text-rose-400">
+              {{ Number(currentRed.me_gusta_totales || 0).toLocaleString() }}
+            </div>
+            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
+              <span>Punto Alfa (Inicio):</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.me_gusta_punto_cero || 0).toLocaleString() }}</span>
+            </div>
+          </div>
+
+          <!-- Publicaciones / Videos Totales (Oculto en Facebook) -->
           <div
             v-if="currentRed.key !== 'facebook'"
             class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1"
           >
             <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
-              <span>📄 Publicaciones</span>
+              <span>{{ currentRed.key === 'tiktok' || currentRed.key === 'youtube' ? '🎬 Videos' : (currentRed.key === 'linkedin' ? '📝 Posts / Artículos' : '📄 Publicaciones') }}</span>
               <span
                 v-if="currentRed.crecimiento_neto_posts > 0"
                 class="text-purple-400 text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/10"
@@ -537,6 +619,29 @@ const getSocialMeta = (key) => {
             <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
               <span>Punto Alfa (Inicio):</span>
               <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.publicaciones_punto_cero || 0).toLocaleString() }}</span>
+            </div>
+          </div>
+
+          <!-- Visualizaciones Totales (Específico Cabecera YouTube) -->
+          <div
+            v-if="currentRed.key === 'youtube'"
+            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-red-500/30 space-y-1"
+          >
+            <span class="text-[11px] uppercase tracking-wider text-red-500 font-bold block flex items-center justify-between">
+              <span>👁️ Visualizaciones</span>
+              <span
+                v-if="currentRed.crecimiento_neto_visualizaciones > 0"
+                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
+              >
+                +{{ Number(currentRed.crecimiento_neto_visualizaciones).toLocaleString() }}
+              </span>
+            </span>
+            <div class="text-2xl font-extrabold text-red-600 dark:text-red-400">
+              {{ Number(currentRed.visualizaciones_totales || 0).toLocaleString() }}
+            </div>
+            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
+              <span>Punto Alfa (Inicio):</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.visualizaciones_punto_cero || 0).toLocaleString() }}</span>
             </div>
           </div>
 
@@ -577,6 +682,298 @@ const getSocialMeta = (key) => {
     </div>
 
 
+
+    <!-- MODAL PARA CONFIGURAR CANAL & PUNTO CERO DEL RIVAL -->
+    <div
+      v-if="isConfigModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
+    >
+      <div class="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+        <!-- Header Modal -->
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-10 h-10 rounded-xl" :class="getSocialMeta(currentRed.key).bgLight">
+              <svg v-if="currentRed.key === 'instagram'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ color: getSocialMeta(currentRed.key).color }">
+                <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+              </svg>
+              <svg v-else-if="currentRed.key === 'facebook'" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              <svg v-else-if="currentRed.key === 'tiktok'" class="w-5 h-5 text-cyan-500 dark:text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+              </svg>
+              <svg v-else-if="currentRed.key === 'x_twitter'" class="w-5 h-5 text-slate-900 dark:text-slate-100" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              <svg v-else-if="currentRed.key === 'youtube'" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+              <svg v-else-if="currentRed.key === 'linkedin'" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Settings class="w-4 h-4 text-purple-500" />
+                <span>Configurar Canal del Rival: {{ currentRed.nombre }}</span>
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Punto Cero, enlace oficial, estado de canal y lector con 1 clic.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            @click="isConfigModalOpen = false"
+            class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+
+        <form @submit.prevent="savePerfilSocial" class="space-y-5">
+          <!-- A. Enlace, Lector Automático y Estados -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
+            <!-- Enlace con Botón Auto-Lector -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  1. Enlace Directo al Perfil del Rival en {{ currentRed.nombre }} (URL)
+                </label>
+                <button
+                  type="button"
+                  @click="fetchScrapedData"
+                  :disabled="isScraping || !formRed.url_perfil"
+                  class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs font-mono flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  title="Leer automáticamente foto, seguidores, seguidos y publicaciones del rival"
+                >
+                  <Sparkles class="w-3.5 h-3.5" />
+                  <span>{{ isScraping ? 'Leyendo datos...' : '⚡ Leer Datos & Foto con 1 Clic' }}</span>
+                </button>
+              </div>
+
+              <div class="relative">
+                <input
+                  v-model="formRed.url_perfil"
+                  type="url"
+                  :placeholder="getSocialPlaceholder(currentRed.key)"
+                  class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-purple-500"
+                />
+                <Link2 class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              </div>
+
+              <div v-if="scrapeMessage" class="mt-2 flex items-center gap-2 text-xs font-mono" :class="scrapeSuccess ? 'text-emerald-500' : 'text-amber-500'">
+                <CheckCircle v-if="scrapeSuccess" class="w-4 h-4" />
+                <AlertCircle v-else class="w-4 h-4" />
+                <span>{{ scrapeMessage }}</span>
+              </div>
+            </div>
+
+            <!-- Handle & Switches -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Usuario / Handle *
+                </label>
+                <input
+                  v-model="formRed.handle_usuario"
+                  type="text"
+                  required
+                  :placeholder="getHandlePlaceholder(currentRed.key)"
+                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">Canal Activo</span>
+                  <span class="text-[10px] text-amber-500 font-semibold">🟠 Pestaña Naranja</span>
+                </div>
+                <input
+                  v-model="formRed.esta_activo"
+                  type="checkbox"
+                  class="w-5 h-5 rounded text-purple-600"
+                />
+              </div>
+
+              <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span class="text-xs font-bold text-blue-500 dark:text-blue-400 block">Cuenta Verificada</span>
+                  <span class="text-[10px] text-blue-400 font-semibold">🔵 Pestaña Azul</span>
+                </div>
+                <input
+                  v-model="formRed.esta_verificado"
+                  type="checkbox"
+                  class="w-5 h-5 rounded text-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- B. FOTO DE PERFIL & TABLA ÚNICA DE NÚMEROS (PUNTO CERO) -->
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono flex items-center gap-2">
+              <Flag class="w-4 h-4 text-purple-500" />
+              <span>2. Foto de Perfil & Punto Cero del Rival</span>
+            </h3>
+
+            <!-- Preview Foto & Input URL -->
+            <div class="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex-wrap">
+              <div class="relative shrink-0">
+                <img
+                  :src="formRed.foto_perfil_url || candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(formRed.handle_usuario || 'Rival')}&background=1e1b4b&color=a855f7`"
+                  alt="Foto Perfil"
+                  referrerpolicy="no-referrer"
+                  class="w-14 h-14 rounded-2xl object-cover border-2 border-purple-500 shadow-sm"
+                />
+              </div>
+              <div class="flex-1 min-w-[240px]">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Foto de Perfil (URL Extraída)
+                </label>
+                <div class="relative">
+                  <input
+                    v-model="formRed.foto_perfil_url"
+                    type="url"
+                    placeholder="https://..."
+                    class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100"
+                  />
+                  <ImageIcon class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabla Única de Métricas del Punto Cero -->
+            <div
+              class="grid gap-3 font-mono pt-1"
+              :class="currentRed.key === 'facebook' ? 'grid-cols-1 sm:grid-cols-3' : (currentRed.key === 'tiktok' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4')"
+            >
+              <!-- Seguidores / Suscriptores / Contactos -->
+              <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-purple-500/40 text-center space-y-1">
+                <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">
+                  👥 {{ currentRed.key === 'youtube' ? 'Suscriptores Iniciales' : (currentRed.key === 'linkedin' ? 'Contactos Iniciales' : 'Seguidores Iniciales') }}
+                </span>
+                <input
+                  v-model.number="formRed.seguidores_actuales"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 50000"
+                  class="w-full text-center px-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-base font-extrabold text-purple-600 dark:text-purple-400"
+                />
+                <span class="text-[9px] text-slate-400 block font-mono">Punto Alfa del Rival</span>
+              </div>
+
+              <!-- Seguidos (Oculto en YouTube) -->
+              <div
+                v-if="currentRed.key !== 'youtube'"
+                class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1"
+              >
+                <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">
+                  🔄 Seguidos
+                </span>
+                <input
+                  v-model.number="formRed.seguidos_actuales"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 300"
+                  class="w-full text-center px-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-base font-extrabold text-slate-800 dark:text-slate-200"
+                />
+                <span class="text-[9px] text-slate-400 block font-mono">Cuentas seguidas</span>
+              </div>
+
+              <!-- Me Gusta Iniciales (Específico TikTok) -->
+              <div
+                v-if="currentRed.key === 'tiktok'"
+                class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-rose-500/40 text-center space-y-1"
+              >
+                <span class="text-[10px] uppercase tracking-wider text-rose-500 font-bold block">
+                  ❤️ Me Gusta Iniciales
+                </span>
+                <input
+                  v-model.number="formRed.me_gusta_totales"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 7063"
+                  class="w-full text-center px-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-base font-extrabold text-rose-600 dark:text-rose-400"
+                />
+                <span class="text-[9px] text-slate-400 block font-mono">Likes acumulados</span>
+              </div>
+
+              <!-- Publicaciones / Videos Totales (Oculto en Facebook porque no aplica) -->
+              <div
+                v-if="currentRed.key !== 'facebook'"
+                class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1"
+              >
+                <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">
+                  {{ currentRed.key === 'tiktok' || currentRed.key === 'youtube' ? '🎬 Videos' : (currentRed.key === 'linkedin' ? '📝 Posts / Artículos' : '📄 Publicaciones Totales') }}
+                </span>
+                <input
+                  v-model.number="formRed.publicaciones_totales"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 250"
+                  class="w-full text-center px-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-base font-extrabold text-slate-800 dark:text-slate-200"
+                />
+                <span class="text-[9px] text-slate-400 block font-mono">Videos al comenzar</span>
+              </div>
+
+              <!-- Visualizaciones Iniciales (Específico YouTube) -->
+              <div
+                v-if="currentRed.key === 'youtube'"
+                class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-red-500/40 text-center space-y-1"
+              >
+                <span class="text-[10px] uppercase tracking-wider text-red-500 font-bold block">
+                  👁️ Visualizaciones Iniciales
+                </span>
+                <input
+                  v-model.number="formRed.visualizaciones_totales"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 6210"
+                  class="w-full text-center px-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-base font-extrabold text-red-600 dark:text-red-400"
+                />
+                <span class="text-[9px] text-slate-400 block font-mono">Vistas totales canal</span>
+              </div>
+
+              <!-- Fecha Punto Cero -->
+              <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1">
+                <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">
+                  📅 Fecha de Comienzo
+                </span>
+                <input
+                  v-model="formRed.fecha_punto_cero"
+                  type="date"
+                  class="w-full text-center px-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200"
+                />
+                <span class="text-[9px] text-slate-400 block font-mono">Nacimiento auditoría</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button & Cancel -->
+          <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              @click="isConfigModalOpen = false"
+              class="px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              :disabled="formRed.processing"
+              class="px-6 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-md shadow-purple-600/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-102"
+            >
+              <Save class="w-4 h-4" />
+              <span>{{ formRed.processing ? 'Guardando...' : `Guardar y Establecer Punto Cero de ${currentRed.nombre}` }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Modal para Editar Datos Generales del Candidato Rival -->
     <div

@@ -128,23 +128,40 @@ Esta documentación detalla de forma sencilla cada una de las pantallas de la pl
 
 ---
 
-## 6. Candidatos & Perfiles Políticos
-- **Ruta:** `/candidatos` y `/candidatos/{id}`
-- **Componentes:** `resources/js/Pages/Candidatos/Index.vue` y `Show.vue`
+## 6. Candidatos & Perfiles Políticos (Mi Perfil & Rivales)
+- **Rutas:**
+  - **Mi Perfil Oficial:** `/mi-perfil` (`resources/js/Pages/Candidatos/MiPerfil.vue`)
+  - **Catálogo de Candidatos:** `/candidatos` (`resources/js/Pages/Candidatos/Index.vue`)
+  - **Ficha Técnica del Rival:** `/candidatos/{id}` (`resources/js/Pages/Candidatos/Show.vue`)
 
 ### ¿Qué se ve?
-- **Catálogo de Actores Políticos:** Fichas con foto, nombre, territorio asignado, partido político y estado de campaña (**En Funciones / Reelección**, **Opositor Principal**, **Precandidato**, **Intendente Electo**).
-- **Vista Detallada del Candidato (`/candidatos/{id}`):**
-  - Menciones en prensa favorables vs. críticas.
-  - Cuentas de redes sociales conectadas con recuento de seguidores.
-  - Historial de publicaciones propias del candidato.
+- **Punto Cero / Punto Alfa (Línea de Base de Campaña):**
+  - Sistema de auditoría que registra las métricas iniciales del candidato propio y de los rivales al iniciar la campaña (fecha de inicio, seguidores, seguidos, publicaciones, me gusta y visualizaciones iniciales).
+  - Cálculo en tiempo real del **Crecimiento Neto** (+Seguidores ganados, +Videos subidos, +Interacciones).
+- **Lector Automático de Redes Sociales (`SocialProfileScraperService`):**
+  - Extractor inteligente con 1 clic que obtiene fotos de perfil en alta resolución (con protección `referrerpolicy="no-referrer"`), handles, descripciones y métricas de cabecera adaptadas por red:
+    - **📸 Instagram:** Seguidores, Cuentas Seguidas, Publicaciones totales y avatar HD.
+    - **👥 Facebook:** Seguidores y Seguidos (con tabla adaptativa que oculta publicaciones al ser privadas en páginas de FB).
+    - **🎵 TikTok:** Seguidores, Siguiendo, **❤️ Me Gusta acumulados de cabecera**, y Videos.
+    - **🐦 X (Twitter):** Seguidores, Seguidos, Posts acumulados y foto de perfil `_400x400`.
+    - **▶️ YouTube:** **👥 Suscriptores**, **🎬 Videos**, y **👁️ Visualizaciones Acumuladas del Canal** (vía Innertube API).
+    - **💼 LinkedIn:** **👥 Contactos / Red Profesional**, trayectoria en bio y foto de perfil oficial.
+- **Semáforo de Estado de Canales (Pestañas):**
+  - 🔵 **Azul (Verificada):** Cuenta oficialmente certificada por la red social.
+  - 🟠 **Naranja (Activa):** Cuenta vinculada y en uso activo de campaña.
+  - 🔴 **Roja (Inactiva):** Canal pendiente de creación o sin actividad de campaña.
+- **Modal de Configuración & Punto Cero:**
+  - Modal interactivo con diseño horizontal unificado que permite auto-extraer datos con un clic o ingresar números iniciales manualmente para fijar la línea de partida.
 
 ### ¿Cuál es el objetivo?
-- Gestionar los perfiles de todos los competidores en el tablero electoral y segmentar su tracción digital y mediática de forma individual.
+- Garantizar que el comando de campaña disponga de una línea de partida exacta para medir el impacto de la estrategia digital a lo largo del tiempo, y automatizar la ingesta de perfiles públicos de candidatos propios y opositores.
 
 ### ¿Cómo se trabaja?
-1. Pulsa sobre cualquier candidato para abrir su expediente completo.
-2. (Consultores/Admin): Usa el botón **"+ Nuevo Candidato"** para registrar nuevos competidores o precandidatos que surjan en la contienda.
+1. Ingresa a **"Mi Perfil"** o a la ficha de cualquier rival.
+2. Selecciona la pestaña de la red social deseada (Instagram, Facebook, TikTok, X, YouTube, LinkedIn).
+3. Haz clic en **"Configurar Canal & Punto Cero"**.
+4. Pega la URL del perfil y pulsa **"Leer Datos Automáticamente"** para que el sistema complete la foto, seguidores, seguidos, likes/vistas y publicaciones.
+5. Ajusta los valores del Punto Alfa si es necesario y pulsa **"Guardar Canal & Punto Cero"**.
 
 ---
 

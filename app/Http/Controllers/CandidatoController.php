@@ -147,6 +147,14 @@ class CandidatoController extends Controller
             $postsBaseline = $perfil ? (int)$perfil->publicaciones_punto_cero : 0;
             $crecimientoPosts = $postsActuales - $postsBaseline;
 
+            $meGustaActuales = $perfil ? (int)$perfil->me_gusta_totales : 0;
+            $meGustaBaseline = $perfil ? (int)$perfil->me_gusta_punto_cero : 0;
+            $crecimientoMeGusta = $meGustaActuales - $meGustaBaseline;
+
+            $viewsActuales = $perfil ? (int)$perfil->visualizaciones_totales : 0;
+            $viewsBaseline = $perfil ? (int)$perfil->visualizaciones_punto_cero : 0;
+            $crecimientoViews = $viewsActuales - $viewsBaseline;
+
             return [
                 'key' => $key,
                 'nombre' => $info['nombre'],
@@ -161,14 +169,20 @@ class CandidatoController extends Controller
                 'seguidores_actuales' => $seguidoresActuales,
                 'seguidos_actuales' => $perfil ? (int)$perfil->seguidos_actuales : 0,
                 'publicaciones_totales' => $postsActuales,
+                'me_gusta_totales' => $meGustaActuales,
+                'visualizaciones_totales' => $viewsActuales,
                 // Punto Cero (Baseline Inicial)
                 'fecha_punto_cero' => $perfil?->fecha_punto_cero ? $perfil->fecha_punto_cero->format('Y-m-d') : date('Y-m-d'),
                 'seguidores_punto_cero' => $seguidoresBaseline,
                 'seguidos_punto_cero' => $perfil ? (int)$perfil->seguidos_punto_cero : 0,
                 'publicaciones_punto_cero' => $postsBaseline,
+                'me_gusta_punto_cero' => $meGustaBaseline,
+                'visualizaciones_punto_cero' => $viewsBaseline,
                 'notas_punto_cero' => $perfil?->notas_punto_cero ?? '',
                 'crecimiento_neto_seguidores' => $crecimientoSeguidores,
                 'crecimiento_neto_posts' => $crecimientoPosts,
+                'crecimiento_neto_me_gusta' => $crecimientoMeGusta,
+                'crecimiento_neto_visualizaciones' => $crecimientoViews,
             ];
         })->values();
 
@@ -213,10 +227,14 @@ class CandidatoController extends Controller
             'seguidores_actuales' => ['nullable', 'integer', 'min:0'],
             'seguidos_actuales' => ['nullable', 'integer', 'min:0'],
             'publicaciones_totales' => ['nullable', 'integer', 'min:0'],
+            'me_gusta_totales' => ['nullable', 'integer', 'min:0'],
+            'visualizaciones_totales' => ['nullable', 'integer', 'min:0'],
             'fecha_punto_cero' => ['nullable', 'date'],
             'seguidores_punto_cero' => ['nullable', 'integer', 'min:0'],
             'seguidos_punto_cero' => ['nullable', 'integer', 'min:0'],
             'publicaciones_punto_cero' => ['nullable', 'integer', 'min:0'],
+            'me_gusta_punto_cero' => ['nullable', 'integer', 'min:0'],
+            'visualizaciones_punto_cero' => ['nullable', 'integer', 'min:0'],
             'notas_punto_cero' => ['nullable', 'string'],
         ]);
 
@@ -234,10 +252,14 @@ class CandidatoController extends Controller
                 'seguidores_actuales' => (int)($validated['seguidores_actuales'] ?? $validated['seguidores_punto_cero'] ?? 0),
                 'seguidos_actuales' => (int)($validated['seguidos_actuales'] ?? $validated['seguidos_punto_cero'] ?? 0),
                 'publicaciones_totales' => (int)($validated['publicaciones_totales'] ?? $validated['publicaciones_punto_cero'] ?? 0),
+                'me_gusta_totales' => (int)($validated['me_gusta_totales'] ?? $validated['me_gusta_punto_cero'] ?? 0),
+                'visualizaciones_totales' => (int)($validated['visualizaciones_totales'] ?? $validated['visualizaciones_punto_cero'] ?? 0),
                 'fecha_punto_cero' => $validated['fecha_punto_cero'] ?? now(),
                 'seguidores_punto_cero' => (int)($validated['seguidores_punto_cero'] ?? $validated['seguidores_actuales'] ?? 0),
                 'seguidos_punto_cero' => (int)($validated['seguidos_punto_cero'] ?? $validated['seguidos_actuales'] ?? 0),
                 'publicaciones_punto_cero' => (int)($validated['publicaciones_punto_cero'] ?? $validated['publicaciones_totales'] ?? 0),
+                'me_gusta_punto_cero' => (int)($validated['me_gusta_punto_cero'] ?? $validated['me_gusta_totales'] ?? 0),
+                'visualizaciones_punto_cero' => (int)($validated['visualizaciones_punto_cero'] ?? $validated['visualizaciones_totales'] ?? 0),
                 'notas_punto_cero' => $validated['notas_punto_cero'] ?? null,
             ]
         );
@@ -282,10 +304,14 @@ class CandidatoController extends Controller
             'seguidores_actuales' => ['nullable', 'integer', 'min:0'],
             'seguidos_actuales' => ['nullable', 'integer', 'min:0'],
             'publicaciones_totales' => ['nullable', 'integer', 'min:0'],
+            'me_gusta_totales' => ['nullable', 'integer', 'min:0'],
+            'visualizaciones_totales' => ['nullable', 'integer', 'min:0'],
             'fecha_punto_cero' => ['nullable', 'date'],
             'seguidores_punto_cero' => ['nullable', 'integer', 'min:0'],
             'seguidos_punto_cero' => ['nullable', 'integer', 'min:0'],
             'publicaciones_punto_cero' => ['nullable', 'integer', 'min:0'],
+            'me_gusta_punto_cero' => ['nullable', 'integer', 'min:0'],
+            'visualizaciones_punto_cero' => ['nullable', 'integer', 'min:0'],
             'notas_punto_cero' => ['nullable', 'string'],
         ]);
 
@@ -332,8 +358,19 @@ class CandidatoController extends Controller
 
             $seguidoresActuales = $perfil ? (int)$perfil->seguidores_actuales : 0;
             $seguidoresBaseline = $perfil ? (int)$perfil->seguidores_punto_cero : 0;
+            $crecimientoSeguidores = $seguidoresActuales - $seguidoresBaseline;
+
             $postsActuales = $perfil ? (int)$perfil->publicaciones_totales : 0;
             $postsBaseline = $perfil ? (int)$perfil->publicaciones_punto_cero : 0;
+            $crecimientoPosts = $postsActuales - $postsBaseline;
+
+            $meGustaActuales = $perfil ? (int)$perfil->me_gusta_totales : 0;
+            $meGustaBaseline = $perfil ? (int)$perfil->me_gusta_punto_cero : 0;
+            $crecimientoMeGusta = $meGustaActuales - $meGustaBaseline;
+
+            $viewsActuales = $perfil ? (int)$perfil->visualizaciones_totales : 0;
+            $viewsBaseline = $perfil ? (int)$perfil->visualizaciones_punto_cero : 0;
+            $crecimientoViews = $viewsActuales - $viewsBaseline;
 
             return [
                 'key' => $key,
@@ -349,11 +386,20 @@ class CandidatoController extends Controller
                 'seguidores_actuales' => $seguidoresActuales,
                 'seguidos_actuales' => $perfil ? (int)$perfil->seguidos_actuales : 0,
                 'publicaciones_totales' => $postsActuales,
+                'me_gusta_totales' => $meGustaActuales,
+                'visualizaciones_totales' => $viewsActuales,
+                // Punto Cero (Baseline Inicial)
                 'fecha_punto_cero' => $perfil?->fecha_punto_cero ? $perfil->fecha_punto_cero->format('Y-m-d') : date('Y-m-d'),
                 'seguidores_punto_cero' => $seguidoresBaseline,
                 'seguidos_punto_cero' => $perfil ? (int)$perfil->seguidos_punto_cero : 0,
                 'publicaciones_punto_cero' => $postsBaseline,
+                'me_gusta_punto_cero' => $meGustaBaseline,
+                'visualizaciones_punto_cero' => $viewsBaseline,
                 'notas_punto_cero' => $perfil?->notas_punto_cero ?? '',
+                'crecimiento_neto_seguidores' => $crecimientoSeguidores,
+                'crecimiento_neto_posts' => $crecimientoPosts,
+                'crecimiento_neto_me_gusta' => $crecimientoMeGusta,
+                'crecimiento_neto_visualizaciones' => $crecimientoViews,
             ];
         })->values();
 
