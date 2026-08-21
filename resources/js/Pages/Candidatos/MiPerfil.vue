@@ -223,7 +223,11 @@ const formCandidato = useForm({
   cargo_aspirado: props.candidato.cargo_aspirado || '',
   estado_politico: props.candidato.estado_politico || 'candidato',
   ciclo_campana_id: props.candidato.ciclo_campana_id || props.ciclos[0]?.id,
-  territorio_id: props.candidato.territorio_id || props.territorios[0]?.id,
+  territorio_id: props.candidato.territorio_id || props.candidato.territorio?.id || '',
+  territorio_nombre: props.candidato.territorio?.nombre || '',
+  padron_electoral: props.candidato.territorio?.padron_electoral || 0,
+  poblacion_total: props.candidato.territorio?.poblacion_total || 0,
+  tipo_territorio: props.candidato.territorio?.tipo || 'municipio',
   color_hex: props.candidato.color_hex || '#06b6d4',
   avatar_url: props.candidato.avatar_url || '',
   bio_resumen: props.candidato.bio_resumen || '',
@@ -1061,6 +1065,57 @@ const getHandlePlaceholder = (key) => {
                 placeholder="ej. Intendente Municipal"
                 class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
               />
+            </div>
+          </div>
+
+          <!-- DATOS GEOGRÁFICOS Y ELECTORALES -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono flex items-center gap-1.5">
+                <MapPin class="w-4 h-4 text-cyan-500" />
+                <span>Territorio Geográfico & Padrón Electoral</span>
+              </span>
+              <span class="text-[10px] text-cyan-500 font-mono uppercase font-bold">Base Electoral</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Nombre del Territorio / Departamento / Municipio *
+              </label>
+              <input
+                v-model="formCandidato.territorio_nombre"
+                type="text"
+                required
+                placeholder="ej. Departamento Albardón / San Juan"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 font-mono">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Padrón Electoral (Votantes) *
+                </label>
+                <input
+                  v-model.number="formCandidato.padron_electoral"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 24500"
+                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-extrabold text-emerald-500"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Población Total Estimada
+                </label>
+                <input
+                  v-model.number="formCandidato.poblacion_total"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 31000"
+                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100"
+                />
+              </div>
             </div>
           </div>
 

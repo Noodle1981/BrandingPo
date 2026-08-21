@@ -18,11 +18,11 @@ class PoliticaSeeder extends Seeder
     {
         // 1. Territorio
         $territorio = Territorio::firstOrCreate(
-            ['nombre' => 'Departamento Capital / Gran Córdoba'],
+            ['nombre' => 'Departamento Albardón / San Juan'],
             [
                 'tipo' => 'municipio',
-                'poblacion_total' => 1450000,
-                'padron_electoral' => 1120000,
+                'poblacion_total' => 31000,
+                'padron_electoral' => 24500,
             ]
         );
 

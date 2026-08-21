@@ -464,7 +464,7 @@ class CandidatoController extends Controller
     }
 
     /**
-     * Actualizar datos del candidato.
+     * Actualizar datos del candidato y su territorio geográfico.
      */
     public function update(Request $request, Candidato $candidato): RedirectResponse
     {
@@ -473,27 +473,47 @@ class CandidatoController extends Controller
             'partido_coalicion' => ['required', 'string', 'max:255'],
             'cargo_aspirado' => ['nullable', 'string', 'max:255'],
             'estado_politico' => ['required', 'string'],
-            'ciclo_campana_id' => ['required', 'exists:ciclo_campanas,id'],
-            'territorio_id' => ['nullable', 'exists:territorios,id'],
+            'ciclo_campana_id' => ['nullable', 'exists:ciclo_campanas,id'],
+            'territorio_id' => ['nullable'],
+            'territorio_nombre' => ['nullable', 'string', 'max:255'],
+            'padron_electoral' => ['nullable', 'integer', 'min:0'],
+            'poblacion_total' => ['nullable', 'integer', 'min:0'],
+            'tipo_territorio' => ['nullable', 'string', 'max:50'],
             'color_hex' => ['nullable', 'string', 'max:10'],
             'avatar_url' => ['nullable', 'url', 'max:500'],
             'bio_resumen' => ['nullable', 'string'],
         ]);
+
+        $territorioId = $validated['territorio_id'] ?? $candidato->territorio_id;
+
+        // Si se envió un nombre de territorio nuevo o editado
+        if (!empty($validated['territorio_nombre'])) {
+            $territorio = Territorio::updateOrCreate(
+                ['id' => $territorioId ?: null],
+                [
+                    'nombre' => $validated['territorio_nombre'],
+                    'padron_electoral' => $validated['padron_electoral'] ?? 0,
+                    'poblacion_total' => $validated['poblacion_total'] ?? 0,
+                    'tipo' => $validated['tipo_territorio'] ?? 'municipio',
+                ]
+            );
+            $territorioId = $territorio->id;
+        }
 
         $candidato->update([
             'nombre_completo' => $validated['nombre_completo'],
             'partido_coalicion' => $validated['partido_coalicion'],
             'cargo_aspirado' => $validated['cargo_aspirado'] ?? null,
             'estado_politico' => $validated['estado_politico'],
-            'ciclo_campana_id' => $validated['ciclo_campana_id'],
-            'territorio_id' => $validated['territorio_id'] ?? null,
+            'ciclo_campana_id' => $validated['ciclo_campana_id'] ?? $candidato->ciclo_campana_id,
+            'territorio_id' => $territorioId,
             'color_hex' => $validated['color_hex'] ?? $candidato->color_hex,
             'avatar_url' => $validated['avatar_url'] ?? null,
             'bio_resumen' => $validated['bio_resumen'] ?? null,
         ]);
 
         return redirect()->back()
-            ->with('success', "Perfil de {$candidato->nombre_completo} actualizado correctamente.");
+            ->with('success', "Datos y territorio geográfico de {$candidato->nombre_completo} actualizados correctamente.");
     }
 
     /**
