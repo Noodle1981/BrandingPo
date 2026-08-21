@@ -18,7 +18,9 @@ import {
   TrendingUp,
   Image as ImageIcon,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Settings,
+  X
 } from '@lucide/vue';
 
 const props = defineProps({
@@ -166,6 +168,15 @@ const fetchScrapedData = async () => {
   }
 };
 
+const isConfigModalOpen = ref(false);
+
+const openConfigModal = (platformKey = null) => {
+  if (platformKey) {
+    selectPlatform(platformKey);
+  }
+  isConfigModalOpen.value = true;
+};
+
 const savePerfilSocial = () => {
   // Sincronizar Punto Cero con actuales si están en 0
   if (!formRed.seguidores_punto_cero) formRed.seguidores_punto_cero = formRed.seguidores_actuales;
@@ -177,6 +188,7 @@ const savePerfilSocial = () => {
     onSuccess: () => {
       scrapeMessage.value = '¡Canal guardado correctamente!';
       scrapeSuccess.value = true;
+      isConfigModalOpen.value = false;
     }
   });
 };
@@ -360,18 +372,28 @@ const getSocialMeta = (key) => {
     <!-- 2. Pestañas de Redes Sociales (Grid Centrado y Proporcionado con Logos Oficiales) -->
     <div class="space-y-4">
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <button
+        <div
           v-for="red in redes"
           :key="red.key"
-          type="button"
           @click="selectPlatform(red.key)"
-          class="p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-center gap-2 cursor-pointer relative shadow-xs"
+          class="p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-center gap-2 cursor-pointer relative shadow-xs group"
           :class="[
             selectedPlatformKey === red.key
               ? 'ring-2 ring-cyan-500 shadow-md scale-102 ' + tabBadgeStyle(red.color_estado).tab
               : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm'
           ]"
         >
+          <!-- Botón de Engranaje para Configurar Directamente -->
+          <button
+            type="button"
+            @click.stop="openConfigModal(red.key)"
+            class="absolute top-2 right-2 p-1.5 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+            :class="selectedPlatformKey === red.key ? 'text-cyan-500' : 'opacity-70 group-hover:opacity-100'"
+            title="Configurar canal y Punto Cero"
+          >
+            <Settings class="w-3.5 h-3.5" />
+          </button>
+
           <!-- Logo Oficial de la Red -->
           <div class="flex items-center justify-center w-10 h-10 rounded-xl shadow-2xs" :class="getSocialMeta(red.key).bgLight">
             <!-- Instagram -->
@@ -410,228 +432,178 @@ const getSocialMeta = (key) => {
           >
             {{ red.color_estado === 'azul' ? '✓ Verificada' : (red.color_estado === 'naranja' ? 'Activa' : 'Inactiva') }}
           </span>
-        </button>
+        </div>
       </div>
 
-      <!-- 3. TABLA / FICHA UNIFICADA DEL CANAL DIGITAL Y PUNTO CERO -->
+      <!-- 3. FICHA RESUMEN EJECUTIVA DEL CANAL & PUNTO CERO -->
       <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-          <div>
-            <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span class="w-3 h-3 rounded-full" :class="{
-                'bg-blue-500': currentRed.color_estado === 'azul',
-                'bg-amber-500': currentRed.color_estado === 'naranja',
-                'bg-rose-500': currentRed.color_estado === 'rojo',
-              }"></span>
-              <span>Ficha Única: {{ currentRed.nombre }}</span>
-            </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Enlace, estado de verificación, foto de perfil y punto de partida (Punto Cero).
-            </p>
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-4">
+          <div class="flex items-center gap-4">
+            <!-- Foto de Perfil de la Red Social -->
+            <div class="relative shrink-0">
+              <img
+                :src="currentRed.foto_perfil_url || candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentRed.handle_usuario || 'User')}&background=0f172a&color=06b6d4`"
+                alt="Foto Canal"
+                referrerpolicy="no-referrer"
+                class="w-14 h-14 rounded-2xl object-cover border-2 border-cyan-500 shadow-sm"
+              />
+              <div
+                class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900"
+                :class="{
+                  'bg-blue-500 text-white': currentRed.color_estado === 'azul',
+                  'bg-amber-500 text-slate-950': currentRed.color_estado === 'naranja',
+                  'bg-rose-500 text-white': currentRed.color_estado === 'rojo',
+                }"
+              >
+                <CheckCircle v-if="currentRed.color_estado === 'azul'" class="w-3 h-3" />
+                <span v-else class="text-[9px] font-extrabold">{{ currentRed.color_estado === 'naranja' ? '●' : '×' }}</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span>{{ currentRed.nombre }}</span>
+                </h2>
+                <span
+                  class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase"
+                  :class="tabBadgeStyle(currentRed.color_estado).pill"
+                >
+                  {{ tabBadgeStyle(currentRed.color_estado).label }}
+                </span>
+              </div>
+
+              <div class="flex items-center gap-3 mt-1 text-xs font-mono text-slate-600 dark:text-slate-400 flex-wrap">
+                <span class="font-bold text-slate-800 dark:text-slate-200">
+                  {{ currentRed.handle_usuario || 'Sin handle asignado' }}
+                </span>
+                <a
+                  v-if="currentRed.url_perfil"
+                  :href="currentRed.url_perfil"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-cyan-500 hover:text-cyan-400 inline-flex items-center gap-1 text-[11px] underline font-semibold"
+                >
+                  <span>Abrir enlace</span>
+                  <ExternalLink class="w-3 h-3" />
+                </a>
+                <span v-else class="text-slate-400 text-[11px] italic">
+                  (Enlace no configurado)
+                </span>
+              </div>
+            </div>
           </div>
 
-          <span
-            class="px-3 py-1 rounded-xl text-xs font-mono font-bold uppercase border"
-            :class="tabBadgeStyle(currentRed.color_estado).tab"
+          <!-- Botón para Abrir Modal de Configuración -->
+          <button
+            type="button"
+            @click="openConfigModal(currentRed.key)"
+            class="px-4 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:scale-102"
           >
-            Estado: {{ tabBadgeStyle(currentRed.color_estado).label }}
-          </span>
+            <Settings class="w-4 h-4" />
+            <span>Configurar Canal & Punto Cero</span>
+          </button>
         </div>
 
-        <form @submit.prevent="savePerfilSocial" class="space-y-6">
-          <!-- A. Enlace, Lector Automático y Estados -->
-          <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
-            <!-- Enlace con Botón Auto-Lector -->
-            <div>
-              <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                  1. Enlace Directo al Perfil de {{ currentRed.nombre }} (URL)
-                </label>
-                <button
-                  type="button"
-                  @click="fetchScrapedData"
-                  :disabled="isScraping || !formRed.url_perfil"
-                  class="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                  title="Leer automáticamente foto, seguidores, seguidos y publicaciones con 1 clic"
-                >
-                  <Sparkles class="w-3.5 h-3.5" />
-                  <span>{{ isScraping ? 'Leyendo datos...' : '⚡ Leer Datos & Foto con 1 Clic' }}</span>
-                </button>
-              </div>
-
-              <div class="relative">
-                <input
-                  v-model="formRed.url_perfil"
-                  type="url"
-                  placeholder="https://www.instagram.com/usuario/"
-                  class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
-                />
-                <Link2 class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              </div>
-
-              <div v-if="scrapeMessage" class="mt-2 flex items-center gap-2 text-xs font-mono" :class="scrapeSuccess ? 'text-emerald-500' : 'text-amber-500'">
-                <CheckCircle v-if="scrapeSuccess" class="w-4 h-4" />
-                <AlertCircle v-else class="w-4 h-4" />
-                <span>{{ scrapeMessage }}</span>
-              </div>
-            </div>
-
-            <!-- Handle & Switches -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-200 dark:border-slate-800">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Usuario / Handle *
-                </label>
-                <input
-                  v-model="formRed.handle_usuario"
-                  type="text"
-                  required
-                  placeholder="ej. @usuario"
-                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100"
-                />
-              </div>
-
-              <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <div>
-                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">Canal Activo</span>
-                  <span class="text-[10px] text-amber-500 font-semibold">🟠 Pestaña Naranja</span>
-                </div>
-                <input
-                  v-model="formRed.esta_activo"
-                  type="checkbox"
-                  class="w-5 h-5 rounded text-cyan-500"
-                />
-              </div>
-
-              <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <div>
-                  <span class="text-xs font-bold text-blue-500 dark:text-blue-400 block">Cuenta Verificada</span>
-                  <span class="text-[10px] text-blue-400 font-semibold">🔵 Pestaña Azul</span>
-                </div>
-                <input
-                  v-model="formRed.esta_verificado"
-                  type="checkbox"
-                  class="w-5 h-5 rounded text-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- B. FOTO DE PERFIL & TABLA ÚNICA DE NÚMEROS (PUNTO CERO) -->
-          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono flex items-center gap-2">
-              <Flag class="w-4 h-4 text-cyan-500" />
-              <span>2. Foto de Perfil & Punto Cero (Línea de Base de Inicio)</span>
-            </h3>
-
-            <!-- Preview Foto & Input URL -->
-            <div class="flex items-center gap-4 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex-wrap">
-              <div class="relative shrink-0">
-                <img
-                  :src="formRed.foto_perfil_url || candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(formRed.handle_usuario || 'User')}&background=0f172a&color=06b6d4`"
-                  alt="Foto Perfil"
-                  referrerpolicy="no-referrer"
-                  class="w-16 h-16 rounded-2xl object-cover border-2 border-cyan-500 shadow-sm"
-                />
-              </div>
-              <div class="flex-1 min-w-[240px]">
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Foto de Perfil (URL Extraída)
-                </label>
-                <div class="relative">
-                  <input
-                    v-model="formRed.foto_perfil_url"
-                    type="url"
-                    placeholder="https://..."
-                    class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100"
-                  />
-                  <ImageIcon class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                </div>
-              </div>
-            </div>
-
-            <!-- Tabla Única de Métricas del Punto Cero -->
-            <div
-              class="grid gap-4 font-mono pt-2"
-              :class="currentRed.key === 'facebook' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-4'"
-            >
-              <!-- Seguidores -->
-              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-cyan-500/40 text-center space-y-1">
-                <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
-                  👥 Seguidores Iniciales
-                </span>
-                <input
-                  v-model.number="formRed.seguidores_actuales"
-                  type="number"
-                  min="0"
-                  placeholder="ej. 1359"
-                  class="w-full text-center px-2 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-lg font-extrabold text-cyan-600 dark:text-cyan-400"
-                />
-                <span class="text-[10px] text-slate-400 block font-mono">Punto Alfa de Inicio</span>
-              </div>
-
-              <!-- Seguidos -->
-              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1">
-                <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
-                  🔄 Seguidos
-                </span>
-                <input
-                  v-model.number="formRed.seguidos_actuales"
-                  type="number"
-                  min="0"
-                  placeholder="ej. 588"
-                  class="w-full text-center px-2 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-lg font-extrabold text-slate-800 dark:text-slate-200"
-                />
-                <span class="text-[10px] text-slate-400 block font-mono">Cuentas seguidas</span>
-              </div>
-
-              <!-- Publicaciones Totales (Oculto en Facebook porque no aplica) -->
-              <div
-                v-if="currentRed.key !== 'facebook'"
-                class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1"
+        <!-- Tarjetas de Métricas Ejecutivas del Canal (Punto Cero vs Actual) -->
+        <div
+          class="grid gap-4 font-mono"
+          :class="currentRed.key === 'facebook' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'"
+        >
+          <!-- Seguidores -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
+              <span>👥 Seguidores</span>
+              <span
+                v-if="currentRed.crecimiento_neto_seguidores > 0"
+                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
               >
-                <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
-                  📄 Publicaciones Totales
-                </span>
-                <input
-                  v-model.number="formRed.publicaciones_totales"
-                  type="number"
-                  min="0"
-                  placeholder="ej. 64"
-                  class="w-full text-center px-2 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-lg font-extrabold text-slate-800 dark:text-slate-200"
-                />
-                <span class="text-[10px] text-slate-400 block font-mono">Posts al comenzar</span>
-              </div>
-
-              <!-- Fecha Punto Cero -->
-              <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-center space-y-1">
-                <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
-                  📅 Fecha de Comienzo
-                </span>
-                <input
-                  v-model="formRed.fecha_punto_cero"
-                  type="date"
-                  class="w-full text-center px-2 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200"
-                />
-                <span class="text-[10px] text-slate-400 block font-mono">Nacimiento de auditoría</span>
-              </div>
+                +{{ Number(currentRed.crecimiento_neto_seguidores).toLocaleString() }}
+              </span>
+            </span>
+            <div class="text-2xl font-extrabold text-cyan-600 dark:text-cyan-400">
+              {{ Number(currentRed.seguidores_actuales || 0).toLocaleString() }}
+            </div>
+            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
+              <span>Punto Alfa (Inicio):</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.seguidores_punto_cero || 0).toLocaleString() }}</span>
             </div>
           </div>
 
-          <!-- Submit Button -->
-          <div class="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="submit"
-              :disabled="formRed.processing"
-              class="px-7 py-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-sm shadow-md shadow-cyan-500/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-102"
-            >
-              <Save class="w-4 h-4" />
-              <span>{{ formRed.processing ? 'Guardando...' : `Guardar y Establecer Punto Cero en ${currentRed.nombre}` }}</span>
-            </button>
+          <!-- Cuentas Seguidas -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
+              🔄 Seguidos
+            </span>
+            <div class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">
+              {{ Number(currentRed.seguidos_actuales || 0).toLocaleString() }}
+            </div>
+            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
+              <span>Punto Alfa (Inicio):</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.seguidos_punto_cero || 0).toLocaleString() }}</span>
+            </div>
           </div>
-        </form>
+
+          <!-- Publicaciones Totales (Oculto en Facebook) -->
+          <div
+            v-if="currentRed.key !== 'facebook'"
+            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1"
+          >
+            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
+              <span>📄 Publicaciones</span>
+              <span
+                v-if="currentRed.crecimiento_neto_posts > 0"
+                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
+              >
+                +{{ Number(currentRed.crecimiento_neto_posts).toLocaleString() }}
+              </span>
+            </span>
+            <div class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">
+              {{ Number(currentRed.publicaciones_totales || 0).toLocaleString() }}
+            </div>
+            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
+              <span>Punto Alfa (Inicio):</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.publicaciones_punto_cero || 0).toLocaleString() }}</span>
+            </div>
+          </div>
+
+          <!-- Fecha de Inicio & Estado -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
+              📅 Fecha Punto Cero
+            </span>
+            <div class="text-sm font-bold text-slate-800 dark:text-slate-200 pt-1">
+              {{ currentRed.fecha_punto_cero || 'No registrada' }}
+            </div>
+            <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200/50 dark:border-slate-800/50 truncate" :title="currentRed.notas_punto_cero || 'Línea de partida de campaña'">
+              {{ currentRed.notas_punto_cero || 'Línea de partida de campaña' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Banner si el canal está inactivo / pendiente -->
+        <div
+          v-if="currentRed.color_estado === 'rojo'"
+          class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between flex-wrap gap-3"
+        >
+          <div class="flex items-center gap-2.5">
+            <AlertCircle class="w-5 h-5 text-rose-500 shrink-0" />
+            <p class="text-xs text-rose-600 dark:text-rose-300">
+              Este canal digital figura como <strong>Inactivo o No Vinculado</strong>. Puedes configurarlo y comenzar a auditarlo en cualquier momento.
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="openConfigModal(currentRed.key)"
+            class="px-3.5 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold text-xs font-mono transition-all cursor-pointer"
+          >
+            Configurar Ahora
+          </button>
+        </div>
       </div>
     </div>
+
+
 
     <!-- Modal para Editar Datos Generales del Candidato -->
     <div
