@@ -13,6 +13,7 @@ class PresupuestoPartida extends Model
     protected $table = 'presupuesto_partidas';
 
     protected $fillable = [
+        'workspace_id',
         'ciclo_campana_id',
         'candidato_id',
         'categoria',
@@ -25,6 +26,11 @@ class PresupuestoPartida extends Model
         'monto_asignado' => 'decimal:2',
         'monto_ejecutado' => 'decimal:2',
     ];
+
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     public function cicloCampana(): BelongsTo
     {

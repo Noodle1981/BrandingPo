@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\MedioPrensa;
 use App\Models\NotaPrensa;
@@ -13,15 +14,17 @@ use Inertia\Response;
 class MediosController extends Controller
 {
     /**
-     * Observatorio de Medios Tradicionales & Clipping Informativo.
+     * Observatorio de Medios Tradicionales & Clipping Informativo del Workspace Activo.
      */
     public function index(Request $request): Response
     {
+        $workspace = WorkspaceHelper::activo($request);
         $candidatoId = $request->input('candidato_id');
         $tono = $request->input('tono');
         $medioId = $request->input('medio_id');
 
-        $query = NotaPrensa::with(['medioPrensa', 'candidato'])
+        $query = NotaPrensa::where('workspace_id', $workspace->id)
+            ->with(['medioPrensa', 'candidato'])
             ->orderByDesc('fecha_publicacion');
 
         if ($candidatoId) {
@@ -62,10 +65,22 @@ class MediosController extends Controller
             ];
         });
 
-        $medios = MedioPrensa::withCount('notasPrensa')->orderBy('nombre')->get();
-        $candidatos = Candidato::orderByDesc('es_propio')->orderBy('nombre_completo')->get(['id', 'nombre_completo', 'es_propio']);
+        $medios = MedioPrensa::where('workspace_id', $workspace->id)
+            ->withCount('notasPrensa')
+            ->orderBy('nombre')
+            ->get();
 
-        $todasNotas = NotaPrensa::all();
+        // Si no hay medios creados específicos en este workspace, mostrar los globales o fallbacks
+        if ($medios->isEmpty()) {
+            $medios = MedioPrensa::withCount('notasPrensa')->orderBy('nombre')->get();
+        }
+
+        $candidatos = Candidato::where('workspace_id', $workspace->id)
+            ->orderByDesc('es_propio')
+            ->orderBy('nombre_completo')
+            ->get(['id', 'nombre_completo', 'es_propio']);
+
+        $todasNotas = NotaPrensa::where('workspace_id', $workspace->id)->get();
         $totalFavorables = $todasNotas->where('tono_mencion', 'favorable')->count();
         $totalNeutras = $todasNotas->where('tono_mencion', 'neutro')->count();
         $totalCriticas = $todasNotas->where('tono_mencion', 'critico')->count();
@@ -93,6 +108,8 @@ class MediosController extends Controller
      */
     public function storeNota(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'medio_prensa_id' => ['required', 'exists:medios_prensa,id'],
             'candidato_id' => ['nullable', 'exists:candidatos,id'],
@@ -107,6 +124,7 @@ class MediosController extends Controller
         ]);
 
         NotaPrensa::create([
+            'workspace_id' => $workspace->id,
             'medio_prensa_id' => $validated['medio_prensa_id'],
             'candidato_id' => $validated['candidato_id'] ?? null,
             'fecha_publicacion' => $validated['fecha_publicacion'],

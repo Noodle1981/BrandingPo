@@ -13,6 +13,7 @@ class InformeEjecutivo extends Model
     protected $table = 'informes_ejecutivos';
 
     protected $fillable = [
+        'workspace_id',
         'ciclo_campana_id',
         'titulo',
         'fecha_generacion',
@@ -26,6 +27,11 @@ class InformeEjecutivo extends Model
         'fecha_generacion' => 'date',
         'metricas_clave_snapshot' => 'array',
     ];
+
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     public function cicloCampana(): BelongsTo
     {

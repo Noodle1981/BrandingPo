@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, useForm, usePage, Link } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import Badge from '../../Components/Badge.vue';
 import {
@@ -30,7 +30,11 @@ const props = defineProps({
   ultimas_cargas: {
     type: Array,
     default: () => [],
-  }
+  },
+  tipo_activo: {
+    type: String,
+    default: 'todos',
+  },
 });
 
 const page = usePage();
@@ -202,24 +206,32 @@ const formatNumber = (num) => {
 </script>
 
 <template>
-  <Head title="Carga Rápida Fast-Flow Desk" />
+  <Head :title="tipo_activo === 'propio' ? 'Fast-Flow (Mi Campaña)' : 'Fast-Flow (Auditoría Rivales)'" />
 
   <WarRoomLayout>
-    <!-- Header -->
+    <!-- Header Contextualizado por Flujo -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
         <div class="flex items-center gap-2">
-          <Zap class="w-6 h-6 text-cyan-500" />
+          <Sparkles v-if="tipo_activo === 'propio'" class="w-6 h-6 text-cyan-500" />
+          <Zap v-else class="w-6 h-6 text-violet-500" />
           <h1 class="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-            Fast-Flow Entry Desk
+            {{ tipo_activo === 'propio' ? 'Fast-Flow — Mi Campaña' : 'Fast-Flow — Auditoría de Oposición' }}
           </h1>
-          <span class="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/40">
-            Ergonómico • Atajo: Ctrl+Enter
+          <span
+            class="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full border"
+            :class="tipo_activo === 'propio' ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/40' : 'bg-violet-500/20 text-violet-600 dark:text-violet-400 border-violet-500/40'"
+          >
+            {{ tipo_activo === 'propio' ? '🎖️ CANDIDATO OFICIAL' : '⚔️ RIVALES & OPOSICIÓN' }}
           </span>
         </div>
         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Formulario adaptativo de alta velocidad para registro de publicaciones, métricas y pauta publicitaria.
+          {{ tipo_activo === 'propio' ? 'Carga ágil de publicaciones orgánicas y pauta publicitaria invertida de tu candidato.' : 'Monitorea y audita el impacto emocional y pauta de las publicaciones de tus rivales.' }}
         </p>
+      </div>
+
+      <div class="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+        Atajo: <kbd class="px-1.5 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">Ctrl + Enter</kbd>
       </div>
     </div>
 
@@ -239,24 +251,52 @@ const formatNumber = (num) => {
       <!-- Left 8 Cols: Fast-Flow Form Desk -->
       <div class="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs">
         <form @submit.prevent="submitFastFlow" class="space-y-5 text-sm">
-          <!-- Step 1: Candidate Selector with Visual Pills -->
+          <!-- Step 1: Candidate Selector with Visual Cards -->
           <div>
             <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">
-              1. Selecciona el Candidato Político *
+              {{ tipo_activo === 'propio' ? '1. Candidato Propio de Campaña' : '1. Selecciona el Rival / Contrincante *' }}
             </label>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+
+            <!-- Caso 1: Mi Campaña (1 solo candidato propio -> Ficha destacada sin confusión) -->
+            <div
+              v-if="tipo_activo === 'propio' && candidatos.length === 1"
+              class="p-3.5 rounded-2xl bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-between"
+            >
+              <div class="flex items-center gap-3">
+                <img
+                  :src="candidatos[0].avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(candidatos[0].nombre_completo)}`"
+                  class="w-12 h-12 rounded-2xl object-cover border-2 border-cyan-500 shadow-sm"
+                />
+                <div>
+                  <p class="font-extrabold text-slate-900 dark:text-slate-100 text-sm leading-none">
+                    {{ candidatos[0].nombre_completo }}
+                  </p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">
+                    {{ candidatos[0].cargo_aspirado }} &bull; {{ candidatos[0].partido_coalicion }}
+                  </p>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full bg-cyan-500 text-slate-950 text-[10px] font-mono font-bold uppercase shadow-xs">
+                ✓ Mi Candidato
+              </span>
+            </div>
+
+            <!-- Caso 2: Oposición o Múltiples Candidatos -> Grid Selector -->
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
                 v-for="cand in candidatos"
                 :key="cand.id"
                 type="button"
                 @click="form.candidato_id = cand.id"
                 class="p-3 rounded-2xl border text-left flex items-center gap-3 transition-all cursor-pointer"
-                :class="form.candidato_id == cand.id ? 'border-cyan-500 bg-cyan-500/10 dark:bg-cyan-500/20 ring-2 ring-cyan-500/30 shadow-xs' : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-slate-400'"
+                :class="form.candidato_id == cand.id
+                  ? (tipo_activo === 'propio' ? 'border-cyan-500 bg-cyan-500/10 ring-2 ring-cyan-500/30 shadow-xs' : 'border-violet-500 bg-violet-500/10 ring-2 ring-violet-500/30 shadow-xs')
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-slate-400'"
               >
                 <img
                   :src="cand.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(cand.nombre_completo)}`"
                   class="w-10 h-10 rounded-xl object-cover border"
-                  :style="{ borderColor: cand.color_hex || '#06b6d4' }"
+                  :style="{ borderColor: cand.color_hex || (tipo_activo === 'propio' ? '#06b6d4' : '#8b5cf6') }"
                 />
                 <div class="min-w-0 flex-1">
                   <p class="font-bold text-slate-900 dark:text-slate-100 text-xs sm:text-sm truncate">
@@ -267,6 +307,7 @@ const formatNumber = (num) => {
               </button>
             </div>
           </div>
+
 
           <!-- Step 2: Social Network Pill Selector & Post Format -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -624,10 +665,13 @@ const formatNumber = (num) => {
             <button
               type="submit"
               :disabled="form.processing || !canWrite"
-              class="px-6 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-sm transition-all shadow-md shadow-cyan-500/25 flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              class="px-6 py-3 rounded-2xl font-extrabold text-sm transition-all shadow-md flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              :class="tipo_activo === 'propio'
+                ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-cyan-500/25'
+                : 'bg-violet-600 hover:bg-violet-500 text-white shadow-violet-500/25'"
             >
               <Send class="w-4 h-4" />
-              <span>{{ form.processing ? 'Guardando...' : 'Registrar en Fast-Flow' }}</span>
+              <span>{{ form.processing ? 'Guardando...' : (tipo_activo === 'propio' ? 'Registrar Publicación Propia' : 'Registrar Auditoría Rival') }}</span>
             </button>
           </div>
         </form>
@@ -637,8 +681,8 @@ const formatNumber = (num) => {
       <div class="lg:col-span-4 space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Clock class="w-4 h-4 text-cyan-500" />
-            <span>Últimas Cargas Rápidas</span>
+            <Clock class="w-4 h-4" :class="tipo_activo === 'propio' ? 'text-cyan-500' : 'text-violet-500'" />
+            <span>{{ tipo_activo === 'propio' ? 'Últimas Cargas Propias' : 'Últimas Auditorías de Oposición' }}</span>
           </h2>
           <span class="text-xs font-mono text-slate-400">{{ ultimas_cargas.length }} registros</span>
         </div>

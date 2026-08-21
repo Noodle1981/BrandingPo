@@ -14,6 +14,7 @@ class Territorio extends Model
     use HasFactory;
 
     protected $fillable = [
+        'workspace_id',
         'parent_id',
         'nombre',
         'tipo',
@@ -43,6 +44,14 @@ class Territorio extends Model
         'circuitos_electorales' => 'array',
         'meta_electoral' => 'array',
     ];
+
+    /**
+     * Workspace al que pertenece este registro.
+     */
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     /**
      * Territorio Padre (ej. Provincia respecto a Departamentos/Municipios).

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\CicloCampana;
 use App\Models\EventoCalendario;
@@ -13,14 +14,16 @@ use Inertia\Response;
 class CalendarioController extends Controller
 {
     /**
-     * Agenda de Campaña & Timeline de Eventos.
+     * Agenda de Campaña & Timeline de Eventos del Workspace Activo.
      */
     public function index(Request $request): Response
     {
+        $workspace = WorkspaceHelper::activo($request);
         $tipo = $request->input('tipo');
         $candidatoId = $request->input('candidato_id');
 
-        $query = EventoCalendario::with(['candidato', 'cicloCampana'])
+        $query = EventoCalendario::where('workspace_id', $workspace->id)
+            ->with(['candidato', 'cicloCampana'])
             ->orderBy('fecha_inicio');
 
         if ($tipo) {
@@ -50,8 +53,14 @@ class CalendarioController extends Controller
             ];
         });
 
-        $ciclos = CicloCampana::orderByDesc('anio')->get(['id', 'nombre', 'anio']);
-        $candidatos = Candidato::orderByDesc('es_propio')->orderBy('nombre_completo')->get(['id', 'nombre_completo', 'es_propio']);
+        $ciclos = CicloCampana::where('workspace_id', $workspace->id)
+            ->orderByDesc('anio')
+            ->get(['id', 'nombre', 'anio']);
+
+        $candidatos = Candidato::where('workspace_id', $workspace->id)
+            ->orderByDesc('es_propio')
+            ->orderBy('nombre_completo')
+            ->get(['id', 'nombre_completo', 'es_propio']);
 
         return Inertia::render('Calendario/Index', [
             'eventos' => $eventos,
@@ -77,6 +86,8 @@ class CalendarioController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'ciclo_campana_id' => ['required', 'exists:ciclo_campanas,id'],
             'candidato_id' => ['nullable', 'exists:candidatos,id'],
@@ -89,7 +100,10 @@ class CalendarioController extends Controller
             'notas' => ['nullable', 'string'],
         ]);
 
-        EventoCalendario::create($validated);
+        EventoCalendario::create([
+            'workspace_id' => $workspace->id,
+            ...$validated,
+        ]);
 
         return redirect()->route('calendario.index')
             ->with('success', 'Evento programado en el calendario de campaña.');

@@ -14,6 +14,7 @@ class MedioPrensa extends Model
     protected $table = 'medios_prensa';
 
     protected $fillable = [
+        'workspace_id',
         'territorio_id',
         'nombre',
         'tipo_medio',
@@ -21,6 +22,11 @@ class MedioPrensa extends Model
         'alcance_tipo',
         'sesgo_editorial_estimado',
     ];
+
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     public function territorio(): BelongsTo
     {

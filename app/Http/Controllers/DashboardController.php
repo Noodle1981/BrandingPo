@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\NotaPrensa;
 use App\Models\Publicacion;
@@ -12,24 +13,29 @@ use Inertia\Response;
 class DashboardController extends Controller
 {
     /**
-     * Tablero Central enfocado en el Perfil del Cliente / Candidato Propio.
+     * Tablero Central enfocado en el Perfil del Cliente / Candidato Propio del Workspace Activo.
      */
     public function index(Request $request): Response
     {
+        $workspace = WorkspaceHelper::activo($request);
         $candidatoId = $request->input('candidato_id');
 
-        // Obtener el candidato objetivo: por ID solicitado o el candidato propio por defecto
-        $candidato = $candidatoId
-            ? Candidato::with(['perfilesSociales', 'territorio', 'cicloCampana'])->find($candidatoId)
-            : Candidato::where('es_propio', true)->with(['perfilesSociales', 'territorio', 'cicloCampana'])->first();
+        // Obtener el candidato objetivo dentro del workspace: por ID solicitado o el candidato propio por defecto
+        $candidatoQuery = Candidato::where('workspace_id', $workspace->id)
+            ->with(['perfilesSociales', 'territorio', 'cicloCampana']);
 
-        // Fallback si no hay candidato propio marcado
+        $candidato = $candidatoId
+            ? (clone $candidatoQuery)->find($candidatoId)
+            : (clone $candidatoQuery)->where('es_propio', true)->first();
+
+        // Fallback si no hay candidato propio marcado en el workspace
         if (!$candidato) {
-            $candidato = Candidato::with(['perfilesSociales', 'territorio', 'cicloCampana'])->first();
+            $candidato = (clone $candidatoQuery)->first();
         }
 
-        // Listado de todos los candidatos para selector rápido si se desea cambiar
-        $todosCandidatos = Candidato::select('id', 'nombre_completo', 'partido_coalicion', 'cargo_aspirado', 'estado_politico', 'color_hex', 'es_propio', 'avatar_url')
+        // Listado de candidatos del workspace para selector
+        $todosCandidatos = Candidato::where('workspace_id', $workspace->id)
+            ->select('id', 'nombre_completo', 'partido_coalicion', 'cargo_aspirado', 'estado_politico', 'color_hex', 'es_propio', 'avatar_url')
             ->get();
 
         if (!$candidato) {
@@ -44,8 +50,9 @@ class DashboardController extends Controller
             ]);
         }
 
-        // Publicaciones del candidato
-        $publicaciones = Publicacion::where('candidato_id', $candidato->id)
+        // Publicaciones del candidato en este workspace
+        $publicaciones = Publicacion::where('workspace_id', $workspace->id)
+            ->where('candidato_id', $candidato->id)
             ->with(['perfilSocial', 'ejeTematico'])
             ->latest('fecha_publicacion')
             ->get();
@@ -126,7 +133,8 @@ class DashboardController extends Controller
         });
 
         // Notas de prensa donde se menciona al candidato
-        $notasPrensa = NotaPrensa::where('candidato_id', $candidato->id)
+        $notasPrensa = NotaPrensa::where('workspace_id', $workspace->id)
+            ->where('candidato_id', $candidato->id)
             ->with('medioPrensa')
             ->latest('fecha_publicacion')
             ->take(4)
@@ -145,8 +153,8 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Benchmark contextual resumido (sin ruido: solo 1 métrica de posición competitiva)
-        $todasPublicaciones = Publicacion::all();
+        // Benchmark contextual resumido dentro del workspace
+        $todasPublicaciones = Publicacion::where('workspace_id', $workspace->id)->get();
         $totalVistasEcosistema = $todasPublicaciones->sum('total_vistas');
         $shareOfVoicePropio = $totalVistasEcosistema > 0
             ? round(($totalVistas / $totalVistasEcosistema) * 100, 1)

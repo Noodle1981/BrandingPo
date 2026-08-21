@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'can_write' => \App\Http\Middleware\CheckCanWrite::class,
             'is_admin' => \App\Http\Middleware\CheckIsAdmin::class,
+            'workspace_active' => \App\Http\Middleware\EnsureWorkspaceActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

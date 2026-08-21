@@ -13,6 +13,7 @@ class NotaPrensa extends Model
     protected $table = 'notas_prensa';
 
     protected $fillable = [
+        'workspace_id',
         'medio_prensa_id',
         'candidato_id',
         'fecha_publicacion',
@@ -30,6 +31,11 @@ class NotaPrensa extends Model
         'es_tapa_o_principal' => 'boolean',
         'interacciones_en_redes_del_medio' => 'integer',
     ];
+
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     public function medioPrensa(): BelongsTo
     {

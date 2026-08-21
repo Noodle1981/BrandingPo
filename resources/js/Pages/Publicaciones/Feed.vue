@@ -59,6 +59,7 @@ const plataformas = [
 
 const applyFilters = () => {
   router.get('/feed', {
+    filtro: props.filtros.filtro || undefined,
     candidato_id: selectedCandidato.value || undefined,
     plataforma: selectedPlataforma.value || undefined,
     tipo_pauta: selectedTipoPauta.value || undefined,
@@ -101,7 +102,7 @@ const formatCurrency = (amount) => {
 </script>
 
 <template>
-  <Head title="Feed Social Multired | Social Wall" />
+  <Head :title="filtros.filtro === 'propio' ? 'Feed Propio (Mi Campaña)' : 'Feed Social Multired | Social Wall'" />
 
   <WarRoomLayout>
     <!-- Header -->
@@ -110,25 +111,33 @@ const formatCurrency = (amount) => {
         <div class="flex items-center gap-2">
           <Radio class="w-6 h-6 text-cyan-500 animate-pulse" />
           <h1 class="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-            Feed Social Multired (Social Wall)
+            {{ filtros.filtro === 'propio' ? 'Feed Propio — Mi Campaña' : (filtros.filtro === 'oposicion' ? 'Feed de Oposición & Rivales' : 'Feed Social Multired (Social Wall)') }}
           </h1>
+          <span
+            v-if="filtros.filtro"
+            class="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full border"
+            :class="filtros.filtro === 'propio' ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/40' : 'bg-violet-500/20 text-violet-600 dark:text-violet-400 border-violet-500/40'"
+          >
+            {{ filtros.filtro === 'propio' ? '🎖️ CANDIDATO OFICIAL' : '⚔️ RIVALES' }}
+          </span>
         </div>
         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Línea de tiempo unificada con publicaciones de candidatos, reacciones nativas y radar de pauta.
+          {{ filtros.filtro === 'propio' ? 'Línea de tiempo cronológica exclusiva de las publicaciones y pauta de tu candidato oficial.' : 'Línea de tiempo unificada con publicaciones de candidatos, reacciones nativas y radar de pauta.' }}
         </p>
       </div>
 
       <div class="flex items-center gap-2">
         <Link
           v-if="canWrite"
-          href="/fast-flow"
+          :href="filtros.filtro === 'propio' ? '/fast-flow?tipo=propio' : '/fast-flow'"
           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm transition-all shadow-md shadow-cyan-500/20"
         >
           <Zap class="w-4 h-4" />
-          <span>Carga Rápida Fast-Flow</span>
+          <span>{{ filtros.filtro === 'propio' ? 'Cargar Post Propio' : 'Carga Rápida Fast-Flow' }}</span>
         </Link>
       </div>
     </div>
+
 
     <!-- Stats Mini Bar -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">

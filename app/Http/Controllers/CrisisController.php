@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\AlianzaPolitica;
 use App\Models\Candidato;
 use App\Models\EventoCrisis;
@@ -13,14 +14,20 @@ use Inertia\Response;
 class CrisisController extends Controller
 {
     /**
-     * Centro de Situación de Crisis & Matriz de Alianzas.
+     * Centro de Situación de Crisis & Matriz de Alianzas del Workspace Activo.
      */
     public function index(Request $request): Response
     {
+        $workspace = WorkspaceHelper::activo($request);
         $candidatoId = $request->input('candidato_id');
 
-        $queryCrisis = EventoCrisis::with('candidato')->orderByDesc('fecha_evento');
-        $queryAlianzas = AlianzaPolitica::with('candidato')->orderBy('nombre_figura');
+        $queryCrisis = EventoCrisis::where('workspace_id', $workspace->id)
+            ->with('candidato')
+            ->orderByDesc('fecha_evento');
+
+        $queryAlianzas = AlianzaPolitica::where('workspace_id', $workspace->id)
+            ->with('candidato')
+            ->orderBy('nombre_figura');
 
         if ($candidatoId) {
             $queryCrisis->where('candidato_id', $candidatoId);
@@ -59,7 +66,10 @@ class CrisisController extends Controller
             ];
         });
 
-        $candidatos = Candidato::orderByDesc('es_propio')->orderBy('nombre_completo')->get(['id', 'nombre_completo', 'es_propio']);
+        $candidatos = Candidato::where('workspace_id', $workspace->id)
+            ->orderByDesc('es_propio')
+            ->orderBy('nombre_completo')
+            ->get(['id', 'nombre_completo', 'es_propio']);
 
         $totalCriticos = $eventos->where('nivel_gravedad', 'critico')->where('estado', '!=', 'resuelto')->count();
         $totalModerados = $eventos->where('nivel_gravedad', 'moderado')->where('estado', '!=', 'resuelto')->count();
@@ -87,6 +97,8 @@ class CrisisController extends Controller
      */
     public function storeCrisis(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'candidato_id' => ['required', 'exists:candidatos,id'],
             'titulo' => ['required', 'string', 'max:255'],
@@ -99,6 +111,7 @@ class CrisisController extends Controller
         ]);
 
         EventoCrisis::create([
+            'workspace_id' => $workspace->id,
             'candidato_id' => $validated['candidato_id'],
             'titulo' => $validated['titulo'],
             'fecha_evento' => $validated['fecha_evento'],
@@ -135,6 +148,8 @@ class CrisisController extends Controller
      */
     public function storeAlianza(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'candidato_id' => ['required', 'exists:candidatos,id'],
             'nombre_figura' => ['required', 'string', 'max:255'],
@@ -143,7 +158,10 @@ class CrisisController extends Controller
             'notas_observacion' => ['nullable', 'string'],
         ]);
 
-        AlianzaPolitica::create($validated);
+        AlianzaPolitica::create([
+            'workspace_id' => $workspace->id,
+            ...$validated,
+        ]);
 
         return redirect()->route('crisis.index')
             ->with('success', 'Figura política incorporada a la matriz de alianzas.');

@@ -13,6 +13,7 @@ class EventoCalendario extends Model
     protected $table = 'eventos_calendario';
 
     protected $fillable = [
+        'workspace_id',
         'ciclo_campana_id',
         'candidato_id',
         'titulo',
@@ -28,6 +29,11 @@ class EventoCalendario extends Model
         'fecha_inicio' => 'datetime',
         'fecha_fin' => 'datetime',
     ];
+
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     public function cicloCampana(): BelongsTo
     {

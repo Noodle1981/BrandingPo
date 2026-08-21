@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CicloCampana extends Model
@@ -11,6 +12,7 @@ class CicloCampana extends Model
     use HasFactory;
 
     protected $fillable = [
+        'workspace_id',
         'anio',
         'nombre',
         'fecha_inicio',
@@ -25,6 +27,14 @@ class CicloCampana extends Model
         'fecha_fin' => 'date',
         'es_activo' => 'boolean',
     ];
+
+    /**
+     * Workspace al que pertenece este registro.
+     */
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     /**
      * Candidatos participantes en este ciclo de campaña.

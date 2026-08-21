@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\CicloCampana;
 use App\Models\PerfilSocial;
@@ -15,15 +16,17 @@ use Inertia\Response;
 class CandidatoController extends Controller
 {
     /**
-     * Catálogo de la Oposición y Candidatos Rivales (Competencia).
+     * Catálogo de la Oposición y Candidatos Rivales (Competencia) del Workspace Activo.
      */
     public function index(Request $request): Response
     {
+        $workspace = WorkspaceHelper::activo($request);
         $cicloId = $request->input('ciclo_id');
         $estado = $request->input('estado');
 
-        // Filtrar exclusivamente a los opositores / rivales para no mezclar con el propio
-        $query = Candidato::where('es_propio', false)
+        // Filtrar exclusivamente a los opositores / rivales del workspace
+        $query = Candidato::where('workspace_id', $workspace->id)
+            ->where('es_propio', false)
             ->with(['cicloCampana', 'territorio', 'perfilesSociales']);
 
         if ($cicloId) {
@@ -65,8 +68,13 @@ class CandidatoController extends Controller
                 ];
             });
 
-        $ciclos = CicloCampana::orderByDesc('anio')->get(['id', 'anio', 'nombre', 'es_activo']);
-        $territorios = Territorio::orderBy('nombre')->get(['id', 'nombre', 'tipo']);
+        $ciclos = CicloCampana::where('workspace_id', $workspace->id)
+            ->orderByDesc('anio')
+            ->get(['id', 'anio', 'nombre', 'es_activo']);
+
+        $territorios = Territorio::where('workspace_id', $workspace->id)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'tipo']);
 
         return Inertia::render('Candidatos/Index', [
             'candidatos' => $candidatos,
@@ -89,23 +97,84 @@ class CandidatoController extends Controller
     }
 
     /**
-     * Vista de Gestión Exclusiva del Perfil Propio (Cliente / Campaña).
+     * Benchmarking comparativo de crecimiento neto entre el candidato propio y los rivales.
+     * Muestra quién crece más rápido en cada red social desde el Punto Cero.
+     */
+    public function benchmarking(Request $request): Response
+    {
+        $workspace = WorkspaceHelper::activo($request);
+
+        $candidatos = Candidato::where('workspace_id', $workspace->id)
+            ->with(['perfilesSociales', 'territorio'])
+            ->orderByDesc('es_propio')
+            ->orderBy('nombre_completo')
+            ->get()
+            ->map(fn ($c) => [
+                'id'        => $c->id,
+                'nombre'    => $c->nombre_completo,
+                'partido'   => $c->partido_coalicion,
+                'cargo'     => $c->cargo_aspirado,
+                'es_propio' => $c->es_propio,
+                'color'     => $c->color_hex ?? ($c->es_propio ? '#06b6d4' : '#8b5cf6'),
+                'avatar'    => $c->avatar_url,
+                'territorio'=> $c->territorio?->nombre,
+                'redes'     => $c->perfilesSociales->map(fn ($p) => [
+                    'plataforma'            => $p->plataforma,
+                    'handle'                => $p->handle_usuario,
+                    'seguidores_actuales'   => $p->seguidores_actuales,
+                    'seguidores_punto_cero' => $p->seguidores_punto_cero ?? 0,
+                    'crecimiento_neto'      => $p->seguidores_actuales - ($p->seguidores_punto_cero ?? 0),
+                    'crecimiento_pct'       => ($p->seguidores_punto_cero ?? 0) > 0
+                        ? round((($p->seguidores_actuales - $p->seguidores_punto_cero) / $p->seguidores_punto_cero) * 100, 1)
+                        : 0,
+                    'esta_activo'           => $p->esta_activo,
+                    'fecha_punto_cero'      => $p->fecha_punto_cero,
+                ]),
+            ]);
+
+        return Inertia::render('Candidatos/Benchmarking', [
+            'candidatos' => $candidatos,
+            'workspace'  => [
+                'id'           => $workspace->id,
+                'nombre'       => $workspace->nombre,
+                'nivel_label'  => $workspace->nivel_politico_label,
+            ],
+        ]);
+    }
+
+
+    /**
+     * Vista de Gestión Exclusiva del Perfil Propio (Cliente / Campaña) del Workspace Activo.
      */
     public function miCandidato(Request $request): Response
     {
-        $cicloActivo = CicloCampana::where('es_activo', true)->first() ?? CicloCampana::first();
-        $territorioDefault = Territorio::first();
+        $workspace = WorkspaceHelper::activo($request);
 
-        // Buscar o inicializar el candidato propio
-        $candidato = Candidato::where('es_propio', true)
+        $cicloActivo = CicloCampana::where('workspace_id', $workspace->id)->where('es_activo', true)->first()
+            ?? CicloCampana::where('workspace_id', $workspace->id)->first();
+
+        $territorioDefault = Territorio::where('workspace_id', $workspace->id)->first();
+
+        // Buscar o inicializar el candidato propio del workspace
+        $candidato = Candidato::where('workspace_id', $workspace->id)
+            ->where('es_propio', true)
             ->with(['perfilesSociales', 'territorio', 'cicloCampana'])
             ->first();
 
         if (!$candidato) {
+            $cargoPorDefecto = match ($workspace->nivel_politico) {
+                'gobernador' => 'Candidato a Gobernador',
+                'legislador_nacional' => 'Candidato a Diputado Nacional',
+                'senador' => 'Candidato a Senador Nacional',
+                'concejal' => 'Candidato a Concejal',
+                default => 'Candidato a Intendente',
+            };
+
             $candidato = Candidato::create([
-                'nombre_completo' => 'Mi Candidato (Cliente)',
+                'workspace_id' => $workspace->id,
+                'nombre_completo' => 'Mi Candidato (' . $workspace->nombre . ')',
                 'partido_coalicion' => 'Frente de Campaña',
-                'cargo_aspirado' => 'Candidato a Intendente',
+                'cargo_aspirado' => $cargoPorDefecto,
                 'estado_politico' => 'candidato',
                 'ciclo_campana_id' => $cicloActivo?->id,
                 'territorio_id' => $territorioDefault?->id,
@@ -132,11 +201,6 @@ class CandidatoController extends Controller
 
             $estaActivo = $perfil ? (bool)$perfil->esta_activo : false;
             $estaVerificado = $perfil ? (bool)$perfil->esta_verificado : false;
-
-            // Determinar color de la pestaña:
-            // 🔵 'azul' si está certificada/verificada
-            // 🟠 'naranja' si está activa/vinculada
-            // 🔴 'rojo' si no la tiene / inactiva
             $colorEstado = $estaVerificado ? 'azul' : ($estaActivo ? 'naranja' : 'rojo');
 
             $seguidoresActuales = $perfil ? (int)$perfil->seguidores_actuales : 0;
@@ -186,8 +250,13 @@ class CandidatoController extends Controller
             ];
         })->values();
 
-        $ciclos = CicloCampana::orderByDesc('anio')->get(['id', 'anio', 'nombre', 'es_activo']);
-        $territorios = Territorio::orderBy('nombre')->get(['id', 'nombre', 'tipo', 'poblacion_total', 'padron_electoral']);
+        $ciclos = CicloCampana::where('workspace_id', $workspace->id)
+            ->orderByDesc('anio')
+            ->get(['id', 'anio', 'nombre', 'es_activo']);
+
+        $territorios = Territorio::where('workspace_id', $workspace->id)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'tipo', 'poblacion_total', 'padron_electoral']);
 
         return Inertia::render('Candidatos/MiPerfil', [
             'candidato' => [
@@ -336,8 +405,9 @@ class CandidatoController extends Controller
     /**
      * Ficha técnica y gestión de canales / Punto Cero de un candidato rival.
      */
-    public function show(Candidato $candidato): Response
+    public function show(Request $request, Candidato $candidato): Response
     {
+        $workspace = WorkspaceHelper::activo($request);
         $candidato->load(['cicloCampana', 'territorio', 'perfilesSociales']);
 
         $plataformasEstandar = [
@@ -403,8 +473,13 @@ class CandidatoController extends Controller
             ];
         })->values();
 
-        $ciclos = CicloCampana::orderByDesc('anio')->get(['id', 'anio', 'nombre', 'es_activo']);
-        $territorios = Territorio::orderBy('nombre')->get(['id', 'nombre', 'tipo', 'poblacion_total', 'padron_electoral']);
+        $ciclos = CicloCampana::where('workspace_id', $workspace->id)
+            ->orderByDesc('anio')
+            ->get(['id', 'anio', 'nombre', 'es_activo']);
+
+        $territorios = Territorio::where('workspace_id', $workspace->id)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'tipo', 'poblacion_total', 'padron_electoral']);
 
         return Inertia::render('Candidatos/Show', [
             'candidato' => [
@@ -430,10 +505,12 @@ class CandidatoController extends Controller
     }
 
     /**
-     * Registrar un nuevo candidato opositor / rival.
+     * Registrar un nuevo candidato opositor / rival en el workspace.
      */
     public function store(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'nombre_completo' => ['required', 'string', 'max:255'],
             'partido_coalicion' => ['required', 'string', 'max:255'],
@@ -447,6 +524,7 @@ class CandidatoController extends Controller
         ]);
 
         $candidato = Candidato::create([
+            'workspace_id' => $workspace->id,
             'nombre_completo' => $validated['nombre_completo'],
             'partido_coalicion' => $validated['partido_coalicion'],
             'cargo_aspirado' => $validated['cargo_aspirado'] ?? null,
@@ -468,6 +546,8 @@ class CandidatoController extends Controller
      */
     public function update(Request $request, Candidato $candidato): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'nombre_completo' => ['required', 'string', 'max:255'],
             'partido_coalicion' => ['required', 'string', 'max:255'],
@@ -489,8 +569,9 @@ class CandidatoController extends Controller
         // Si se envió un nombre de territorio nuevo o editado
         if (!empty($validated['territorio_nombre'])) {
             $territorio = Territorio::updateOrCreate(
-                ['id' => $territorioId ?: null],
+                ['id' => $territorioId ?: null, 'workspace_id' => $workspace->id],
                 [
+                    'workspace_id' => $workspace->id,
                     'nombre' => $validated['territorio_nombre'],
                     'padron_electoral' => $validated['padron_electoral'] ?? 0,
                     'poblacion_total' => $validated['poblacion_total'] ?? 0,

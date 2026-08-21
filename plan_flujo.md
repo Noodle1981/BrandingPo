@@ -1,128 +1,80 @@
-# 📋 PLAN DE FLUJO OPERATIVO & REESTRUCTURACIÓN DEL NAVBAR
-## BrandingPo — War Room & Intelligence Suite
+# 📋 PLAN DE FLUJO OPERATIVO & ARQUITECTURA DE CAMPAÑA
+## BrandingPo — War Room & Intelligence Suite (Multi-Tenant Edition)
 
-Este documento contiene la guía paso a paso y la arquitectura de flujo para implementar la **separación por bloques de acción en el Navbar** y el **workflow unificado y simétrico** tanto para **Mi Candidato** como para los **Contrincantes / Oposición (ej. Romina Rosas, Carlos Morales, etc.)**.
+Este documento detalla la arquitectura de **Workspaces Multi-Tenant**, el **Sidebar estilo Gemini Portal con globos desplegables** y los **flujos 100% enfocados** para **Mi Campaña (Oficial)** y para la **Inteligencia de Oposición (Rivales)**.
 
 ---
 
-## 🧭 1. Nueva Arquitectura del Navbar / Sidebar (Agrupado por Bloques de Acción)
+## 🏢 1. Arquitectura Multi-Tenant (Workspaces Aislados)
 
-En lugar de una lista plana, el menú lateral se organiza en **4 bloques operativos claros con encabezados y colores temáticos**:
+Cada cliente político dispone de su propio **Workspace** completamente aislado en base de datos (`workspace_id`):
+- **Candidato Propio:** `es_propio = true` (solo 1 candidato oficial por campaña).
+- **Rivales Monitoreados:** `es_propio = false` (perfiles de datos públicos seguidos, sin cuenta en el sistema).
+- **Separación de Datos:** 0% de solapamiento entre diferentes campañas.
+
+---
+
+## 🧭 2. Sidebar Estilo Gemini Portal (Globos Flotantes Desplegables)
+
+En lugar de una lista plana saturada, el sidebar utiliza un ancho ultra-limpio (`w-16`) con **4 iconos maestros de sección**. Al posar el cursor sobre cualquier icono maestro, se despliega hacia la derecha un **globo flotante (flyout popover)** con los accesos directos temáticos:
 
 ```text
-┌───────────────────────────────────────────────────────────────┐
-│ 🎖️ MI CAMPAÑA (OFICIAL / PROPIA)                              │
-│ ├─ 👤 Mi Candidato & Redes    (/mi-candidato)                │
-│ │   └─ Datos, foto, semáforo de redes y Punto Cero inicial.   │
-│ ├─ ⚡ Fast-Flow Propio         (/fast-flow?tipo=propio)       │
-│ │   └─ Carga de posts propios: emojis, alcance, pauta real.   │
-│ └─ 📱 Feed Propio             (/feed?filtro=propio)          │
-│     └─ Timeline cronológico de publicaciones del candidato.   │
-├───────────────────────────────────────────────────────────────┤
-│ ⚔️ INTELIGENCIA DE OPOSICIÓN (RIVALES)                       │
-│ ├─ 👥 Fichas de Rivales       (/candidatos)                  │
-│ │   └─ Crear rival (ej. Romina Rosas), auto-lector y Punto 0. │
-│ ├─ ⚡ Fast-Flow Oposición      (/fast-flow?tipo=oposicion)    │
-│ │   └─ Auditar posts del rival: qué dijo, 👍 ❤️ 😂 😡, etc.   │
-│ └─ 📊 Comparativa & Benchmarking (/candidatos/benchmarking)   │
-│     └─ Quién crece más rápido y qué ejes temáticos rinden.    │
-├───────────────────────────────────────────────────────────────┤
-│ 🌍 TERRITORIO, MEDIOS & ENTORNO                              │
-│ ├─ 📍 Territorio & Demografía (/territorios)                 │
-│ │   └─ Padrón, pirámide etaria (16-29, 30-49), urbano/campo.  │
-│ ├─ 📰 Observatorio de Medios  (/medios)                      │
-│ │   └─ Clipping de notas: qué dice la prensa (Propio vs Rival)│
-│ └─ 🚨 Centro de Crisis        (/crisis)                      │
-│     └─ Monitoreo de alertas rojas (😡 > 15%) y alianzas.     │
-├───────────────────────────────────────────────────────────────┤
-│ 🏛️ SALA DE MANDO & ESTRATEGIA                               │
-│ ├─ 📊 Sala de Situación       (/dashboard)                   │
-│ │   └─ Tablero general ejecutivo (War Room).                  │
-│ ├─ 🎯 Predictor de Pauta      (/predictor)                   │
-│ │   └─ Simulador algorítmico de presupuesto por red social.   │
-│ └─ 📅 Calendario & Agenda     (/calendario)                  │
-│     └─ Actos de campaña, recorridas y pautas programadas.     │
-└───────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│ 📊 [Dashboard]  → Acceso directo a Sala de Situación                   │
+├────────────────────────────────────────────────────────────────────────┤
+│ ✨ [Mi Campaña]                                                        │
+│    └─ GLOBO: 👤 Mi Candidato & Redes  (/mi-candidato)                  │
+│              ⚡ Fast-Flow Propio       (/fast-flow?tipo=propio)        │
+│              📱 Feed Propio             (/feed?filtro=propio)           │
+├────────────────────────────────────────────────────────────────────────┤
+│ ⚔️ [Oposición]                                                         │
+│    └─ GLOBO: 👥 Fichas de Rivales       (/candidatos)                   │
+│              ⚡ Fast-Flow Oposición     (/fast-flow?tipo=oposicion)     │
+│              📊 Benchmarking            (/candidatos/benchmarking)      │
+├────────────────────────────────────────────────────────────────────────┤
+│ 🌍 [Territorio]                                                        │
+│    └─ GLOBO: 📍 Territorio & Demografía (/territorios)                  │
+│              📰 Observatorio de Medios  (/medios)                       │
+│              🚨 Centro de Crisis        (/crisis)                       │
+├────────────────────────────────────────────────────────────────────────┤
+│ 🛡️ [Sala de Mando]                                                    │
+│    └─ GLOBO: 📊 Sala de Situación       (/dashboard)                    │
+│              🎯 Predictor de Pauta      (/predictor)                    │
+│              📅 Calendario & Agenda     (/calendario)                   │
+│              💰 Presupuesto & Pauta     (/presupuesto)                  │
+│              📄 Briefings Ejecutivos    (/briefings)                    │
+│              👤 Usuarios & Roles        (/usuarios - solo admin)        │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🔄 2. El Flujo Operativo Simétrico: Candidato Propio vs. Rivales
+## 🔄 3. Flujo Operativo Separado por Enfoque
 
-El flujo de trabajo es exactamente el mismo para **nuestro candidato** y para **cada uno de los rivales**:
+### A. Flujo Oficial (Mi Campaña)
+1. **Punto Cero:** En `/mi-candidato`, carga de enlaces oficiales (Instagram, Facebook, etc.) con el auto-lector de 1 clic para fijar la línea de base (seguidores y posts iniciales).
+2. **Fast-Flow Propio:** En `/fast-flow?tipo=propio`, pantalla 100% dedicada a tu candidato (sin dropdowns de rivales ni selectores cruzados). Carga ágil de emojis (👍, ❤️, 🥰, 😂, 😮, 😢, 😡), comentarios y pauta.
+3. **Feed Propio:** En `/feed?filtro=propio`, timeline exclusivo de publicaciones del candidato oficial.
 
-```mermaid
-flowchart TD
-    subgraph Fase1["FASE 1: Configuración de Base (Punto Cero / Alfa)"]
-        F1["1. Crear o Abrir Candidato\n(ej. Federico Sisterna o Romina Rosas)"]
-        F2["2. Pegar enlaces de sus redes\n(Facebook, Instagram, TikTok, X, etc.)"]
-        F3["3. Auto-Lector Scraper (1 Clic)\nTrae foto, handle y métricas públicas"]
-        F4["4. Fijar Punto Cero / Alfa\nGuarda seguidores iniciales y posts al comenzar"]
-        F1 --> F2 --> F3 --> F4
-    end
+### B. Flujo de Oposición (Inteligencia Competitiva)
+1. **Alta de Rivales:** En `/candidatos`, creación de perfiles opositores a auditar con su respectivo Punto Cero.
+2. **Fast-Flow Oposición:** En `/fast-flow?tipo=oposicion`, auditoría de publicaciones de la competencia.
+3. **Benchmarking:** En `/candidatos/benchmarking`, comparativa visual de quién crece más rápido desde el Punto Cero por red social.
 
-    subgraph Fase2["FASE 2: Monitoreo Diario en Fast-Flow"]
-        M1["1. Abrir Fast-Flow (Propio u Oposición)"]
-        M2["2. Seleccionar el candidato y la red social"]
-        M3["3. Cargar enlace o título del post y Eje Temático"]
-        M4["4. Cuantificar Emociones Emoji por Emoji\n(👍 Me Gusta, ❤️ Amor, 😂 Risa, 😡 Enojo)"]
-        M5["5. Registrar Métricas y Pauta\n(Comentarios, Compartidos, Orgánico vs Pauta)"]
-        M1 --> M2 --> M3 --> M4 --> M5
-    end
+---
 
-    subgraph Fase3["FASE 3: Análisis Táctico en el War Room"]
-        A1["Termómetro de Aprobación vs. Crisis (Alerta si 😡 > 15%)"]
-        A2["Crecimiento Neto respecto al Punto Cero"]
-        A3["Detección de Temas Ganadores para potenciar con pauta"]
-        M5 --> A1
-        M5 --> A2
-        M5 --> A3
-    end
+## 🧹 4. Puesta a Cero para Campaña Real (2026 / 2027)
 
-    Fase1 --> Fase2
+Para reiniciar la base de datos limpia y comenzar con datos 100% reales:
+
+```powershell
+php artisan migrate:fresh --seed --seeder=CleanCampanaBaseSeeder
 ```
 
----
-
-## 🛠️ 3. Tareas Técnicas a Ejecutar en Casa
-
-### A. Modificación de `WarRoomLayout.vue` (Navbar / Sidebar)
-1. Estructurar el array `navigation` con categorías/secciones:
-   - `seccion: 'Mi Campaña (Oficial)'`
-   - `seccion: 'Inteligencia de Oposición'`
-   - `seccion: 'Territorio & Entorno'`
-   - `seccion: 'Sala de Mando'`
-2. Renderizar encabezados sutiles en mayúsculas (`text-[10px] font-mono font-bold text-slate-400 tracking-wider`) entre cada bloque.
-
-### B. Ajustes en `FastFlow.vue` y `PublicacionController.php`
-1. Permitir que el selector de candidato en Fast-Flow venga pre-filtrado si la URL es:
-   - `/fast-flow?tipo=propio` &rarr; Selecciona por defecto a Federico Sisterna (Candidato Propio).
-   - `/fast-flow?tipo=oposicion` &rarr; Abre el listado exclusivo de rivales (Romina Rosas, Carlos Morales, etc.).
-2. Agregar un switch rápido en la cabecera de Fast-Flow:
-   - `[ 🎖️ Cargar Post Propio ]` | `[ ⚔️ Auditar Post de Rival ]`
-
-### C. Fichas de Rivales (`Candidatos/Show.vue`)
-1. Asegurar que la ficha de cada rival cuente con:
-   - Botonera centrada de 6 columnas con logos oficiales SVG.
-   - Lector Scraper con 1 clic (`SocialProfileScraperService`).
-   - Tabla adaptativa de 3 columnas para Facebook (ocultando posts iniciales).
-   - Tabla de Punto Cero con cálculo de crecimiento neto en tiempo real.
+### Usuarios del Sistema:
+- **Admin:** `admin@brandingpo.com` / `password`
+- **Consultor:** `consultor@brandingpo.com` / `password`
+- **Visualizador:** `visualizador@brandingpo.com` / `password`
 
 ---
-
-## 🚀 4. Comandos Útiles para Levantar el Proyecto en Casa
-
-```bash
-# 1. Traer los últimos cambios de GitHub
-git pull origin main
-
-# 2. Levantar el servidor PHP y Vite
-php artisan serve
-npm run dev
-
-# 3. Acceder al War Room
-http://localhost:8000  # o http://brandingpo.test
-```
-
----
-*Documento guardado y versionado en el repositorio.* 🎯
+*BrandingPo v2.5 — Multi-Tenant War Room & Intelligence Suite.* 🎯

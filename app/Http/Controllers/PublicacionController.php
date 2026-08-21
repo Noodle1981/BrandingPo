@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\EjeTematico;
 use App\Models\PerfilSocial;
@@ -15,17 +16,26 @@ use Inertia\Response;
 class PublicacionController extends Controller
 {
     /**
-     * Muro interactivo estilo red social (Social Wall).
+     * Muro interactivo estilo red social (Social Wall) del Workspace Activo.
      */
     public function feed(Request $request): Response
     {
+        $workspace = WorkspaceHelper::activo($request);
         $candidatoId = $request->input('candidato_id');
         $plataforma = $request->input('plataforma');
         $tipoPauta = $request->input('tipo_pauta');
         $search = $request->input('search');
+        $filtro = $request->input('filtro'); // 'propio' | 'oposicion'
 
-        $query = Publicacion::with(['candidato', 'perfilSocial', 'ejeTematico'])
+        $query = Publicacion::where('workspace_id', $workspace->id)
+            ->with(['candidato', 'perfilSocial', 'ejeTematico'])
             ->orderByDesc('fecha_publicacion');
+
+        if ($filtro === 'propio') {
+            $query->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
+        } elseif ($filtro === 'oposicion') {
+            $query->whereHas('candidato', fn ($q) => $q->where('es_propio', false));
+        }
 
         if ($candidatoId) {
             $query->where('candidato_id', $candidatoId);
@@ -88,14 +98,28 @@ class PublicacionController extends Controller
             ];
         });
 
-        $candidatos = Candidato::orderByDesc('es_propio')->orderBy('nombre_completo')->get(['id', 'nombre_completo', 'estado_politico', 'es_propio', 'avatar_url']);
-        $ejes = EjeTematico::orderBy('nombre')->get(['id', 'nombre', 'color_badge']);
+        $candidatosQuery = Candidato::where('workspace_id', $workspace->id)
+            ->orderByDesc('es_propio')
+            ->orderBy('nombre_completo');
+
+        if ($filtro === 'propio') {
+            $candidatosQuery->where('es_propio', true);
+        } elseif ($filtro === 'oposicion') {
+            $candidatosQuery->where('es_propio', false);
+        }
+
+        $candidatos = $candidatosQuery->get(['id', 'nombre_completo', 'estado_politico', 'es_propio', 'avatar_url']);
+
+        $ejes = EjeTematico::where('workspace_id', $workspace->id)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'color_badge']);
 
         return Inertia::render('Publicaciones/Feed', [
             'publicaciones' => $publicaciones,
             'candidatos' => $candidatos,
             'ejes' => $ejes,
             'filtros' => [
+                'filtro' => $filtro,
                 'candidato_id' => $candidatoId,
                 'plataforma' => $plataforma,
                 'tipo_pauta' => $tipoPauta,
@@ -111,14 +135,38 @@ class PublicacionController extends Controller
 
     /**
      * Consola ergonómica de carga rápida Fast-Flow.
+     * Acepta ?tipo=propio|oposicion|todos para pre-filtrar el selector de candidato.
      */
-    public function fastFlow(): Response
+    public function fastFlow(Request $request): Response
     {
-        $candidatos = Candidato::with('perfilesSociales')->orderByDesc('es_propio')->orderBy('nombre_completo')->get();
-        $ejes = EjeTematico::orderBy('nombre')->get(['id', 'nombre', 'color_badge']);
+        $workspace = WorkspaceHelper::activo($request);
+        $tipo = $request->query('tipo', 'propio'); // 'propio' (default) | 'oposicion'
 
-        $ultimasCargas = Publicacion::with(['candidato', 'perfilSocial'])
-            ->orderByDesc('id')
+        $candidatosQuery = Candidato::where('workspace_id', $workspace->id)
+            ->with('perfilesSociales')
+            ->orderByDesc('es_propio')
+            ->orderBy('nombre_completo');
+
+        if ($tipo === 'propio') {
+            $candidatosQuery->where('es_propio', true);
+        } elseif ($tipo === 'oposicion') {
+            $candidatosQuery->where('es_propio', false);
+        }
+
+        $ejes = EjeTematico::where('workspace_id', $workspace->id)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'color_badge']);
+
+        $ultimasCargasQuery = Publicacion::where('workspace_id', $workspace->id)
+            ->with(['candidato', 'perfilSocial']);
+
+        if ($tipo === 'propio') {
+            $ultimasCargasQuery->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
+        } elseif ($tipo === 'oposicion') {
+            $ultimasCargasQuery->whereHas('candidato', fn ($q) => $q->where('es_propio', false));
+        }
+
+        $ultimasCargas = $ultimasCargasQuery->orderByDesc('id')
             ->limit(10)
             ->get()
             ->map(fn ($p) => [
@@ -134,9 +182,10 @@ class PublicacionController extends Controller
             ]);
 
         return Inertia::render('Publicaciones/FastFlow', [
-            'candidatos' => $candidatos,
-            'ejes' => $ejes,
+            'candidatos'     => $candidatosQuery->get(),
+            'ejes'           => $ejes,
             'ultimas_cargas' => $ultimasCargas,
+            'tipo_activo'    => $tipo,
         ]);
     }
 
@@ -145,6 +194,8 @@ class PublicacionController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'candidato_id' => ['required', 'exists:candidatos,id'],
             'perfil_social_id' => ['required', 'exists:perfil_socials,id'],
@@ -192,6 +243,7 @@ class PublicacionController extends Controller
         $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int)($validated['total_likes'] ?? 0));
 
         Publicacion::create([
+            'workspace_id' => $workspace->id,
             'candidato_id' => $validated['candidato_id'],
             'perfil_social_id' => $validated['perfil_social_id'],
             'eje_tematico_id' => $validated['eje_tematico_id'] ?? null,

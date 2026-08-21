@@ -32,9 +32,17 @@ import {
 } from '@lucide/vue';
 
 const props = defineProps({
-  escala_seleccionada: {
+  nivel_politico: {
     type: String,
-    default: 'frente', // 'intendencia', 'gobernacion', 'frente'
+    default: 'intendente',
+  },
+  nivel_label: {
+    type: String,
+    default: '🏛️ Intendente / Municipio',
+  },
+  es_gobernador: {
+    type: Boolean,
+    default: false,
   },
   provincia: {
     type: Object,
@@ -63,13 +71,6 @@ const props = defineProps({
   }
 });
 
-// Escala activa (Intendencia vs Gobernacion vs Frente)
-const escalaActual = ref(props.escala_seleccionada || 'frente');
-const cambiarEscala = (escala) => {
-  escalaActual.value = escala;
-  router.get('/territorios', { escala: escala }, { preserveScroll: true, preserveState: true });
-};
-
 // Búsqueda y filtrado de departamentos
 const searchDept = ref('');
 const departamentosFiltrados = computed(() => {
@@ -84,7 +85,6 @@ const departamentosFiltrados = computed(() => {
 // Territorio seleccionado para ver en detalle
 const seleccionarTerritorio = (id) => {
   router.get('/territorios', { 
-    escala: escalaActual.value, 
     territorio_id: id 
   }, { preserveScroll: true });
 };
@@ -235,58 +235,24 @@ const saveTerritorio = () => {
             </p>
           </div>
 
-          <!-- Selector de Escala de Campaña (Los 3 Modos de Negocio) -->
-          <div class="flex items-center p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 self-start lg:self-center">
-            <button
-              type="button"
-              @click="cambiarEscala('intendencia')"
-              class="px-3.5 py-2 rounded-xl text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer"
-              :class="escalaActual === 'intendencia' ? 'bg-cyan-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
-            >
-              <Building2 class="w-4 h-4" />
-              <span>1. Modo Intendencia</span>
-            </button>
-
-            <button
-              type="button"
-              @click="cambiarEscala('gobernacion')"
-              class="px-3.5 py-2 rounded-xl text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer"
-              :class="escalaActual === 'gobernacion' ? 'bg-purple-600 text-white shadow-md font-extrabold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
-            >
-              <Crown class="w-4 h-4" />
-              <span>2. Modo Gobernación</span>
-            </button>
-
-            <button
-              type="button"
-              @click="cambiarEscala('frente')"
-              class="px-3.5 py-2 rounded-xl text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer"
-              :class="escalaActual === 'frente' ? 'bg-emerald-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
-            >
-              <Share2 class="w-4 h-4" />
-              <span>3. Red de Intendentes</span>
-            </button>
+          <!-- Nivel Político del Workspace Activo -->
+          <div class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 self-start lg:self-center">
+            <component :is="props.es_gobernador ? Crown : Building2" class="w-4 h-4 text-cyan-500 shrink-0" />
+            <span class="text-xs font-bold font-mono">
+              {{ props.nivel_label || '🏛️ Intendente / Municipio' }}
+            </span>
           </div>
         </div>
 
-        <!-- Banner Explicativo según la Escala Seleccionada -->
-        <div class="p-4 rounded-2xl border text-xs leading-relaxed flex items-center justify-between gap-3 flex-wrap"
-          :class="{
-            'bg-cyan-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300': escalaActual === 'intendencia',
-            'bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300': escalaActual === 'gobernacion',
-            'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300': escalaActual === 'frente',
-          }"
-        >
+        <!-- Banner Explicativo según el Nivel Político de la Campaña -->
+        <div class="p-4 rounded-2xl border text-xs leading-relaxed flex items-center justify-between gap-3 flex-wrap bg-cyan-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300">
           <div class="flex items-center gap-2.5">
             <Sparkles class="w-5 h-5 shrink-0" />
-            <span v-if="escalaActual === 'intendencia'">
-              <strong>Modo Intendencia (Local):</strong> Análisis hiperlocal enfocado en el "metro cuadrado", pirámide barrial de votantes y penetración digital en <strong>{{ territorio_activo?.nombre || 'Albardón' }}</strong>.
-            </span>
-            <span v-else-if="escalaActual === 'gobernacion'">
-              <strong>Modo Gobernación (Provincial):</strong> Diagnóstico macro sistémico para la <strong>Provincia de San Juan</strong> (610.000 electores), matriz productiva y clima social provincial.
+            <span v-if="!props.es_gobernador">
+              <strong>Campaña Municipal / Local:</strong> Análisis hiperlocal enfocado en el "metro cuadrado", pirámide barrial de votantes y penetración digital en <strong>{{ territorio_activo?.nombre || 'Municipio' }}</strong>.
             </span>
             <span v-else>
-              <strong>Modo Frente Electoral (Gobernador & 19 Intendentes):</strong> Sala de situación maestra para monitorear el arrastre y cobertura electoral departamento por departamento.
+              <strong>Campaña Provincial:</strong> Diagnóstico macro sistémico para la <strong>{{ provincia?.nombre || 'Provincia' }}</strong> ({{ Number(metricas_macro?.padron_total_provincial || 610000).toLocaleString('es-AR') }} electores) y cobertura departamento por departamento.
             </span>
           </div>
 

@@ -13,6 +13,7 @@ class Candidato extends Model
     use HasFactory;
 
     protected $fillable = [
+        'workspace_id',
         'ciclo_campana_id',
         'territorio_id',
         'nombre_completo',
@@ -28,6 +29,14 @@ class Candidato extends Model
     protected $casts = [
         'es_propio' => 'boolean',
     ];
+
+    /**
+     * Workspace al que pertenece este registro.
+     */
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     /**
      * Ciclo de campaña / Año al que pertenece el candidato.

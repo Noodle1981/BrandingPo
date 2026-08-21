@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\Territorio;
 use App\Services\DemographicIntelligenceService;
@@ -18,35 +19,55 @@ class TerritorioController extends Controller
     ) {}
 
     /**
-     * Mapa de Situación Territorial & Inteligencia Demográfica.
+     * Mapa de Situación Territorial & Inteligencia Demográfica del Workspace Activo.
      */
     public function index(Request $request): Response
     {
-        $escalaSeleccionada = $request->query('escala', 'frente'); // 'intendencia', 'gobernacion', 'frente'
+        $workspace = WorkspaceHelper::activo($request);
         $territorioId = $request->query('territorio_id');
 
-        $provincia = Territorio::where('tipo', 'provincia')->orWhereNull('parent_id')->first();
+        $nivelPolitico = $workspace->nivel_politico ?? 'intendente';
+        $esGobernador = in_array($nivelPolitico, ['gobernador', 'senador', 'legislador_nacional']);
 
-        $query = Territorio::with(['candidatoPropio.perfilesSociales', 'candidatos' => function ($q) {
-            $q->with('perfilesSociales');
-        }])->orderBy('nombre');
+        // Territorios pertenecientes a este workspace
+        $provincia = Territorio::where('workspace_id', $workspace->id)
+            ->where(function ($q) {
+                $q->where('tipo', 'provincia')->orWhereNull('parent_id');
+            })
+            ->first();
 
+        // Si no hay provincia creada en el workspace pero hay alguna en la BD o fallback
+        if (!$provincia) {
+            $provincia = Territorio::where('tipo', 'provincia')->first();
+        }
+
+        $departamentosQuery = Territorio::where('workspace_id', $workspace->id);
         if ($provincia) {
-            $departamentos = Territorio::where('parent_id', $provincia->id)
+            $departamentos = (clone $departamentosQuery)
+                ->where('parent_id', $provincia->id)
                 ->with(['candidatoPropio.perfilesSociales', 'candidatos' => function ($q) {
                     $q->with('perfilesSociales');
                 }])
                 ->orderBy('nombre')
                 ->get();
         } else {
-            $departamentos = $query->get();
+            $departamentos = (clone $departamentosQuery)
+                ->with(['candidatoPropio.perfilesSociales', 'candidatos' => function ($q) {
+                    $q->with('perfilesSociales');
+                }])
+                ->orderBy('nombre')
+                ->get();
         }
 
-        // Determinar territorio activo según la escala seleccionada
-        $candidatoPropio = Candidato::where('es_propio', true)->with('territorio')->first();
+        // Determinar candidato propio del workspace
+        $candidatoPropio = Candidato::where('workspace_id', $workspace->id)
+            ->where('es_propio', true)
+            ->with('territorio')
+            ->first();
 
-        if ($escalaSeleccionada === 'gobernacion') {
-            $territorioActivo = $provincia;
+        // Determinar territorio activo según el nivel político
+        if ($esGobernador && !$territorioId) {
+            $territorioActivo = $provincia ?: $departamentos->first();
         } elseif ($territorioId) {
             $territorioActivo = $departamentos->firstWhere('id', $territorioId) ?: ($provincia ?: $departamentos->first());
         } else {
@@ -73,7 +94,9 @@ class TerritorioController extends Controller
         $poblacionProvincialTotal = $departamentos->sum('poblacion_total') ?: ($provincia?->poblacion_total ?: 820000);
 
         return Inertia::render('Territorios/Index', [
-            'escala_seleccionada' => $escalaSeleccionada,
+            'nivel_politico' => $nivelPolitico,
+            'nivel_label' => $workspace->nivel_politico_label,
+            'es_gobernador' => $esGobernador,
             'provincia' => $provincia,
             'departamentos' => $departamentos->map(function ($d) {
                 $candidato = $d->candidatoPropio;
@@ -166,10 +189,12 @@ class TerritorioController extends Controller
     }
 
     /**
-     * Guardar nuevo territorio.
+     * Guardar nuevo territorio en el workspace.
      */
     public function store(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:255'],
             'tipo' => ['required', 'string', 'in:municipio,departamento,provincia,seccion'],
@@ -189,12 +214,13 @@ class TerritorioController extends Controller
         $piramide = $this->demographicService->generarPiramideEtaria($poblacion, $padron);
 
         $territorio = Territorio::create([
+            'workspace_id' => $workspace->id,
             ...$validated,
             'piramide_etaria' => $piramide,
         ]);
 
         return redirect()->back()
-            ->with('success', "Territorio {$territorio->nombre} registrado exitosamente.");
+            ->with('success', "Territorio {$territorio->nombre} registrado exitosamente en {$workspace->nombre}.");
     }
 
     /**

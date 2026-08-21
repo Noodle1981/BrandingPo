@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
+use App\Models\Workspace;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -11,14 +13,31 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/quick-login', [AuthController::class, 'quickLogin'])->name('quick-login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// --- Rutas Protegidas (Requieren autenticación) ---
-Route::middleware(['auth'])->group(function () {
+// --- Rutas Protegidas (Requieren autenticación y Workspace Activo) ---
+Route::middleware(['auth', 'workspace_active'])->group(function () {
+    // Cambio de Workspace activo (para consultores y administradores)
+    Route::post('/workspace/cambiar/{workspace}', function (Request $request, Workspace $workspace) {
+        $user = $request->user();
+        $tieneAcceso = $user->role === 'admin'
+            || $user->workspaces()->where('workspaces.id', $workspace->id)->exists();
+
+        if (!$tieneAcceso) {
+            abort(403, 'No tienes acceso a esta campaña / workspace.');
+        }
+
+        $user->update(['active_workspace_id' => $workspace->id]);
+
+        return redirect()->back()->with('success', "Campaña cambiada a: {$workspace->nombre}");
+    })->name('workspace.cambiar');
+
     Route::get('/', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index']);
 
     // Gestión del Perfil Propio (Cliente) y Oposición (Competencia)
     Route::get('/mi-candidato', [\App\Http\Controllers\CandidatoController::class, 'miCandidato'])->name('mi-candidato');
     Route::get('/candidatos', [\App\Http\Controllers\CandidatoController::class, 'index'])->name('candidatos.index');
+    // IMPORTANTE: benchmarking debe ir ANTES de /candidatos/{candidato} para que Laravel no confunda "benchmarking" como ID
+    Route::get('/candidatos/benchmarking', [\App\Http\Controllers\CandidatoController::class, 'benchmarking'])->name('candidatos.benchmarking');
     Route::get('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'show'])->name('candidatos.show');
 
     Route::middleware(['can_write'])->group(function () {

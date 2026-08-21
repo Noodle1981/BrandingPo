@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,16 +17,21 @@ class UserController extends Controller
     /**
      * Listado de usuarios del sistema con sus roles.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $usuarios = User::orderBy('name')->get()->map(fn ($u) => [
-            'id' => $u->id,
-            'name' => $u->name,
-            'email' => $u->email,
-            'role' => $u->role,
-            'created_at' => $u->created_at?->format('d/m/Y H:i'),
-            'is_current' => $u->id === Auth::id(),
-        ]);
+        $workspace = WorkspaceHelper::activoONull($request);
+
+        $usuarios = User::with('workspaces')->orderBy('name')->get()->map(function ($u) use ($workspace) {
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'role' => $u->role,
+                'rol_en_workspace' => $u->getRolEnWorkspaceActivo(),
+                'created_at' => $u->created_at?->format('d/m/Y H:i'),
+                'is_current' => $u->id === Auth::id(),
+            ];
+        });
 
         return Inertia::render('Usuarios/Index', [
             'usuarios' => $usuarios,
@@ -41,6 +48,8 @@ class UserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activoONull($request);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
@@ -54,12 +63,19 @@ class UserController extends Controller
             'role.in' => 'El rol seleccionado no es válido.',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => bcrypt($validated['password']),
             'role' => $validated['role'],
+            'active_workspace_id' => $workspace?->id,
         ]);
+
+        if ($workspace) {
+            $workspace->usuarios()->syncWithoutDetaching([
+                $user->id => ['role' => $validated['role']],
+            ]);
+        }
 
         return redirect()->route('usuarios.index')
             ->with('success', 'Usuario creado exitosamente.');
@@ -70,6 +86,8 @@ class UserController extends Controller
      */
     public function update(Request $request, User $usuario): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activoONull($request);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($usuario->id)],
@@ -88,6 +106,12 @@ class UserController extends Controller
         }
 
         $usuario->update($data);
+
+        if ($workspace) {
+            $workspace->usuarios()->syncWithoutDetaching([
+                $usuario->id => ['role' => $validated['role']],
+            ]);
+        }
 
         return redirect()->route('usuarios.index')
             ->with('success', 'Usuario actualizado correctamente.');

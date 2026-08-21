@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -36,6 +37,11 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $workspace = $request->get('_workspace') ?: ($user?->active_workspace_id ? Workspace::find($user->active_workspace_id) : Workspace::first());
+
+        $rolEnWorkspace = $user ? $user->getRolEnWorkspaceActivo() : 'visualizador';
+        $canWrite = $user ? $user->puedeEscribir() : false;
+        $isAdmin = $user ? $user->esAdmin() : false;
 
         return [
             ...parent::share($request),
@@ -44,11 +50,27 @@ class HandleInertiaRequests extends Middleware
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'role' => $user->role ?? 'visualizador',
-                    'can_write' => in_array($user->role ?? '', ['admin', 'consultor']),
-                    'is_admin' => ($user->role ?? '') === 'admin',
+                    'role' => $rolEnWorkspace,
+                    'global_role' => $user->role ?? 'visualizador',
+                    'can_write' => $canWrite,
+                    'is_admin' => $isAdmin,
+                    'active_workspace_id' => $workspace?->id,
                 ] : null,
             ],
+            'workspace' => $workspace ? [
+                'id' => $workspace->id,
+                'nombre' => $workspace->nombre,
+                'slug' => $workspace->slug,
+                'nivel_politico' => $workspace->nivel_politico,
+                'nivel_label' => $workspace->nivel_politico_label,
+                'provincia' => $workspace->provincia,
+                'plan' => $workspace->plan,
+            ] : null,
+            'workspaces_disponibles' => fn () => $user
+                ? ($user->role === 'admin'
+                    ? Workspace::where('activo', true)->get(['id', 'nombre', 'slug', 'nivel_politico'])
+                    : $user->workspaces()->where('activo', true)->get(['workspaces.id', 'workspaces.nombre', 'workspaces.slug', 'workspaces.nivel_politico']))
+                : [],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

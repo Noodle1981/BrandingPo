@@ -15,6 +15,7 @@ class Publicacion extends Model
     protected $table = 'publicaciones';
 
     protected $fillable = [
+        'workspace_id',
         'candidato_id',
         'perfil_social_id',
         'eje_tematico_id',
@@ -56,6 +57,14 @@ class Publicacion extends Model
         'comentarios_destacados' => 'array',
         'insights_internos_propios' => 'array',
     ];
+
+    /**
+     * Workspace al que pertenece este registro.
+     */
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     /**
      * Candidato autor de la publicación.

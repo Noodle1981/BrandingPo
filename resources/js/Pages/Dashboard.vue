@@ -107,12 +107,6 @@ const plataformaIconColor = (plataforma) => {
               class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 shadow-md"
               :style="{ borderColor: candidato.color_hex || '#06b6d4' }"
             />
-            <div
-              v-if="candidato.es_propio"
-              class="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-cyan-500 text-slate-950 font-bold text-[10px] uppercase font-mono shadow-sm tracking-wider"
-            >
-              CLIENTE PROPIO
-            </div>
           </div>
 
           <div>

@@ -13,6 +13,7 @@ class EventoCrisis extends Model
     protected $table = 'eventos_crisis';
 
     protected $fillable = [
+        'workspace_id',
         'candidato_id',
         'titulo',
         'fecha_evento',
@@ -27,6 +28,11 @@ class EventoCrisis extends Model
         'fecha_evento' => 'datetime',
         'minutos_tiempo_respuesta' => 'integer',
     ];
+
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     public function candidato(): BelongsTo
     {

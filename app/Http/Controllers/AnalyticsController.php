@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\Publicacion;
 use App\Services\AdsImpactPredictorService;
@@ -17,12 +18,19 @@ class AnalyticsController extends Controller
     ) {}
 
     /**
-     * Tablero de Analítica Central & War Room Metrics.
+     * Tablero de Analítica Central & War Room Metrics del Workspace Activo.
      */
     public function index(Request $request): Response
     {
-        $candidatos = Candidato::with(['perfilesSociales', 'cicloCampana'])->get();
-        $publicaciones = Publicacion::with(['candidato', 'perfilSocial'])->get();
+        $workspace = WorkspaceHelper::activo($request);
+
+        $candidatos = Candidato::where('workspace_id', $workspace->id)
+            ->with(['perfilesSociales', 'cicloCampana'])
+            ->get();
+
+        $publicaciones = Publicacion::where('workspace_id', $workspace->id)
+            ->with(['candidato', 'perfilSocial'])
+            ->get();
 
         $totalVistas = $publicaciones->sum('total_vistas');
         $totalLikes = $publicaciones->sum('total_likes');

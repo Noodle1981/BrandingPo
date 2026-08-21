@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\CicloCampana;
 use App\Models\PresupuestoPartida;
@@ -13,13 +14,15 @@ use Inertia\Response;
 class PresupuestoController extends Controller
 {
     /**
-     * Tablero de Finanzas & Presupuesto de Campaña.
+     * Tablero de Finanzas & Presupuesto de Campaña del Workspace Activo.
      */
     public function index(Request $request): Response
     {
+        $workspace = WorkspaceHelper::activo($request);
         $cicloId = $request->input('ciclo_id');
 
-        $query = PresupuestoPartida::with(['cicloCampana', 'candidato']);
+        $query = PresupuestoPartida::where('workspace_id', $workspace->id)
+            ->with(['cicloCampana', 'candidato']);
 
         if ($cicloId) {
             $query->where('ciclo_campana_id', $cicloId);
@@ -49,8 +52,14 @@ class PresupuestoController extends Controller
         $saldoTotal = $totalAsignado - $totalEjecutado;
         $porcentajeGlobal = $totalAsignado > 0 ? round(($totalEjecutado / $totalAsignado) * 100, 1) : 0;
 
-        $ciclos = CicloCampana::orderByDesc('anio')->get(['id', 'nombre', 'anio']);
-        $candidatos = Candidato::orderByDesc('es_propio')->orderBy('nombre_completo')->get(['id', 'nombre_completo', 'es_propio']);
+        $ciclos = CicloCampana::where('workspace_id', $workspace->id)
+            ->orderByDesc('anio')
+            ->get(['id', 'nombre', 'anio']);
+
+        $candidatos = Candidato::where('workspace_id', $workspace->id)
+            ->orderByDesc('es_propio')
+            ->orderBy('nombre_completo')
+            ->get(['id', 'nombre_completo', 'es_propio']);
 
         return Inertia::render('Presupuesto/Index', [
             'partidas' => $partidas,
@@ -81,6 +90,8 @@ class PresupuestoController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'ciclo_campana_id' => ['required', 'exists:ciclo_campanas,id'],
             'candidato_id' => ['nullable', 'exists:candidatos,id'],
@@ -91,6 +102,7 @@ class PresupuestoController extends Controller
         ]);
 
         PresupuestoPartida::create([
+            'workspace_id' => $workspace->id,
             'ciclo_campana_id' => $validated['ciclo_campana_id'],
             'candidato_id' => $validated['candidato_id'] ?? null,
             'categoria' => $validated['categoria'],

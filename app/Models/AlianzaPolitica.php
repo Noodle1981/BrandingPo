@@ -13,12 +13,18 @@ class AlianzaPolitica extends Model
     protected $table = 'alianzas_politicas';
 
     protected $fillable = [
+        'workspace_id',
         'candidato_id',
         'nombre_figura',
         'cargo_o_rol',
         'tipo_impacto',
         'notas_observacion',
     ];
+
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
 
     public function candidato(): BelongsTo
     {

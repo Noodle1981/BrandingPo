@@ -2,11 +2,21 @@
 
 namespace Database\Seeders;
 
+use App\Models\AlianzaPolitica;
 use App\Models\Candidato;
 use App\Models\CicloCampana;
 use App\Models\EjeTematico;
+use App\Models\EventoCalendario;
+use App\Models\EventoCrisis;
+use App\Models\InformeEjecutivo;
+use App\Models\MedioPrensa;
+use App\Models\NotaPrensa;
 use App\Models\PerfilSocial;
+use App\Models\PresupuestoPartida;
+use App\Models\Publicacion;
 use App\Models\Territorio;
+use App\Models\User;
+use App\Models\Workspace;
 use App\Services\DemographicIntelligenceService;
 use Illuminate\Database\Seeder;
 
@@ -19,10 +29,37 @@ class PoliticaSeeder extends Seeder
     {
         $demoService = new DemographicIntelligenceService();
 
-        // 1. Territorio Provincial (Madre)
+        // ─────────────────────────────────────────────────────────
+        // 0. WORKSPACE PRINCIPAL — Campaña Sisterna (Albardón 2025)
+        // ─────────────────────────────────────────────────────────
+        $workspace = Workspace::updateOrCreate(
+            ['slug' => 'sisterna-albardon-2025'],
+            [
+                'nombre' => 'Campaña Sisterna — Albardón 2025',
+                'nivel_politico' => 'intendente',
+                'provincia' => 'San Juan',
+                'plan' => 'profesional',
+                'activo' => true,
+            ]
+        );
+
+        // Asignar todos los users existentes al workspace
+        User::all()->each(function (User $user) use ($workspace) {
+            $workspace->usuarios()->syncWithoutDetaching([
+                $user->id => ['role' => $user->role === 'admin' ? 'admin' : 'consultor'],
+            ]);
+            if (!$user->active_workspace_id) {
+                $user->update(['active_workspace_id' => $workspace->id]);
+            }
+        });
+
+        // ─────────────────────────────────────────────────────────
+        // 1. TERRITORIO PROVINCIAL (Madre)
+        // ─────────────────────────────────────────────────────────
         $provincia = Territorio::updateOrCreate(
             ['nombre' => 'Provincia de San Juan'],
             [
+                'workspace_id' => $workspace->id,
                 'tipo' => 'provincia',
                 'codigo_indec' => '70',
                 'latitud' => -30.8653,
@@ -38,7 +75,9 @@ class PoliticaSeeder extends Seeder
             'piramide_etaria' => $demoService->generarPiramideEtaria(818000, 610000),
         ]);
 
-        // 2. Departamentos de San Juan (19 Departamentos)
+        // ─────────────────────────────────────────────────────────
+        // 2. DEPARTAMENTOS DE SAN JUAN (19 Departamentos)
+        // ─────────────────────────────────────────────────────────
         $departamentosData = $demoService->getSanJuanDepartamentosFallback();
         $departamentosCreados = [];
 
@@ -47,6 +86,7 @@ class PoliticaSeeder extends Seeder
             $dep = Territorio::updateOrCreate(
                 ['nombre' => "Departamento {$d['nombre']}"],
                 [
+                    'workspace_id' => $workspace->id,
                     'parent_id' => $provincia->id,
                     'tipo' => 'departamento',
                     'codigo_indec' => $d['codigo_indec'],
@@ -63,12 +103,15 @@ class PoliticaSeeder extends Seeder
             $departamentosCreados[strtolower($d['nombre'])] = $dep;
         }
 
-        $albardon = $departamentosCreados['albardón'] ?? Territorio::first();
+        $albardon = $departamentosCreados['albardón'] ?? Territorio::where('workspace_id', $workspace->id)->first();
 
-        // 3. Ciclos de Campaña (Años)
-        $ciclo2023 = CicloCampana::firstOrCreate(
+        // ─────────────────────────────────────────────────────────
+        // 3. CICLOS DE CAMPAÑA
+        // ─────────────────────────────────────────────────────────
+        $ciclo2023 = CicloCampana::updateOrCreate(
             ['anio' => 2023],
             [
+                'workspace_id' => $workspace->id,
                 'nombre' => 'Campaña Provincial & Municipal 2023',
                 'fecha_inicio' => '2023-01-01',
                 'fecha_fin' => '2023-12-31',
@@ -77,9 +120,10 @@ class PoliticaSeeder extends Seeder
             ]
         );
 
-        $ciclo2025 = CicloCampana::firstOrCreate(
+        $ciclo2025 = CicloCampana::updateOrCreate(
             ['anio' => 2025],
             [
+                'workspace_id' => $workspace->id,
                 'nombre' => 'Elecciones Legislativas & Renovación 2025 / 2027',
                 'fecha_inicio' => '2025-01-01',
                 'fecha_fin' => '2025-12-31',
@@ -88,7 +132,9 @@ class PoliticaSeeder extends Seeder
             ]
         );
 
-        // 4. Ejes Temáticos
+        // ─────────────────────────────────────────────────────────
+        // 4. EJES TEMÁTICOS
+        // ─────────────────────────────────────────────────────────
         $ejes = [
             [
                 'nombre' => 'Obras & Infraestructura Barrial',
@@ -123,18 +169,24 @@ class PoliticaSeeder extends Seeder
         ];
 
         foreach ($ejes as $eje) {
-            EjeTematico::firstOrCreate(['slug' => $eje['slug']], $eje);
+            EjeTematico::updateOrCreate(
+                ['slug' => $eje['slug']],
+                [
+                    'workspace_id' => $workspace->id,
+                    ...$eje,
+                ]
+            );
         }
 
-        // 5. Candidatos Políticos Representativos
-
-        // Candidato 1: PROPIO (Federico Sisterna - Albardón)
+        // ─────────────────────────────────────────────────────────
+        // 5. CANDIDATO PROPIO (Federico Sisterna - Albardón)
+        // ─────────────────────────────────────────────────────────
         $propio = Candidato::updateOrCreate(
             [
-                'es_propio' => true,
+                'nombre_completo' => 'Federico Sisterna',
+                'workspace_id' => $workspace->id,
             ],
             [
-                'nombre_completo' => 'Federico Sisterna',
                 'ciclo_campana_id' => $ciclo2025->id,
                 'territorio_id' => $albardon->id,
                 'partido_coalicion' => 'Ahora Albardón',
@@ -215,13 +267,16 @@ class PoliticaSeeder extends Seeder
             );
         }
 
-        // Candidato 2: RIVAL OPOSITOR MUNICIPAL (Albardón)
+        // ─────────────────────────────────────────────────────────
+        // 6. RIVAL OPOSITOR MUNICIPAL (Albardón)
+        // ─────────────────────────────────────────────────────────
         $rival = Candidato::updateOrCreate(
             [
                 'nombre_completo' => 'Carlos Morales',
-                'ciclo_campana_id' => $ciclo2025->id,
+                'workspace_id' => $workspace->id,
             ],
             [
+                'ciclo_campana_id' => $ciclo2025->id,
                 'territorio_id' => $albardon->id,
                 'partido_coalicion' => 'Frente Renovador Departamental',
                 'cargo_aspirado' => 'Candidato a Intendente',
@@ -244,12 +299,14 @@ class PoliticaSeeder extends Seeder
             );
         }
 
-        // 6. Candidatos Aliados del Frente en Departamentos Clave de San Juan
+        // ─────────────────────────────────────────────────────────
+        // 7. CANDIDATOS MONITOREADOS EN DEPARTAMENTOS CLAVE
+        // ─────────────────────────────────────────────────────────
         $candidatosAliados = [
             [
                 'dept' => 'capital',
                 'nombre' => 'Susana Laciar',
-                'partido' => 'Unidos por San Juan / Frente Aliado',
+                'partido' => 'Unidos por San Juan',
                 'cargo' => 'Candidata a Intendente Capital',
                 'avatar' => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
                 'seguidores' => 42000,
@@ -302,9 +359,10 @@ class PoliticaSeeder extends Seeder
                 $cand = Candidato::updateOrCreate(
                     [
                         'nombre_completo' => $aliado['nombre'],
-                        'territorio_id' => $depTarget->id,
+                        'workspace_id' => $workspace->id,
                     ],
                     [
+                        'territorio_id' => $depTarget->id,
                         'ciclo_campana_id' => $ciclo2025->id,
                         'partido_coalicion' => $aliado['partido'],
                         'cargo_aspirado' => $aliado['cargo'],
@@ -312,7 +370,7 @@ class PoliticaSeeder extends Seeder
                         'color_hex' => '#10b981',
                         'es_propio' => false,
                         'avatar_url' => $aliado['avatar'],
-                        'bio_resumen' => "Candidato a Intendente por {$depTarget->nombre} dentro de la red del frente electoral.",
+                        'bio_resumen' => "Candidato a Intendente en {$depTarget->nombre}.",
                     ]
                 );
 
@@ -329,5 +387,15 @@ class PoliticaSeeder extends Seeder
                 );
             }
         }
+
+        // Asignar workspace a cualquier registro huérfano
+        Publicacion::whereNull('workspace_id')->update(['workspace_id' => $workspace->id]);
+        NotaPrensa::whereNull('workspace_id')->update(['workspace_id' => $workspace->id]);
+        MedioPrensa::whereNull('workspace_id')->update(['workspace_id' => $workspace->id]);
+        EventoCrisis::whereNull('workspace_id')->update(['workspace_id' => $workspace->id]);
+        AlianzaPolitica::whereNull('workspace_id')->update(['workspace_id' => $workspace->id]);
+        EventoCalendario::whereNull('workspace_id')->update(['workspace_id' => $workspace->id]);
+        PresupuestoPartida::whereNull('workspace_id')->update(['workspace_id' => $workspace->id]);
+        InformeEjecutivo::whereNull('workspace_id')->update(['workspace_id' => $workspace->id]);
     }
 }

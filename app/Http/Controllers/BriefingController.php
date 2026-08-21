@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\WorkspaceHelper;
 use App\Models\CicloCampana;
 use App\Models\InformeEjecutivo;
 use App\Models\Publicacion;
@@ -13,13 +14,16 @@ use Inertia\Response;
 class BriefingController extends Controller
 {
     /**
-     * Centro de Informes & Briefings Ejecutivos.
+     * Centro de Informes & Briefings Ejecutivos del Workspace Activo.
      */
     public function index(Request $request): Response
     {
+        $workspace = WorkspaceHelper::activo($request);
         $cicloId = $request->input('ciclo_id');
 
-        $query = InformeEjecutivo::with('cicloCampana')->orderByDesc('fecha_generacion');
+        $query = InformeEjecutivo::where('workspace_id', $workspace->id)
+            ->with('cicloCampana')
+            ->orderByDesc('fecha_generacion');
 
         if ($cicloId) {
             $query->where('ciclo_campana_id', $cicloId);
@@ -39,7 +43,9 @@ class BriefingController extends Controller
             ];
         });
 
-        $ciclos = CicloCampana::orderByDesc('anio')->get(['id', 'nombre', 'anio']);
+        $ciclos = CicloCampana::where('workspace_id', $workspace->id)
+            ->orderByDesc('anio')
+            ->get(['id', 'nombre', 'anio']);
 
         return Inertia::render('Briefings/Index', [
             'informes' => $informes,
@@ -76,6 +82,8 @@ class BriefingController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'ciclo_campana_id' => ['required', 'exists:ciclo_campanas,id'],
             'titulo' => ['required', 'string', 'max:255'],
@@ -84,7 +92,7 @@ class BriefingController extends Controller
             'conclusiones_estrategicas' => ['nullable', 'string'],
         ]);
 
-        $publicaciones = Publicacion::all();
+        $publicaciones = Publicacion::where('workspace_id', $workspace->id)->get();
 
         $snapshot = [
             'total_publicaciones' => $publicaciones->count(),
@@ -94,6 +102,7 @@ class BriefingController extends Controller
         ];
 
         $informe = InformeEjecutivo::create([
+            'workspace_id' => $workspace->id,
             'ciclo_campana_id' => $validated['ciclo_campana_id'],
             'titulo' => $validated['titulo'],
             'fecha_generacion' => now()->toDateString(),
