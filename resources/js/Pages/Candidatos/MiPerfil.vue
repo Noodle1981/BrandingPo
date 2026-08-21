@@ -463,7 +463,7 @@ const getSocialMeta = (key) => {
                 <input
                   v-model="formRed.url_perfil"
                   type="url"
-                  placeholder="https://www.instagram.com/federico__sisterna/"
+                  placeholder="https://www.instagram.com/usuario/"
                   class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
                 />
                 <Link2 class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -486,7 +486,7 @@ const getSocialMeta = (key) => {
                   v-model="formRed.handle_usuario"
                   type="text"
                   required
-                  placeholder="ej. @federico__sisterna"
+                  placeholder="ej. @usuario"
                   class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100"
                 />
               </div>
