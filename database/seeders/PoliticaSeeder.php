@@ -243,5 +243,91 @@ class PoliticaSeeder extends Seeder
                 $r
             );
         }
+
+        // 6. Candidatos Aliados del Frente en Departamentos Clave de San Juan
+        $candidatosAliados = [
+            [
+                'dept' => 'capital',
+                'nombre' => 'Susana Laciar',
+                'partido' => 'Unidos por San Juan / Frente Aliado',
+                'cargo' => 'Candidata a Intendente Capital',
+                'avatar' => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
+                'seguidores' => 42000,
+            ],
+            [
+                'dept' => 'rawson',
+                'nombre' => 'Carlos Munisaga',
+                'partido' => 'Frente San Juan Adelante',
+                'cargo' => 'Candidato a Intendente Rawson',
+                'avatar' => 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80',
+                'seguidores' => 31500,
+            ],
+            [
+                'dept' => 'rivadavia',
+                'nombre' => 'Sergio Miodowsky',
+                'partido' => 'Cambia Rivadavia',
+                'cargo' => 'Candidato a Intendente Rivadavia',
+                'avatar' => 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80',
+                'seguidores' => 28000,
+            ],
+            [
+                'dept' => 'chimbas',
+                'nombre' => 'Daniela Rodríguez',
+                'partido' => 'Chimbas Te Quiero',
+                'cargo' => 'Candidata a Intendente Chimbas',
+                'avatar' => 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&auto=format&fit=crop&q=80',
+                'seguidores' => 35000,
+            ],
+            [
+                'dept' => 'pocito',
+                'nombre' => 'Fabián Aballay',
+                'partido' => 'Pocito Crece',
+                'cargo' => 'Candidato a Intendente Pocito',
+                'avatar' => 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&auto=format&fit=crop&q=80',
+                'seguidores' => 19500,
+            ],
+            [
+                'dept' => 'caucete',
+                'nombre' => 'Romina Rosas',
+                'partido' => 'Frente Caucete Adelante',
+                'cargo' => 'Candidata a Intendente Caucete',
+                'avatar' => 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
+                'seguidores' => 14200,
+            ],
+        ];
+
+        foreach ($candidatosAliados as $aliado) {
+            $depTarget = $departamentosCreados[$aliado['dept']] ?? null;
+            if ($depTarget) {
+                $cand = Candidato::updateOrCreate(
+                    [
+                        'nombre_completo' => $aliado['nombre'],
+                        'territorio_id' => $depTarget->id,
+                    ],
+                    [
+                        'ciclo_campana_id' => $ciclo2025->id,
+                        'partido_coalicion' => $aliado['partido'],
+                        'cargo_aspirado' => $aliado['cargo'],
+                        'estado_politico' => 'candidato',
+                        'color_hex' => '#10b981',
+                        'es_propio' => false,
+                        'avatar_url' => $aliado['avatar'],
+                        'bio_resumen' => "Candidato a Intendente por {$depTarget->nombre} dentro de la red del frente electoral.",
+                    ]
+                );
+
+                PerfilSocial::updateOrCreate(
+                    ['candidato_id' => $cand->id, 'plataforma' => 'instagram'],
+                    [
+                        'handle_usuario' => '@' . strtolower(str_replace(' ', '', $aliado['nombre'])),
+                        'esta_activo' => true,
+                        'seguidores_actuales' => $aliado['seguidores'],
+                        'publicaciones_totales' => 110,
+                        'fecha_punto_cero' => now()->toDateString(),
+                        'seguidores_punto_cero' => $aliado['seguidores'],
+                    ]
+                );
+            }
+        }
     }
 }

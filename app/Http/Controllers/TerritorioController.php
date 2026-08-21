@@ -42,10 +42,17 @@ class TerritorioController extends Controller
             $departamentos = $query->get();
         }
 
-        // Territorio activo enfocado (por defecto el candidato propio o Albardón)
+        // Determinar territorio activo según la escala seleccionada
         $candidatoPropio = Candidato::where('es_propio', true)->with('territorio')->first();
-        $territorioActivoId = $territorioId ?: ($candidatoPropio?->territorio_id ?: $departamentos->first()?->id);
-        $territorioActivo = $departamentos->firstWhere('id', $territorioActivoId) ?: ($provincia ?: $departamentos->first());
+
+        if ($escalaSeleccionada === 'gobernacion') {
+            $territorioActivo = $provincia;
+        } elseif ($territorioId) {
+            $territorioActivo = $departamentos->firstWhere('id', $territorioId) ?: ($provincia ?: $departamentos->first());
+        } else {
+            $territorioActivoId = $candidatoPropio?->territorio_id ?: $departamentos->first()?->id;
+            $territorioActivo = $departamentos->firstWhere('id', $territorioActivoId) ?: ($provincia ?: $departamentos->first());
+        }
 
         // Generar o recuperar pirámide etaria del territorio activo
         $piramide = null;

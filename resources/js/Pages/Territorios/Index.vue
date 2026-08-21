@@ -67,6 +67,7 @@ const props = defineProps({
 const escalaActual = ref(props.escala_seleccionada || 'frente');
 const cambiarEscala = (escala) => {
   escalaActual.value = escala;
+  router.get('/territorios', { escala: escala }, { preserveScroll: true, preserveState: true });
 };
 
 // Búsqueda y filtrado de departamentos
