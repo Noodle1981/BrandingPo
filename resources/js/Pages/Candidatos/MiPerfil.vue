@@ -233,6 +233,46 @@ const formCandidato = useForm({
   bio_resumen: props.candidato.bio_resumen || '',
 });
 
+const isDetectingTerritorio = ref(false);
+const detectTerritorioMessage = ref('');
+const detectTerritorioSuccess = ref(false);
+
+const autoDetectTerritorio = async () => {
+  if (!formCandidato.territorio_nombre) return;
+  isDetectingTerritorio.value = true;
+  detectTerritorioMessage.value = 'Buscando en Georef e INDEC...';
+  try {
+    const res = await fetch('/territorios/auto-detect', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        nombre: formCandidato.territorio_nombre,
+        provincia: 'San Juan',
+      }),
+    });
+    const data = await res.json();
+    if (data && data.success) {
+      formCandidato.territorio_nombre = `Departamento ${data.nombre}`;
+      if (data.padron_electoral) formCandidato.padron_electoral = Number(data.padron_electoral);
+      if (data.poblacion_total) formCandidato.poblacion_total = Number(data.poblacion_total);
+      detectTerritorioSuccess.value = true;
+      detectTerritorioMessage.value = `¡${data.nombre} detectado! Padrón: ${Number(data.padron_electoral).toLocaleString('es-AR')}`;
+    } else {
+      detectTerritorioSuccess.value = false;
+      detectTerritorioMessage.value = data.mensaje || 'No se encontraron datos automáticos.';
+    }
+  } catch (e) {
+    detectTerritorioSuccess.value = false;
+    detectTerritorioMessage.value = 'Error de conexión.';
+  } finally {
+    isDetectingTerritorio.value = false;
+  }
+};
+
 const saveCandidato = () => {
   formCandidato.put(`/candidatos/${props.candidato.id}`, {
     preserveScroll: true,
@@ -1079,16 +1119,30 @@ const getHandlePlaceholder = (key) => {
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Nombre del Territorio / Departamento / Municipio *
-              </label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Nombre del Territorio / Departamento / Municipio *
+                </label>
+                <button
+                  type="button"
+                  @click="autoDetectTerritorio"
+                  :disabled="isDetectingTerritorio || !formCandidato.territorio_nombre"
+                  class="text-[10px] font-mono text-cyan-500 hover:text-cyan-400 font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  <Sparkles class="w-3 h-3" />
+                  <span>{{ isDetectingTerritorio ? 'Detectando...' : '⚡ Autocompletar con Georef' }}</span>
+                </button>
+              </div>
               <input
                 v-model="formCandidato.territorio_nombre"
                 type="text"
                 required
-                placeholder="ej. Departamento Albardón / San Juan"
+                placeholder="ej. Albardón o Rawson"
                 class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
               />
+              <div v-if="detectTerritorioMessage" class="mt-1.5 text-[11px] font-mono" :class="detectTerritorioSuccess ? 'text-emerald-500 font-bold' : 'text-amber-500'">
+                {{ detectTerritorioMessage }}
+              </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3 font-mono">

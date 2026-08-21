@@ -8,34 +8,56 @@ use Illuminate\Support\Facades\Log;
 class DemographicIntelligenceService
 {
     /**
+     * Limpiar el término de búsqueda de departamento / municipio.
+     */
+    public function cleanSearchTerm(string $nombre): string
+    {
+        $term = trim($nombre);
+        // Quitar prefijos comunes: Departamento, Municipio, Partido, etc.
+        $term = preg_replace('/^(departamento|municipio|partido|depto|ciudad)\s*(de)?\s*/iu', '', $term);
+        // Quitar sufijos comunes: / San Juan, San Juan, etc.
+        $term = preg_replace('/\s*[\/\-]\s*.*$/iu', '', $term);
+        $term = preg_replace('/\s*(san juan|mendoza|cordoba|córdoba|buenos aires|santa fe)\s*$/iu', '', $term);
+        return trim($term);
+    }
+
+    /**
      * Consultar API de Georef Argentina (IGN / Secretaría de Innovación Pública)
      * para obtener datos geográficos oficiales, códigos INDEC y coordenadas.
      */
-    public function consultarGeoref(string $nombre, ?string $provincia = null): array
+    public function consultarGeoref(string $nombre, ?string $provincia = 'San Juan'): array
     {
-        $nombre = trim($nombre);
+        $nombreOriginal = trim($nombre);
+        $nombreLimpio = $this->cleanSearchTerm($nombreOriginal);
+
         $result = [
             'success' => false,
-            'nombre' => $nombre,
-            'provincia' => $provincia ?? 'San Juan',
+            'nombre' => $nombreOriginal,
+            'provincia' => $provincia ?: 'San Juan',
             'codigo_indec' => null,
             'latitud' => null,
             'longitud' => null,
             'tipo' => 'departamento',
-            'fuente' => 'Georef AR / Datos Abiertos',
+            'poblacion_total' => null,
+            'padron_electoral' => null,
+            'poblacion_urbana_pct' => 70.0,
+            'poblacion_rural_pct' => 30.0,
+            'hogares_nbi_pct' => 15.0,
+            'fuente' => 'Georef AR / INDEC',
             'mensaje' => '',
         ];
 
+        // 1. Intentar consultar API oficial de Georef AR (departamentos)
         try {
             $params = [
-                'nombre' => $nombre,
+                'nombre' => $nombreLimpio,
                 'max' => 5,
             ];
-            if ($provincia) {
+            if ($provincia && $provincia !== 'Todas') {
                 $params['provincia'] = $provincia;
             }
 
-            $response = Http::timeout(5)->get('https://apis.datos.gob.ar/georef/api/departamentos', $params);
+            $response = Http::timeout(4)->get('https://apis.datos.gob.ar/georef/api/departamentos', $params);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -47,37 +69,99 @@ class DemographicIntelligenceService
                     $result['provincia'] = $dep['provincia']['nombre'] ?? $provincia;
                     $result['latitud'] = $dep['centroide']['lat'] ?? null;
                     $result['longitud'] = $dep['centroide']['lon'] ?? null;
-                    $result['mensaje'] = "Departamento {$dep['nombre']} detectado con coordenadas oficiales.";
-                    return $result;
+                    $result['mensaje'] = "Departamento {$dep['nombre']} detectado con coordenadas oficiales de Georef AR.";
+                }
+            }
+
+            // Si no encontró por departamento, probar por municipios de Georef
+            if (!$result['success']) {
+                $respMuni = Http::timeout(4)->get('https://apis.datos.gob.ar/georef/api/municipios', $params);
+                if ($respMuni->successful()) {
+                    $dataMuni = $respMuni->json();
+                    if (!empty($dataMuni['municipios']) && count($dataMuni['municipios']) > 0) {
+                        $muni = $dataMuni['municipios'][0];
+                        $result['success'] = true;
+                        $result['nombre'] = $muni['nombre'];
+                        $result['codigo_indec'] = $muni['id'] ?? null;
+                        $result['provincia'] = $muni['provincia']['nombre'] ?? $provincia;
+                        $result['latitud'] = $muni['centroide']['lat'] ?? null;
+                        $result['longitud'] = $muni['centroide']['lon'] ?? null;
+                        $result['mensaje'] = "Municipio {$muni['nombre']} detectado con coordenadas oficiales de Georef AR.";
+                    }
                 }
             }
         } catch (\Throwable $e) {
-            Log::warning("Error consultando Georef AR para '{$nombre}': " . $e->getMessage());
+            Log::warning("Error consultando Georef AR para '{$nombreLimpio}': " . $e->getMessage());
         }
 
-        // Fallback inteligente para San Juan si la API externa está offline
+        // 2. Enriquecer con base censal INDEC de San Juan y departamentos conocidos
         $sanJuanDepartamentos = $this->getSanJuanDepartamentosFallback();
-        $key = strtolower(str_replace(['departamento', 'san juan', '/', ' '], '', $nombre));
+        $keyBusqueda = strtolower(str_replace(['á', 'é', 'í', 'ó', 'ú', 'ñ', ' '], ['a', 'e', 'i', 'o', 'u', 'n', ''], $nombreLimpio));
 
         foreach ($sanJuanDepartamentos as $depKey => $data) {
-            if (str_contains($key, $depKey) || str_contains($depKey, $key)) {
+            $depKeyNormalizado = strtolower(str_replace(['á', 'é', 'í', 'ó', 'ú', 'ñ', ' '], ['a', 'e', 'i', 'o', 'u', 'n', ''], $depKey));
+            if (str_contains($keyBusqueda, $depKeyNormalizado) || str_contains($depKeyNormalizado, $keyBusqueda)) {
                 $result['success'] = true;
-                $result['nombre'] = $data['nombre'];
-                $result['codigo_indec'] = $data['codigo_indec'];
-                $result['latitud'] = $data['latitud'];
-                $result['longitud'] = $data['longitud'];
+                if (!$result['nombre'] || $result['nombre'] === $nombreOriginal) {
+                    $result['nombre'] = $data['nombre'];
+                }
+                if (!$result['codigo_indec']) $result['codigo_indec'] = $data['codigo_indec'];
+                if (!$result['latitud']) $result['latitud'] = $data['latitud'];
+                if (!$result['longitud']) $result['longitud'] = $data['longitud'];
                 $result['poblacion_total'] = $data['poblacion_total'];
                 $result['padron_electoral'] = $data['padron_electoral'];
                 $result['poblacion_urbana_pct'] = $data['poblacion_urbana_pct'];
                 $result['poblacion_rural_pct'] = $data['poblacion_rural_pct'];
                 $result['hogares_nbi_pct'] = $data['hogares_nbi_pct'];
-                $result['mensaje'] = "Datos demográficos censales de {$data['nombre']} cargados con éxito.";
+                $result['mensaje'] = "¡Departamento {$data['nombre']} ({$provincia}) detectado con datos censales INDEC!";
                 return $result;
             }
         }
 
-        $result['mensaje'] = 'No se encontró el departamento en Georef. Puedes ingresar las coordenadas manualmente.';
+        // Si fue detectado por Georef pero no está en la tabla de San Juan (otra provincia)
+        if ($result['success']) {
+            if (!$result['poblacion_total']) {
+                $result['poblacion_total'] = 45000;
+                $result['padron_electoral'] = 35000;
+            }
+            return $result;
+        }
+
+        $result['mensaje'] = "No se encontró '{$nombreLimpio}' en {$provincia}. Verifica la ortografía o ingresa los datos manualmente.";
         return $result;
+    }
+
+    /**
+     * Listado oficial de las 24 Provincias / Jurisdicciones de Argentina.
+     */
+    public function getProvinciasArgentinas(): array
+    {
+        return [
+            'San Juan',
+            'Mendoza',
+            'Córdoba',
+            'Buenos Aires',
+            'Ciudad Autónoma de Buenos Aires',
+            'Santa Fe',
+            'Entre Ríos',
+            'Tucumán',
+            'Salta',
+            'Chaco',
+            'Corrientes',
+            'Misiones',
+            'Santiago del Estero',
+            'San Luis',
+            'La Rioja',
+            'Catamarca',
+            'Jujuy',
+            'Neuquén',
+            'Río Negro',
+            'Chubut',
+            'Santa Cruz',
+            'La Pampa',
+            'Formosa',
+            'Tierra del Fuego',
+        ];
     }
 
     /**
@@ -88,13 +172,6 @@ class DemographicIntelligenceService
         if ($padronElectoral <= 0) {
             $padronElectoral = (int)round($poblacionTotal * 0.78); // Estimación del 78% de población con edad de votar
         }
-
-        // Distribución etaria electoral estándar en Argentina:
-        // 1. 16-17 años: ~4.2% del padrón (Voto Joven Optativo)
-        // 2. 18-29 años: ~24.8% del padrón (Juventud / Primeros Empleos)
-        // 3. 30-49 años: ~32.5% del padrón (Adultos Activos / Familias)
-        // 4. 50-69 años: ~25.5% del padrón (Adultos Mayores / Voto Tradicional)
-        // 5. 70+ años:   ~13.0% del padrón (Tercera Edad / Voto Optativo)
 
         $grupos = [
             [
@@ -153,9 +230,9 @@ class DemographicIntelligenceService
             'padron_total' => $padronElectoral,
             'poblacion_total' => $poblacionTotal,
             'grupos_etarios' => $grupos,
-            'resumen_voto_joven' => (int)round($padronElectoral * 0.29), // 16 a 29 años (29% del padrón)
-            'resumen_voto_adulto' => (int)round($padronElectoral * 0.58), // 30 a 69 años (58% del padrón)
-            'resumen_voto_senior' => (int)round($padronElectoral * 0.13), // 70+ años (13% del padrón)
+            'resumen_voto_joven' => (int)round($padronElectoral * 0.29),
+            'resumen_voto_adulto' => (int)round($padronElectoral * 0.58),
+            'resumen_voto_senior' => (int)round($padronElectoral * 0.13),
         ];
     }
 
@@ -164,10 +241,6 @@ class DemographicIntelligenceService
      */
     public function recomendarEstrategiaDigital(array $piramide, float $urbanoPct): array
     {
-        $padron = $piramide['padron_total'] ?? 20000;
-        $jovenPct = 29.0;
-        $adultoPct = 58.0;
-
         $distribucionPauta = [
             [
                 'plataforma' => 'Facebook Ads',

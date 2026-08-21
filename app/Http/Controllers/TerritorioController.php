@@ -119,6 +119,7 @@ class TerritorioController extends Controller
                     'avatar_url' => $territorioActivo->candidatoPropio->avatar_url,
                 ] : null,
             ] : null,
+            'provincias' => $this->demographicService->getProvinciasArgentinas(),
             'metricas_macro' => [
                 'padron_total_provincial' => $padronProvincialTotal,
                 'poblacion_total_provincial' => $poblacionProvincialTotal,

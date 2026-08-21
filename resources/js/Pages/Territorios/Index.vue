@@ -48,6 +48,15 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  provincias: {
+    type: Array,
+    default: () => [
+      'San Juan', 'Mendoza', 'Córdoba', 'Buenos Aires', 'Ciudad Autónoma de Buenos Aires',
+      'Santa Fe', 'Entre Ríos', 'Tucumán', 'Salta', 'Chaco', 'Corrientes', 'Misiones',
+      'Santiago del Estero', 'San Luis', 'La Rioja', 'Catamarca', 'Jujuy', 'Neuquén',
+      'Río Negro', 'Chubut', 'Santa Cruz', 'La Pampa', 'Formosa', 'Tierra del Fuego'
+    ],
+  },
   metricas_macro: {
     type: Object,
     default: () => ({}),
@@ -89,6 +98,7 @@ const detectSuccess = ref(false);
 const formTerritorio = useForm({
   id: null,
   nombre: '',
+  provincia_seleccionada: props.provincia?.nombre || 'San Juan',
   tipo: 'departamento',
   parent_id: props.provincia?.id || null,
   codigo_indec: '',
@@ -104,6 +114,7 @@ const formTerritorio = useForm({
 const openCreateModal = () => {
   isEditing.value = false;
   formTerritorio.reset();
+  formTerritorio.provincia_seleccionada = props.provincia?.nombre || 'San Juan';
   formTerritorio.parent_id = props.provincia?.id || null;
   formTerritorio.tipo = 'departamento';
   detectMessage.value = '';
@@ -114,6 +125,7 @@ const openEditModal = (terr) => {
   isEditing.value = true;
   formTerritorio.id = terr.id;
   formTerritorio.nombre = terr.nombre;
+  formTerritorio.provincia_seleccionada = props.provincia?.nombre || 'San Juan';
   formTerritorio.tipo = terr.tipo;
   formTerritorio.parent_id = terr.parent_id || props.provincia?.id;
   formTerritorio.codigo_indec = terr.codigo_indec || '';
@@ -136,7 +148,7 @@ const autoDetectGeoref = async () => {
     return;
   }
   isDetecting.value = true;
-  detectMessage.value = 'Consultando Georef AR y datos censales oficiales...';
+  detectMessage.value = `Consultando Georef AR y datos censales en ${formTerritorio.provincia_seleccionada}...`;
 
   try {
     const response = await fetch('/territorios/auto-detect', {
@@ -148,7 +160,7 @@ const autoDetectGeoref = async () => {
       },
       body: JSON.stringify({
         nombre: formTerritorio.nombre,
-        provincia: props.provincia?.nombre || 'San Juan',
+        provincia: formTerritorio.provincia_seleccionada || 'San Juan',
       }),
     });
 
@@ -165,7 +177,7 @@ const autoDetectGeoref = async () => {
       if (data.hogares_nbi_pct) formTerritorio.hogares_nbi_pct = Number(data.hogares_nbi_pct);
 
       detectSuccess.value = true;
-      detectMessage.value = data.mensaje || '¡Datos geográficos y censales detectados con éxito!';
+      detectMessage.value = data.mensaje || `¡Datos de ${data.nombre} detectados con éxito!`;
     } else {
       detectSuccess.value = false;
       detectMessage.value = data.mensaje || 'No se encontraron datos automáticos.';
@@ -606,11 +618,26 @@ const saveTerritorio = () => {
         </div>
 
         <form @submit.prevent="saveTerritorio" class="space-y-4">
-          <!-- Nombre + Auto-detección -->
+          <!-- Selector de Provincia -->
           <div>
-            <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Provincia *
+            </label>
+            <select
+              v-model="formTerritorio.provincia_seleccionada"
+              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500 font-mono"
+            >
+              <option v-for="prov in provincias" :key="prov" :value="prov">
+                {{ prov }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Nombre del Departamento + Auto-detección -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
               <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                Nombre del Departamento / Municipio *
+                Departamento / Municipio *
               </label>
               <button
                 type="button"
@@ -627,7 +654,7 @@ const saveTerritorio = () => {
               v-model="formTerritorio.nombre"
               type="text"
               required
-              placeholder="ej. Albardón o Rawson"
+              placeholder="ej. Albardón, Rawson, Capital..."
               class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500 font-mono"
             />
 
