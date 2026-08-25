@@ -157,19 +157,48 @@ const perfilesCandidatoSeleccionado = computed(() => {
 });
 
 const openCreateModal = () => {
-  // Preseleccionar candidato
-  if (props.filtros.candidato_id) {
+  // 1. Preseleccionar candidato según filtros activos
+  if (selectedCandidato.value) {
+    createForm.candidato_id = selectedCandidato.value;
+  } else if (props.filtros.candidato_id) {
     createForm.candidato_id = props.filtros.candidato_id;
+  } else if (props.filtros.filtro === 'propio') {
+    const propio = props.candidatos.find(c => c.es_propio);
+    createForm.candidato_id = propio ? propio.id : (props.candidatos[0]?.id ?? '');
+  } else if (props.filtros.filtro === 'oposicion') {
+    const opositor = props.candidatos.find(c => !c.es_propio);
+    createForm.candidato_id = opositor ? opositor.id : (props.candidatos[0]?.id ?? '');
   } else if (props.candidatos.length > 0) {
     const propio = props.candidatos.find(c => c.es_propio);
     createForm.candidato_id = propio ? propio.id : props.candidatos[0].id;
   }
 
-  // Preseleccionar perfil
+  // 2. Preseleccionar perfil social según red social filtrada
   const perfiles = perfilesCandidatoSeleccionado.value;
-  if (perfiles.length > 0) {
+  const activePlatform = selectedPlataforma.value || props.filtros.plataforma;
+
+  if (activePlatform) {
+    const matchingPerfil = perfiles.find(p => p.plataforma.toLowerCase() === activePlatform.toLowerCase());
+    if (matchingPerfil) {
+      createForm.perfil_social_id = matchingPerfil.id;
+      createForm.plataforma = matchingPerfil.plataforma;
+    } else if (perfiles.length > 0) {
+      createForm.perfil_social_id = perfiles[0].id;
+      createForm.plataforma = perfiles[0].plataforma;
+    }
+  } else if (perfiles.length > 0) {
     createForm.perfil_social_id = perfiles[0].id;
     createForm.plataforma = perfiles[0].plataforma;
+  }
+
+  // 3. Preseleccionar eje temático si está filtrado
+  if (selectedEje.value) {
+    createForm.eje_tematico_id = selectedEje.value;
+  }
+
+  // 4. Preseleccionar tipo de pauta si está filtrado
+  if (selectedTipoPauta.value) {
+    createForm.tipo_pauta = selectedTipoPauta.value;
   }
 
   scrapeSuccessMsg.value = '';
@@ -179,6 +208,17 @@ const openCreateModal = () => {
 
 const onCandidatoChange = () => {
   const perfiles = perfilesCandidatoSeleccionado.value;
+  const activePlatform = selectedPlataforma.value || props.filtros.plataforma;
+  
+  if (activePlatform) {
+    const matchingPerfil = perfiles.find(p => p.plataforma.toLowerCase() === activePlatform.toLowerCase());
+    if (matchingPerfil) {
+      createForm.perfil_social_id = matchingPerfil.id;
+      createForm.plataforma = matchingPerfil.plataforma;
+      return;
+    }
+  }
+
   if (perfiles.length > 0) {
     createForm.perfil_social_id = perfiles[0].id;
     createForm.plataforma = perfiles[0].plataforma;
