@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { Head, useForm, Link } from '@inertiajs/vue3';
+import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import Badge from '../../Components/Badge.vue';
+import SocialCard from '../../Components/SocialCard.vue';
+import MediaEmbed from '../../Components/MediaEmbed.vue';
 import {
   Sparkles,
   Users,
@@ -16,12 +18,142 @@ import {
   MapPin,
   Vote,
   TrendingUp,
+  TrendingDown,
+  RefreshCw,
+  Zap,
   Image as ImageIcon,
   CheckCircle,
   AlertCircle,
   Settings,
-  X
+  X,
+  Plus,
+  DollarSign,
+  Heart,
+  MessageCircle,
+  Eye,
+  Share2,
+  Star,
+  Film,
+  Send,
+  Layers,
+  Flame,
+  Check,
+  Clock,
+  Radio,
+  Bookmark,
+  Filter,
+  Search,
+  RotateCcw,
+  Target
 } from '@lucide/vue';
+
+// Configuración de Formatos Específicos por Red Social
+const platformFormats = {
+  instagram: [
+    { value: 'Reel', label: '🎬 Reel / Video Vertical (9:16)', desc: 'Algoritmo viral de Instagram Reels', default: true },
+    { value: 'Foto', label: '🖼️ Foto / Post Simple (1:1 o 4:5)', desc: 'Publicación en cuadrícula del feed' },
+    { value: 'Carrusel', label: '📚 Carrusel / Galería Deslizable', desc: 'Múltiples fotos o videos secuenciales (hasta 10)' },
+    { value: 'Story', label: '⚡ Story / Historia (24 Horas)', desc: 'Contenido efímero de alta interacción' },
+    { value: 'Collab', label: '🤝 Collab / Co-autoría', desc: 'Publicación compartida con otra cuenta o figura' },
+    { value: 'Live', label: '🎙️ Instagram Live (En Vivo)', desc: 'Transmisión directa con la comunidad' },
+  ],
+  facebook: [
+    { value: 'Post', label: '📄 Post / Publicación con Texto', desc: 'Actualización en muro de Facebook' },
+    { value: 'Foto', label: '🖼️ Foto / Imagen en Feed', desc: 'Foto única o álbum' },
+    { value: 'Video', label: '📹 Video en Feed', desc: 'Video horizontal o estándar' },
+    { value: 'Reel', label: '🎬 Facebook Reel', desc: 'Video vertical en feed de Reels' },
+    { value: 'Live', label: '🎙️ Facebook Live', desc: 'Streaming en directo' },
+  ],
+  tiktok: [
+    { value: 'Video', label: '🎬 Video TikTok (Vertical)', desc: 'Video con audio y efectos' },
+    { value: 'Foto', label: '🖼️ Modo Foto / Carrusel Musical', desc: 'Fotos deslizables con música' },
+    { value: 'Live', label: '🎙️ TikTok Live', desc: 'En vivo interactivo' },
+  ],
+  x_twitter: [
+    { value: 'Tweet', label: '🐦 Tweet / Post', desc: 'Post corto o comunicado' },
+    { value: 'Hilo', label: '🧵 Hilo (Thread)', desc: 'Serie encadenada de tweets' },
+    { value: 'Video', label: '📹 Video / Clip', desc: 'Audiovisual en el timeline' },
+    { value: 'Foto', label: '🖼️ Foto / Infografía', desc: 'Imagen adjunta' },
+  ],
+  youtube: [
+    { value: 'Shorts', label: '⚡ YouTube Short', desc: 'Video vertical menor a 60 seg' },
+    { value: 'Video', label: '📹 Video Completo', desc: 'Video largo o spot de campaña' },
+    { value: 'Live', label: '🎙️ Transmisión en Vivo', desc: 'Streaming oficial' },
+  ],
+  linkedin: [
+    { value: 'Post', label: '📄 Post Profesional', desc: 'Artículo o actualización laboral' },
+    { value: 'Documento', label: '📑 Documento PDF / Carrusel', desc: 'Presentación o infografía deslizable' },
+    { value: 'Video', label: '📹 Video Profesional', desc: 'Discurso o video institucional' },
+  ],
+};
+
+// Tipos de Difusión & Pauta Específicos por Red Social
+const platformDiffusionTypes = {
+  instagram: [
+    {
+      value: 'organico',
+      label: '🌱 Orgánica Pura',
+      badge: 'Feed & Explorar',
+      desc: 'Tracción 100% natural sin pauta paga',
+      color: 'emerald',
+      isPaid: false,
+    },
+    {
+      value: 'organico_impulsado',
+      label: '🚀 Post Impulsado (Boosted Post)',
+      badge: 'Botón Promocionar',
+      desc: 'Post del feed promocionado con presupuesto para ampliar alcance',
+      color: 'cyan',
+      isPaid: true,
+    },
+    {
+      value: 'pauta_paga',
+      label: '🎯 Dark Post / Anuncio Directo (Meta Ads)',
+      badge: 'Ads Manager Exclusivo',
+      desc: 'Anuncio segmentado que no figura en la cuadrícula del perfil',
+      color: 'violet',
+      isPaid: true,
+    },
+    {
+      value: 'colaboracion_pagada',
+      label: '🌟 Colaboración Pagada / Influencer',
+      badge: 'Paid Partnership',
+      desc: 'Acuerdo con influencers, creadores o medios locales',
+      color: 'amber',
+      isPaid: true,
+    },
+  ],
+  default: [
+    {
+      value: 'organico',
+      label: '🌱 Orgánica Pura',
+      badge: 'Tracción Natural',
+      desc: 'Distribución natural de la audiencia sin costo',
+      color: 'emerald',
+      isPaid: false,
+    },
+    {
+      value: 'pauta_paga',
+      label: '📢 Pauta Paga / Promocionada',
+      badge: 'Inversión Publicitaria',
+      desc: 'Publicación con presupuesto publicitario asignado',
+      color: 'violet',
+      isPaid: true,
+    },
+  ],
+};
+
+const currentPlatformFormats = computed(() => {
+  return platformFormats[selectedPlatformKey.value] || platformFormats.instagram;
+});
+
+const currentPlatformDiffusionTypes = computed(() => {
+  return platformDiffusionTypes[selectedPlatformKey.value] || platformDiffusionTypes.default;
+});
+
+const isPaidDiffusion = computed(() => {
+  return formPost.tipo_pauta !== 'organico';
+});
 
 const props = defineProps({
   candidato: {
@@ -39,8 +171,19 @@ const props = defineProps({
   territorios: {
     type: Array,
     default: () => [],
-  }
+  },
+  publicaciones: {
+    type: Array,
+    default: () => [],
+  },
+  ejes: {
+    type: Array,
+    default: () => [],
+  },
 });
+
+const page = usePage();
+const canWrite = computed(() => page.props.auth?.user?.can_write ?? true);
 
 // Pestaña de red social activa seleccionada
 const selectedPlatformKey = ref(props.redes[0]?.key || 'instagram');
@@ -382,6 +525,319 @@ const getHandlePlaceholder = (key) => {
       return 'ej. @usuario';
   }
 };
+
+// --- Publicaciones & Muro por Red Social ---
+const currentRedPublicaciones = computed(() => {
+  return props.publicaciones.filter(p => {
+    if (p.plataforma) return p.plataforma === selectedPlatformKey.value;
+    if (currentRed.value?.perfil_id) return p.perfil_social_id === currentRed.value.perfil_id;
+    return false;
+  });
+});
+
+const currentRedStats = computed(() => {
+  const posts = currentRedPublicaciones.value;
+  const totalPosts = posts.length;
+  const totalVistas = posts.reduce((sum, p) => sum + Number(p.total_vistas || 0), 0);
+  const totalLikes = posts.reduce((sum, p) => sum + Number(p.total_likes || 0), 0);
+  const totalComentarios = posts.reduce((sum, p) => sum + Number(p.total_comentarios || 0), 0);
+  const totalCompartidos = posts.reduce((sum, p) => sum + Number(p.total_compartidos || 0), 0);
+  const totalGuardados = posts.reduce((sum, p) => sum + Number(p.total_guardados || 0), 0);
+  const totalInteracciones = totalLikes + totalComentarios + totalCompartidos + totalGuardados;
+  const totalPauta = posts.reduce((sum, p) => sum + Number(p.monto_invertido_pauta || 0), 0);
+  const postsOrganicos = posts.filter(p => p.tipo_pauta === 'organico' || p.tipo_pauta === 'organico_impulsado').length;
+  const postsPauta = posts.filter(p => p.tipo_pauta === 'pauta_paga' || p.tipo_pauta === 'anuncio_directo').length;
+
+  return {
+    totalPosts,
+    totalVistas,
+    totalLikes,
+    totalComentarios,
+    totalCompartidos,
+    totalGuardados,
+    totalInteracciones,
+    totalPauta,
+    postsOrganicos,
+    postsPauta,
+  };
+});
+
+// --- Filtros Interactivos de Publicaciones (Meses, Pauta, Ejes, Búsqueda) ---
+const filterMonth = ref('');
+const filterTipoPauta = ref('');
+const filterEjeTematico = ref('');
+const filterSearch = ref('');
+
+const availableMonths = computed(() => {
+  const monthNames = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  const monthsMap = new Map();
+
+  currentRedPublicaciones.value.forEach(p => {
+    const raw = p.fecha_publicacion_raw || p.fecha_publicacion;
+    if (!raw) return;
+    try {
+      // Soportar formato DD/MM/YYYY o ISO YYYY-MM-DD
+      let d;
+      if (typeof raw === 'string' && raw.includes('/')) {
+        const parts = raw.split(' ')[0].split('/');
+        d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      } else {
+        d = new Date(raw);
+      }
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthsMap.has(key)) {
+        monthsMap.set(key, `${monthNames[d.getMonth()]} ${d.getFullYear()}`);
+      }
+    } catch (e) {}
+  });
+
+  return Array.from(monthsMap.entries()).map(([value, label]) => ({ value, label }));
+});
+
+const isAnyFilterActive = computed(() => {
+  return filterMonth.value !== '' || filterTipoPauta.value !== '' || filterEjeTematico.value !== '' || filterSearch.value.trim() !== '';
+});
+
+const clearFilters = () => {
+  filterMonth.value = '';
+  filterTipoPauta.value = '';
+  filterEjeTematico.value = '';
+  filterSearch.value = '';
+};
+
+const currentRedPublicacionesFiltered = computed(() => {
+  return currentRedPublicaciones.value.filter(p => {
+    // 1. Filtro por Mes
+    if (filterMonth.value) {
+      const raw = p.fecha_publicacion_raw || p.fecha_publicacion;
+      if (!raw) return false;
+      try {
+        let d;
+        if (typeof raw === 'string' && raw.includes('/')) {
+          const parts = raw.split(' ')[0].split('/');
+          d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+        } else {
+          d = new Date(raw);
+        }
+        if (isNaN(d.getTime())) return false;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (key !== filterMonth.value) return false;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // 2. Filtro por Tipo de Pauta
+    if (filterTipoPauta.value) {
+      if (filterTipoPauta.value === 'organico' && !(p.tipo_pauta === 'organico' || p.tipo_pauta === 'organico_impulsado')) return false;
+      else if (filterTipoPauta.value === 'organico_puro' && p.tipo_pauta !== 'organico') return false;
+      else if (filterTipoPauta.value === 'organico_impulsado' && p.tipo_pauta !== 'organico_impulsado') return false;
+      else if (filterTipoPauta.value === 'pauta_paga' && !(p.tipo_pauta === 'pauta_paga' || p.tipo_pauta === 'anuncio_directo')) return false;
+      else if (filterTipoPauta.value === 'colaboracion_pagada' && p.tipo_pauta !== 'colaboracion_pagada') return false;
+      else if (!['organico', 'pauta_paga'].includes(filterTipoPauta.value) && p.tipo_pauta !== filterTipoPauta.value) return false;
+    }
+
+    // 3. Filtro por Eje Temático
+    if (filterEjeTematico.value) {
+      const ejeId = p.eje_tematico_id || p.eje_tematico?.id;
+      if (String(ejeId) !== String(filterEjeTematico.value)) return false;
+    }
+
+    // 4. Filtro por búsqueda de texto
+    if (filterSearch.value.trim()) {
+      const q = filterSearch.value.toLowerCase().trim();
+      const text = (p.contenido_resumen || '').toLowerCase();
+      if (!text.includes(q)) return false;
+    }
+
+    return true;
+  });
+});
+
+const getDefaultFormatForPlatform = (key) => {
+  switch (key) {
+    case 'instagram': return 'Reel';
+    case 'tiktok': return 'Video';
+    case 'facebook': return 'Post';
+    case 'youtube': return 'Shorts';
+    case 'x_twitter': return 'Tweet';
+    case 'linkedin': return 'Articulo';
+    default: return 'Post';
+  }
+};
+
+const isPostModalOpen = ref(false);
+const showAdvancedEmotions = ref(false);
+
+const formPost = useForm({
+  candidato_id: props.candidato.id,
+  perfil_social_id: null,
+  plataforma: 'instagram',
+  url_post: '',
+  media_url: '',
+  fecha_publicacion: new Date().toISOString().slice(0, 16),
+  tipo_formato: 'Reel',
+  tipo_pauta: 'organico',
+  monto_invertido_pauta: 0,
+  eje_tematico_id: props.ejes[0]?.id || null,
+  eje_tematico_nombre: '',
+  vistas_organicas: 0,
+  vistas_pagadas: 0,
+  contenido_resumen: '',
+  total_likes: 0,
+  total_comentarios: 0,
+  total_compartidos: 0,
+  total_guardados: 0,
+  me_gusta: 0,
+  me_encanta: 0,
+  me_importa: 0,
+  me_divierte: 0,
+  me_asombra: 0,
+  me_entristece: 0,
+  me_enoja: 0,
+  termometro_humor_social: 4,
+  comentario_destacado: '',
+  figura_acompanante: '',
+});
+
+const openCreatePostModal = () => {
+  formPost.candidato_id = props.candidato.id;
+  formPost.perfil_social_id = currentRed.value?.perfil_id || null;
+  formPost.plataforma = selectedPlatformKey.value;
+  formPost.tipo_formato = getDefaultFormatForPlatform(selectedPlatformKey.value);
+  formPost.tipo_pauta = 'organico';
+  formPost.monto_invertido_pauta = 0;
+  formPost.url_post = '';
+  formPost.media_url = '';
+  formPost.contenido_resumen = '';
+  formPost.fecha_publicacion = new Date().toISOString().slice(0, 16);
+  formPost.total_likes = 0;
+  formPost.total_comentarios = 0;
+  formPost.total_compartidos = 0;
+  formPost.total_guardados = 0;
+  formPost.vistas_organicas = 0;
+  formPost.vistas_pagadas = 0;
+  formPost.me_gusta = 0;
+  formPost.me_encanta = 0;
+  formPost.me_importa = 0;
+  formPost.me_divierte = 0;
+  formPost.me_asombra = 0;
+  formPost.me_entristece = 0;
+  formPost.me_enoja = 0;
+  formPost.eje_tematico_id = props.ejes[0]?.id || null;
+  formPost.eje_tematico_nombre = '';
+  showAdvancedEmotions.value = false;
+  scrapePostFeedback.value = null;
+  isPostModalOpen.value = true;
+};
+
+const isScrapingPost = ref(false);
+const scrapePostFeedback = ref(null);
+
+const scrapePostData = async () => {
+  if (!formPost.url_post) return;
+  isScrapingPost.value = true;
+  scrapePostFeedback.value = null;
+
+  try {
+    const response = await window.axios.post('/publicaciones/scrape-post', {
+      url: formPost.url_post,
+      plataforma: selectedPlatformKey.value,
+    });
+
+    if (response.data && response.data.success) {
+      if (response.data.url_post) formPost.url_post = response.data.url_post;
+      if (response.data.contenido_resumen) formPost.contenido_resumen = response.data.contenido_resumen;
+      if (response.data.total_likes > 0) formPost.total_likes = response.data.total_likes;
+      if (response.data.total_comentarios > 0) formPost.total_comentarios = response.data.total_comentarios;
+      if (response.data.fecha_publicacion) formPost.fecha_publicacion = response.data.fecha_publicacion;
+      if (response.data.tipo_formato) formPost.tipo_formato = response.data.tipo_formato;
+      if (response.data.media_url) formPost.media_url = response.data.media_url;
+
+      scrapePostFeedback.value = {
+        type: 'success',
+        text: `✨ ¡Datos extraídos! (${response.data.total_likes} likes, ${response.data.total_comentarios} comentarios, fecha y texto completos)`,
+      };
+    } else {
+      scrapePostFeedback.value = {
+        type: 'warning',
+        text: response.data?.mensaje || 'No se pudieron extraer los datos automáticamente.',
+      };
+    }
+  } catch (error) {
+    scrapePostFeedback.value = {
+      type: 'error',
+      text: 'Error de conexión al extraer el post. Puedes completar los campos manualmente.',
+    };
+  } finally {
+    isScrapingPost.value = false;
+  }
+};
+
+// Autodetección de formato al pegar enlace
+watch(() => formPost.url_post, (newUrl) => {
+  if (!newUrl) return;
+  const url = newUrl.toLowerCase();
+  if (url.includes('/reel/')) {
+    formPost.tipo_formato = 'Reel';
+  } else if (url.includes('/p/')) {
+    formPost.tipo_formato = 'Foto';
+  } else if (url.includes('/tv/')) {
+    formPost.tipo_formato = 'Video';
+  } else if (url.includes('/shorts/')) {
+    formPost.tipo_formato = 'Shorts';
+  } else if (url.includes('tiktok.com')) {
+    formPost.tipo_formato = 'Video';
+  } else if (url.includes('twitter.com') || url.includes('x.com')) {
+    formPost.tipo_formato = 'Tweet';
+  }
+});
+
+// Sincronizar likes totales con desglose si el panel avanzado está cerrado
+watch(() => formPost.total_likes, (val) => {
+  const num = Number(val || 0);
+  if (!showAdvancedEmotions.value) {
+    formPost.me_gusta = Math.round(num * 0.75);
+    formPost.me_encanta = Math.round(num * 0.20);
+    formPost.me_importa = Math.round(num * 0.05);
+    formPost.me_enoja = 0;
+  }
+});
+
+const submitPublicacion = () => {
+  formPost.candidato_id = props.candidato.id;
+  formPost.perfil_social_id = currentRed.value?.perfil_id || null;
+  formPost.plataforma = selectedPlatformKey.value;
+
+  formPost.post('/publicaciones', {
+    preserveScroll: true,
+    onSuccess: () => {
+      isPostModalOpen.value = false;
+      formPost.reset();
+    }
+  });
+};
+
+const isRefreshingCanal = ref(false);
+
+const refrescarCanal = () => {
+  if (!currentRed.value?.perfil_id || !currentRed.value?.url_perfil) {
+    openConfigModal(selectedPlatformKey.value);
+    return;
+  }
+
+  isRefreshingCanal.value = true;
+  router.post(`/perfiles-sociales/${currentRed.value.perfil_id}/refrescar`, {}, {
+    preserveScroll: true,
+    onFinish: () => {
+      isRefreshingCanal.value = false;
+    }
+  });
+};
 </script>
 
 <template>
@@ -440,35 +896,6 @@ const getHandlePlaceholder = (key) => {
             <Edit3 class="w-4 h-4 text-cyan-500" />
             <span>Editar Datos Generales</span>
           </button>
-          <Link
-            href="/fast-flow"
-            class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-sm transition-all hover:scale-102"
-          >
-            <Sparkles class="w-4 h-4" />
-            <span>Cargar Publicación</span>
-          </Link>
-        </div>
-      </div>
-
-      <!-- Semáforo de Canales -->
-      <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3 text-xs">
-        <span class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 font-mono uppercase text-[11px]">
-          <ShieldCheck class="w-4 h-4 text-cyan-500" />
-          Semáforo de Canales Digitales:
-        </span>
-        <div class="flex items-center gap-4 flex-wrap font-mono text-[11px]">
-          <span class="inline-flex items-center gap-1.5 text-blue-500 dark:text-blue-400 font-semibold">
-            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-            Certificada / Verificada
-          </span>
-          <span class="inline-flex items-center gap-1.5 text-amber-500 dark:text-amber-400 font-semibold">
-            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-            Vinculada / Activa
-          </span>
-          <span class="inline-flex items-center gap-1.5 text-rose-500 dark:text-rose-400 font-semibold">
-            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-            No Vinculada / Inactiva
-          </span>
         </div>
       </div>
     </div>
@@ -575,6 +1002,14 @@ const getHandlePlaceholder = (key) => {
                 >
                   {{ tabBadgeStyle(currentRed.color_estado).label }}
                 </span>
+                <span
+                  v-if="currentRed.ultima_auditoria_at"
+                  class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  :title="`Última lectura: ${currentRed.ultima_auditoria_fecha || currentRed.ultima_auditoria_at}`"
+                >
+                  <Zap class="w-3 h-3 text-amber-500" />
+                  <span>Auditado {{ currentRed.ultima_auditoria_at }}</span>
+                </span>
               </div>
 
               <div class="flex items-center gap-3 mt-1 text-xs font-mono text-slate-600 dark:text-slate-400 flex-wrap">
@@ -598,18 +1033,31 @@ const getHandlePlaceholder = (key) => {
             </div>
           </div>
 
-          <!-- Botón para Abrir Modal de Configuración -->
-          <button
-            type="button"
-            @click="openConfigModal(currentRed.key)"
-            class="px-4 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:scale-102"
-          >
-            <Settings class="w-4 h-4" />
-            <span>Configurar Canal & Punto Cero</span>
-          </button>
+          <!-- Botones de Acción: Refrescar en Vivo & Configurar Punto Cero -->
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <button
+              type="button"
+              @click="refrescarCanal"
+              :disabled="isRefreshingCanal"
+              class="px-4 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:scale-102 disabled:opacity-50"
+              title="Escanear perfil y registrar nueva medición en el histórico"
+            >
+              <RefreshCw class="w-4 h-4" :class="isRefreshingCanal ? 'animate-spin' : ''" />
+              <span>{{ isRefreshingCanal ? 'Auditando...' : 'Auditar Ahora (1 Clic)' }}</span>
+            </button>
+
+            <button
+              type="button"
+              @click="openConfigModal(currentRed.key)"
+              class="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer shadow-xs hover:scale-102"
+            >
+              <Settings class="w-4 h-4 text-cyan-500" />
+              <span>Configurar Canal & Punto Cero</span>
+            </button>
+          </div>
         </div>
 
-        <!-- Tarjetas de Métricas Ejecutivas del Canal (Punto Cero vs Actual) -->
+        <!-- Tarjetas de Métricas Ejecutivas del Canal (Punto Cero vs Actual + Deltas Diarios) -->
         <div
           class="grid gap-4 font-mono"
           :class="currentRed.key === 'facebook' ? 'grid-cols-1 sm:grid-cols-3' : (currentRed.key === 'tiktok' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4')"
@@ -618,19 +1066,40 @@ const getHandlePlaceholder = (key) => {
           <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
             <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
               <span>👥 {{ currentRed.key === 'youtube' ? 'Suscriptores' : (currentRed.key === 'linkedin' ? 'Contactos / Red' : 'Seguidores') }}</span>
+              <!-- Mini-métrica de Crecimiento / Pérdida del Día -->
               <span
-                v-if="currentRed.crecimiento_neto_seguidores > 0"
-                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
+                v-if="currentRed.delta_seguidores_hoy > 0"
+                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 inline-flex items-center gap-0.5"
+                title="Variación respecto a la última medición"
               >
-                +{{ Number(currentRed.crecimiento_neto_seguidores).toLocaleString() }}
+                <TrendingUp class="w-3 h-3" />
+                +{{ Number(currentRed.delta_seguidores_hoy).toLocaleString('es-AR') }} hoy
+              </span>
+              <span
+                v-else-if="currentRed.delta_seguidores_hoy < 0"
+                class="text-rose-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-500/10 inline-flex items-center gap-0.5"
+                title="Pérdida respecto a la última medición"
+              >
+                <TrendingDown class="w-3 h-3" />
+                {{ Number(currentRed.delta_seguidores_hoy).toLocaleString('es-AR') }} hoy
+              </span>
+              <span
+                v-else
+                class="text-slate-400 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-500/10"
+              >
+                0 hoy
               </span>
             </span>
             <div class="text-2xl font-extrabold text-cyan-600 dark:text-cyan-400">
-              {{ Number(currentRed.seguidores_actuales || 0).toLocaleString() }}
+              {{ Number(currentRed.seguidores_actuales || 0).toLocaleString('es-AR') }}
             </div>
             <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-              <span>Punto Alfa (Inicio):</span>
-              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.seguidores_punto_cero || 0).toLocaleString() }}</span>
+              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300">{{ Number(currentRed.seguidores_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
+              <span
+                :class="currentRed.crecimiento_neto_seguidores >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'"
+              >
+                {{ currentRed.crecimiento_neto_seguidores >= 0 ? '+' : '' }}{{ Number(currentRed.crecimiento_neto_seguidores).toLocaleString('es-AR') }} neto
+              </span>
             </div>
           </div>
 
@@ -639,15 +1108,35 @@ const getHandlePlaceholder = (key) => {
             v-if="currentRed.key !== 'youtube'"
             class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1"
           >
-            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
-              🔄 Seguidos
+            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
+              <span>🔄 Seguidos</span>
+              <span
+                v-if="currentRed.delta_seguidos_hoy > 0"
+                class="text-cyan-600 dark:text-cyan-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-500/10 inline-flex items-center gap-0.5"
+              >
+                <TrendingUp class="w-3 h-3" />
+                +{{ Number(currentRed.delta_seguidos_hoy).toLocaleString('es-AR') }} hoy
+              </span>
+              <span
+                v-else-if="currentRed.delta_seguidos_hoy < 0"
+                class="text-amber-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 inline-flex items-center gap-0.5"
+              >
+                <TrendingDown class="w-3 h-3" />
+                {{ Number(currentRed.delta_seguidos_hoy).toLocaleString('es-AR') }} hoy
+              </span>
+              <span
+                v-else
+                class="text-slate-400 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-500/10"
+              >
+                0 hoy
+              </span>
             </span>
             <div class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">
-              {{ Number(currentRed.seguidos_actuales || 0).toLocaleString() }}
+              {{ Number(currentRed.seguidos_actuales || 0).toLocaleString('es-AR') }}
             </div>
             <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
               <span>Punto Alfa (Inicio):</span>
-              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.seguidos_punto_cero || 0).toLocaleString() }}</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.seguidos_punto_cero || 0).toLocaleString('es-AR') }}</span>
             </div>
           </div>
 
@@ -659,18 +1148,27 @@ const getHandlePlaceholder = (key) => {
             <span class="text-[11px] uppercase tracking-wider text-rose-500 font-bold block flex items-center justify-between">
               <span>❤️ Me Gusta</span>
               <span
-                v-if="currentRed.crecimiento_neto_me_gusta > 0"
-                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
+                v-if="currentRed.delta_me_gusta_hoy > 0"
+                class="text-rose-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-500/10 inline-flex items-center gap-0.5"
               >
-                +{{ Number(currentRed.crecimiento_neto_me_gusta).toLocaleString() }}
+                <TrendingUp class="w-3 h-3" />
+                +{{ Number(currentRed.delta_me_gusta_hoy).toLocaleString('es-AR') }} hoy
+              </span>
+              <span
+                v-else
+                class="text-slate-400 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-500/10"
+              >
+                0 hoy
               </span>
             </span>
             <div class="text-2xl font-extrabold text-rose-600 dark:text-rose-400">
-              {{ Number(currentRed.me_gusta_totales || 0).toLocaleString() }}
+              {{ Number(currentRed.me_gusta_totales || 0).toLocaleString('es-AR') }}
             </div>
             <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-              <span>Punto Alfa (Inicio):</span>
-              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.me_gusta_punto_cero || 0).toLocaleString() }}</span>
+              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300">{{ Number(currentRed.me_gusta_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
+              <span class="text-emerald-500 font-bold">
+                +{{ Number(currentRed.crecimiento_neto_me_gusta).toLocaleString('es-AR') }} neto
+              </span>
             </div>
           </div>
 
@@ -682,18 +1180,27 @@ const getHandlePlaceholder = (key) => {
             <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
               <span>{{ currentRed.key === 'tiktok' || currentRed.key === 'youtube' ? '🎬 Videos' : (currentRed.key === 'linkedin' ? '📝 Posts / Artículos' : '📄 Publicaciones') }}</span>
               <span
-                v-if="currentRed.crecimiento_neto_posts > 0"
-                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
+                v-if="currentRed.delta_posts_hoy > 0"
+                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 inline-flex items-center gap-0.5"
               >
-                +{{ Number(currentRed.crecimiento_neto_posts).toLocaleString() }}
+                <TrendingUp class="w-3 h-3" />
+                +{{ Number(currentRed.delta_posts_hoy).toLocaleString('es-AR') }} hoy
+              </span>
+              <span
+                v-else
+                class="text-slate-400 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-500/10"
+              >
+                0 hoy
               </span>
             </span>
             <div class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">
-              {{ Number(currentRed.publicaciones_totales || 0).toLocaleString() }}
+              {{ Number(currentRed.publicaciones_totales || 0).toLocaleString('es-AR') }}
             </div>
             <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-              <span>Punto Alfa (Inicio):</span>
-              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.publicaciones_punto_cero || 0).toLocaleString() }}</span>
+              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300">{{ Number(currentRed.publicaciones_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
+              <span class="text-emerald-500 font-bold">
+                +{{ Number(currentRed.crecimiento_neto_posts).toLocaleString('es-AR') }} neto
+              </span>
             </div>
           </div>
 
@@ -705,31 +1212,47 @@ const getHandlePlaceholder = (key) => {
             <span class="text-[11px] uppercase tracking-wider text-red-500 font-bold block flex items-center justify-between">
               <span>👁️ Visualizaciones</span>
               <span
-                v-if="currentRed.crecimiento_neto_visualizaciones > 0"
-                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
+                v-if="currentRed.delta_views_hoy > 0"
+                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 inline-flex items-center gap-0.5"
               >
-                +{{ Number(currentRed.crecimiento_neto_visualizaciones).toLocaleString() }}
+                <TrendingUp class="w-3 h-3" />
+                +{{ Number(currentRed.delta_views_hoy).toLocaleString('es-AR') }} hoy
+              </span>
+              <span
+                v-else
+                class="text-slate-400 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-500/10"
+              >
+                0 hoy
               </span>
             </span>
             <div class="text-2xl font-extrabold text-red-600 dark:text-red-400">
-              {{ Number(currentRed.visualizaciones_totales || 0).toLocaleString() }}
+              {{ Number(currentRed.visualizaciones_totales || 0).toLocaleString('es-AR') }}
             </div>
             <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-              <span>Punto Alfa (Inicio):</span>
-              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.visualizaciones_punto_cero || 0).toLocaleString() }}</span>
+              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300">{{ Number(currentRed.visualizaciones_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
+              <span class="text-emerald-500 font-bold">
+                +{{ Number(currentRed.crecimiento_neto_visualizaciones).toLocaleString('es-AR') }} neto
+              </span>
             </div>
           </div>
 
-          <!-- Fecha de Inicio & Estado -->
+          <!-- Fecha Punto Cero & Sincronización 24h -->
           <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
-              📅 Fecha Punto Cero
+            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
+              <span>📅 Punto Cero & 24h</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-cyan-500/10 text-cyan-500">
+                Auto-Cron
+              </span>
             </span>
-            <div class="text-sm font-bold text-slate-800 dark:text-slate-200 pt-1">
-              {{ currentRed.fecha_punto_cero || 'No registrada' }}
+            <div class="text-xs font-bold text-slate-800 dark:text-slate-200 pt-1">
+              Inicio: <span class="font-mono text-cyan-600 dark:text-cyan-400">{{ currentRed.fecha_punto_cero || 'No registrada' }}</span>
             </div>
-            <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200/50 dark:border-slate-800/50 truncate" :title="currentRed.notas_punto_cero || 'Línea de partida de campaña'">
-              {{ currentRed.notas_punto_cero || 'Línea de partida de campaña' }}
+            <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between">
+              <span>Lectura 24h:</span>
+              <span class="font-bold text-emerald-500 flex items-center gap-1">
+                <Clock class="w-3 h-3" />
+                {{ currentRed.ultima_auditoria_at || 'Hoy' }}
+              </span>
             </div>
           </div>
         </div>
@@ -750,7 +1273,301 @@ const getHandlePlaceholder = (key) => {
             @click="openConfigModal(currentRed.key)"
             class="px-3.5 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold text-xs font-mono transition-all cursor-pointer"
           >
-            Configurar Ahora
+            Configurar Canal Ahora
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. ENTRADAS & MURO DE PUBLICACIONES DEL CANAL ACTIVO (Instagram, Facebook, TikTok, etc.) -->
+      <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+        <!-- Cabecera de la Sección de Publicaciones -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
+          <div>
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <div class="flex items-center justify-center w-8 h-8 rounded-xl shadow-2xs" :class="getSocialMeta(currentRed.key).bgLight">
+                <svg v-if="currentRed.key === 'instagram'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ color: getSocialMeta(currentRed.key).color }">
+                  <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                  <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+                </svg>
+                <svg v-else-if="currentRed.key === 'facebook'" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                <svg v-else-if="currentRed.key === 'tiktok'" class="w-4 h-4 text-cyan-500 dark:text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+                </svg>
+                <svg v-else-if="currentRed.key === 'x_twitter'" class="w-4 h-4 text-slate-900 dark:text-slate-100" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                <svg v-else-if="currentRed.key === 'youtube'" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                <svg v-else-if="currentRed.key === 'linkedin'" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+                  <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                </svg>
+              </div>
+              <h3 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-slate-100">
+                Entradas & Publicaciones en {{ currentRed.nombre }}
+              </h3>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
+                {{ currentRedPublicaciones.length }} {{ currentRedPublicaciones.length === 1 ? 'post' : 'posts' }}
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Monitoreo de reels, videos, likes, mensajes/comentarios, pauta y termómetro de humor social.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
+            <button
+              v-if="canWrite"
+              type="button"
+              @click="openCreatePostModal"
+              class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/20 transition-all hover:scale-102 cursor-pointer"
+            >
+              <Plus class="w-4 h-4" />
+              <span>Cargar Publicación en {{ currentRed.nombre }}</span>
+            </button>
+            <Link
+              href="/fast-flow"
+              class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-all"
+              title="Abrir consola completa Fast-Flow"
+            >
+              <Sparkles class="w-3.5 h-3.5 text-cyan-500" />
+              <span>Fast-Flow</span>
+            </Link>
+          </div>
+        </div>
+
+        <!-- Barra Resumen de Métricas de Publicaciones en esta Red -->
+        <div v-if="currentRedPublicaciones.length > 0" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 font-mono text-xs">
+          <!-- 🔥 1. Reacciones & Interacciones Totales (Engagement Bruto) -->
+          <div class="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] uppercase text-cyan-600 dark:text-cyan-400 font-extrabold flex items-center gap-1">
+                🔥 Interacciones
+              </span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 font-bold">
+                Engagement
+              </span>
+            </div>
+            <span class="text-xl font-extrabold text-cyan-600 dark:text-cyan-400 block mt-1">
+              {{ Number(currentRedStats.totalInteracciones).toLocaleString() }}
+            </span>
+            <span class="text-[9px] text-slate-500 dark:text-slate-400 font-sans block truncate mt-0.5">
+              Likes + Coment + Shares + Saves
+            </span>
+          </div>
+
+          <!-- ❤️ 2. Total Me Gusta -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] uppercase text-slate-400 font-bold block">❤️ Total Me Gusta</span>
+            <span class="text-xl font-extrabold text-rose-500 block mt-1">
+              {{ Number(currentRedStats.totalLikes).toLocaleString() }}
+            </span>
+            <span class="text-[9px] text-slate-400 font-sans block mt-0.5">Reacciones directas</span>
+          </div>
+
+          <!-- 💬 3. Total Comentarios -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] uppercase text-slate-400 font-bold block">💬 Comentarios</span>
+            <span class="text-xl font-extrabold text-blue-500 block mt-1">
+              {{ Number(currentRedStats.totalComentarios).toLocaleString() }}
+            </span>
+            <span class="text-[9px] text-slate-400 font-sans block mt-0.5">Mensajes recibidos</span>
+          </div>
+
+          <!-- 👁️ 4. Alcance / Vistas Totales -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] uppercase text-slate-400 font-bold block">👁️ Alcance Total</span>
+            <span class="text-xl font-extrabold text-slate-700 dark:text-slate-300 block mt-1">
+              {{ Number(currentRedStats.totalVistas).toLocaleString() }}
+            </span>
+            <span class="text-[9px] text-slate-400 font-sans block mt-0.5">Vistas o insights</span>
+          </div>
+
+          <!-- 📢 5. Pauta Invertida -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] uppercase text-slate-400 font-bold block">📢 Pauta Invertida</span>
+            <span class="text-xl font-extrabold text-violet-500 block mt-1">
+              ${{ Number(currentRedStats.totalPauta).toLocaleString('es-AR') }}
+            </span>
+            <span class="text-[9px] text-slate-400 font-sans block mt-0.5">Presupuesto asignado</span>
+          </div>
+        </div>
+
+        <!-- Barra de Filtros Avanzados (Meses, Pauta, Ejes Temáticos y Búsqueda) -->
+        <div v-if="currentRedPublicaciones.length > 0" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <Filter class="w-4 h-4 text-cyan-500" />
+              <span class="text-xs font-bold font-mono text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                Filtros de Publicaciones
+              </span>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
+                Mostrando {{ currentRedPublicacionesFiltered.length }} de {{ currentRedPublicaciones.length }}
+              </span>
+            </div>
+
+            <button
+              v-if="isAnyFilterActive"
+              type="button"
+              @click="clearFilters"
+              class="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer"
+            >
+              <RotateCcw class="w-3.5 h-3.5" />
+              <span>Limpiar Filtros</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- 1. Filtro por Mes -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                <Calendar class="w-3.5 h-3.5 text-cyan-500" />
+                <span>Mes / Período</span>
+              </label>
+              <select
+                v-model="filterMonth"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+              >
+                <option value="">📅 Todos los Meses</option>
+                <option v-for="m in availableMonths" :key="m.value" :value="m.value">
+                  {{ m.label }}
+                </option>
+              </select>
+            </div>
+
+            <!-- 2. Filtro por Tipo de Pauta -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                <DollarSign class="w-3.5 h-3.5 text-cyan-500" />
+                <span>Difusión / Pauta</span>
+              </label>
+              <select
+                v-model="filterTipoPauta"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+              >
+                <option value="">📢 Todas las Estrategias</option>
+                <option value="organico">🌱 Orgánica (Pura + Impulsada)</option>
+                <option value="organico_puro">🌱 Solo Orgánica Pura</option>
+                <option value="organico_impulsado">🚀 Post Impulsado (Boosted)</option>
+                <option value="pauta_paga">🎯 Dark Post / Meta Ads</option>
+                <option value="colaboracion_pagada">🌟 Colaboración Pagada</option>
+              </select>
+            </div>
+
+            <!-- 3. Filtro por Eje Temático -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                <Target class="w-3.5 h-3.5 text-cyan-500" />
+                <span>Eje Temático</span>
+              </label>
+              <select
+                v-model="filterEjeTematico"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+              >
+                <option value="">🎯 Todos los Ejes Temáticos</option>
+                <option v-for="eje in ejes" :key="eje.id" :value="eje.id">
+                  {{ eje.nombre }}
+                </option>
+              </select>
+            </div>
+
+            <!-- 4. Buscador por texto -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                <Search class="w-3.5 h-3.5 text-cyan-500" />
+                <span>Buscar en Texto</span>
+              </label>
+              <div class="relative">
+                <input
+                  v-model="filterSearch"
+                  type="text"
+                  placeholder="Palabra clave o hashtag..."
+                  class="w-full pl-8 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+                />
+                <Search class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Listado de Publicaciones Filtradas (Social Cards) -->
+        <div v-if="currentRedPublicacionesFiltered.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <SocialCard
+            v-for="post in currentRedPublicacionesFiltered"
+            :key="post.id"
+            :post="post"
+            :can-write="canWrite"
+            :ejes="ejes"
+          />
+        </div>
+
+        <!-- Estado Sin Resultados por Filtros Activos -->
+        <div
+          v-else-if="currentRedPublicaciones.length > 0"
+          class="p-10 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-3"
+        >
+          <Filter class="w-10 h-10 text-slate-400 opacity-50" />
+          <h4 class="font-bold text-base text-slate-800 dark:text-slate-200">
+            No se encontraron publicaciones con los filtros aplicados
+          </h4>
+          <p class="text-xs text-slate-500 max-w-md">
+            No hay publicaciones en {{ currentRed.nombre }} que coincidan con los criterios de mes, pauta o temática elegidos.
+          </p>
+          <button
+            type="button"
+            @click="clearFilters"
+            class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs shadow-sm hover:bg-cyan-400 transition-all cursor-pointer"
+          >
+            Restablecer Todos los Filtros
+          </button>
+        </div>
+
+        <!-- Estado Vacío (Sin Publicaciones en esta red) -->
+        <div
+          v-else
+          class="p-10 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-4"
+        >
+          <div class="flex items-center justify-center w-14 h-14 rounded-2xl" :class="getSocialMeta(currentRed.key).bgLight">
+            <svg v-if="currentRed.key === 'instagram'" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ color: getSocialMeta(currentRed.key).color }">
+              <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+              <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+            </svg>
+            <svg v-else-if="currentRed.key === 'facebook'" class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            <svg v-else-if="currentRed.key === 'tiktok'" class="w-7 h-7 text-cyan-500 dark:text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+            </svg>
+            <svg v-else-if="currentRed.key === 'x_twitter'" class="w-7 h-7 text-slate-900 dark:text-slate-100" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            <svg v-else-if="currentRed.key === 'youtube'" class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            <svg v-else-if="currentRed.key === 'linkedin'" class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+              <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+            </svg>
+          </div>
+          <div class="max-w-md space-y-1">
+            <h4 class="font-bold text-base text-slate-900 dark:text-slate-100">
+              Sin publicaciones registradas en {{ currentRed.nombre }}
+            </h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Carga enlaces a publicaciones, reels o videos de {{ currentRed.nombre }} para monitorear likes, comentarios, humor social y pauta publicitaria.
+            </p>
+          </div>
+          <button
+            v-if="canWrite"
+            type="button"
+            @click="openCreatePostModal"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md transition-all hover:scale-102 cursor-pointer"
+          >
+            <Plus class="w-4 h-4" />
+            <span>Cargar Primera Publicación en {{ currentRed.nombre }}</span>
           </button>
         </div>
       </div>
@@ -1203,9 +2020,451 @@ const getHandlePlaceholder = (key) => {
             <button
               type="submit"
               :disabled="formCandidato.processing"
-              class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shadow-sm"
+              class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shadow-sm cursor-pointer"
             >
               Guardar Cambios
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL PARA CARGAR PUBLICACIÓN EN LA RED SOCIAL ACTIVA -->
+    <div
+      v-if="isPostModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
+    >
+      <div class="w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-11 h-11 rounded-2xl shadow-xs" :class="getSocialMeta(currentRed.key).bgLight">
+              <svg v-if="currentRed.key === 'instagram'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ color: getSocialMeta(currentRed.key).color }">
+                <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+              </svg>
+              <svg v-else-if="currentRed.key === 'facebook'" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              <svg v-else-if="currentRed.key === 'tiktok'" class="w-6 h-6 text-cyan-500 dark:text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+              </svg>
+              <svg v-else-if="currentRed.key === 'x_twitter'" class="w-6 h-6 text-slate-900 dark:text-slate-100" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              <svg v-else-if="currentRed.key === 'youtube'" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+              <svg v-else-if="currentRed.key === 'linkedin'" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
+                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-extrabold text-lg text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span>Cargar Publicación en {{ currentRed.nombre }}</span>
+                <span class="text-xs px-2 py-0.5 rounded-full font-mono font-bold bg-cyan-500/10 text-cyan-500">
+                  {{ candidato.nombre_completo }}
+                </span>
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Audita reels, videos, fotos, métricas de engagement, eje temático y pauta.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            @click="isPostModalOpen = false"
+            class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+
+        <!-- Formulario -->
+        <form @submit.prevent="submitPublicacion" class="space-y-5">
+          <!-- 1. Enlace & Autodetección -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <Link2 class="w-4 h-4 text-cyan-500" />
+                <span>1. Enlace Oficial o Código de Inserción (URL / Embed)</span>
+              </span>
+              <span class="text-[10px] text-cyan-500 font-semibold lowercase">
+                ej. https://www.instagram.com/reel/...
+              </span>
+            </label>
+
+            <!-- URL Input + Botón Autocompletar con 1 Clic -->
+            <div class="flex flex-col sm:flex-row gap-2">
+              <div class="relative flex-1">
+                <input
+                  v-model="formPost.url_post"
+                  type="text"
+                  placeholder="Pega el enlace de Instagram o el bloque de inserción..."
+                  class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+                />
+                <Link2 class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              </div>
+              <button
+                type="button"
+                @click="scrapePostData"
+                :disabled="isScrapingPost || !formPost.url_post"
+                class="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-slate-950 font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer"
+                title="Extraer automáticamente el copy, likes, comentarios, fecha y formato"
+              >
+                <RefreshCw v-if="isScrapingPost" class="w-3.5 h-3.5 animate-spin" />
+                <Sparkles v-else class="w-3.5 h-3.5 fill-current" />
+                <span>{{ isScrapingPost ? 'Extrayendo...' : '⚡ Autocompletar (1 Clic)' }}</span>
+              </button>
+            </div>
+
+            <!-- Feedback Message -->
+            <div
+              v-if="scrapePostFeedback"
+              class="p-2.5 rounded-xl text-xs font-semibold flex items-center gap-2"
+              :class="scrapePostFeedback.type === 'success' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'"
+            >
+              <CheckCircle v-if="scrapePostFeedback.type === 'success'" class="w-4 h-4 shrink-0" />
+              <AlertCircle v-else class="w-4 h-4 shrink-0" />
+              <span>{{ scrapePostFeedback.text }}</span>
+            </div>
+
+            <!-- Formato & Fecha Adaptados a la Red Activa -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <span>Tipo de Formato ({{ currentRed.nombre }}) *</span>
+                  <span class="text-[10px] text-cyan-500 font-semibold lowercase">Específico de {{ currentRed.nombre }}</span>
+                </label>
+                <select
+                  v-model="formPost.tipo_formato"
+                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+                >
+                  <option
+                    v-for="fmt in currentPlatformFormats"
+                    :key="fmt.value"
+                    :value="fmt.value"
+                  >
+                    {{ fmt.label }}
+                  </option>
+                </select>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                  {{ currentPlatformFormats.find(f => f.value === formPost.tipo_formato)?.desc || 'Formato de publicación' }}
+                </p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Fecha y Hora de Publicación *
+                </label>
+                <input
+                  v-model="formPost.fecha_publicacion"
+                  type="datetime-local"
+                  required
+                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Estrategia de Difusión & Pauta Específica por Red -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono flex items-center gap-1.5">
+                <DollarSign class="w-4 h-4 text-cyan-500" />
+                <span>2. Tipo de Difusión & Pauta en {{ currentRed.nombre }}</span>
+              </label>
+              <span class="text-[10px] text-cyan-500 font-bold uppercase font-mono">
+                Estrategia de Difusión
+              </span>
+            </div>
+
+            <!-- Grid de Tipos de Difusión Propios de Instagram / Red -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                v-for="dif in currentPlatformDiffusionTypes"
+                :key="dif.value"
+                type="button"
+                @click="formPost.tipo_pauta = dif.value"
+                class="p-3 rounded-2xl border-2 text-left transition-all cursor-pointer relative overflow-hidden"
+                :class="[
+                  formPost.tipo_pauta === dif.value
+                    ? 'border-cyan-500 bg-cyan-500/10 shadow-sm'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
+                ]"
+              >
+                <div class="flex items-center justify-between gap-2 mb-1">
+                  <span class="text-xs font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <span
+                      class="w-2.5 h-2.5 rounded-full shrink-0"
+                      :class="formPost.tipo_pauta === dif.value ? 'bg-cyan-500' : 'bg-slate-300 dark:bg-slate-700'"
+                    ></span>
+                    <span>{{ dif.label }}</span>
+                  </span>
+                  <span
+                    class="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold uppercase"
+                    :class="[
+                      dif.isPaid
+                        ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400'
+                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                    ]"
+                  >
+                    {{ dif.badge }}
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-snug pl-4">
+                  {{ dif.desc }}
+                </p>
+              </button>
+            </div>
+
+            <!-- Campos adicionales si es Pauta Paga / Impulsada / Colaboración -->
+            <div v-if="isPaidDiffusion" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 animate-fadeIn">
+              <div>
+                <label class="block text-xs font-bold text-violet-600 dark:text-violet-400 mb-1 flex items-center justify-between">
+                  <span>Monto Invertido en Pauta ($ ARS/USD) *</span>
+                  <span class="text-[10px] font-mono">Presupuesto Asignado</span>
+                </label>
+                <input
+                  v-model.number="formPost.monto_invertido_pauta"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 25000"
+                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-violet-500/40 text-xs sm:text-sm font-mono font-bold text-violet-600 dark:text-violet-400 focus:ring-2 focus:ring-violet-500"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <span>Vistas / Alcance Pagado Estimado</span>
+                  <span class="text-[10px] font-mono">Impactos Pauta</span>
+                </label>
+                <input
+                  v-model.number="formPost.vistas_pagadas"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 15000"
+                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Eje Temático & Resumen -->
+          <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono mb-1.5 flex items-center justify-between">
+                <span>3. Eje Temático de Campaña</span>
+                <span class="text-[10px] text-slate-400 lowercase">Clasificación estratégica</span>
+              </label>
+              <select
+                v-model="formPost.eje_tematico_id"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-semibold focus:ring-2 focus:ring-cyan-500"
+              >
+                <option :value="null">-- Seleccionar Eje Temático --</option>
+                <option v-for="eje in ejes" :key="eje.id" :value="eje.id">
+                  🎯 {{ eje.nombre }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono mb-1.5">
+                Texto / Copy o Resumen de la Publicación *
+              </label>
+              <textarea
+                v-model="formPost.contenido_resumen"
+                rows="3"
+                required
+                placeholder="Escribe el texto de la publicación, tema abordado o propuesta comunicacional..."
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- 4. Métricas Clave de Rendimiento (Adaptadas a Instagram: Likes, Comentarios, Vistas, Guardados) -->
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3 font-mono">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Flame class="w-4 h-4 text-cyan-500" />
+                <span>4. Métricas de Interacción en {{ currentRed.nombre }}</span>
+              </label>
+              <span class="text-[10px] text-cyan-500 font-bold">Fast Entry</span>
+            </div>
+
+            <div
+              class="grid gap-3"
+              :class="currentRed.key === 'instagram' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'"
+            >
+              <!-- Likes -->
+              <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                <span class="text-[10px] uppercase font-bold text-rose-500 block">❤️ Me Gusta</span>
+                <input
+                  v-model.number="formPost.total_likes"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 81"
+                  class="w-full text-center px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-base font-extrabold text-rose-500"
+                />
+              </div>
+
+              <!-- Comentarios -->
+              <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                <span class="text-[10px] uppercase font-bold text-blue-500 block">💬 Mensajes / Coment.</span>
+                <input
+                  v-model.number="formPost.total_comentarios"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 8"
+                  class="w-full text-center px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-base font-extrabold text-blue-500"
+                />
+              </div>
+
+              <!-- Vistas / Plays -->
+              <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                <span class="text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 block">
+                  {{ currentRed.key === 'instagram' ? '👁️ Plays / Alcance' : '👁️ Vistas' }}
+                </span>
+                <input
+                  v-model.number="formPost.vistas_organicas"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 1200"
+                  class="w-full text-center px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-base font-extrabold text-cyan-600 dark:text-cyan-400"
+                />
+              </div>
+
+              <!-- Compartidos -->
+              <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                <span class="text-[10px] uppercase font-bold text-slate-500 block">🔄 Compartidos</span>
+                <input
+                  v-model.number="formPost.total_compartidos"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 0"
+                  class="w-full text-center px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-base font-extrabold text-slate-800 dark:text-slate-200"
+                />
+              </div>
+
+              <!-- Guardados (Específico de Instagram) -->
+              <div
+                v-if="currentRed.key === 'instagram'"
+                class="p-3 rounded-xl bg-white dark:bg-slate-900 border-2 border-amber-500/30 space-y-1"
+              >
+                <span class="text-[10px] uppercase font-bold text-amber-500 block flex items-center justify-between">
+                  <span>🔖 Guardados</span>
+                  <span class="text-[8px] bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1 rounded font-bold">Algoritmo</span>
+                </span>
+                <input
+                  v-model.number="formPost.total_guardados"
+                  type="number"
+                  min="0"
+                  placeholder="ej. 12"
+                  class="w-full text-center px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-amber-500/20 text-base font-extrabold text-amber-500"
+                />
+              </div>
+            </div>
+
+            <!-- Desplegable Emociones Avanzadas & Termómetro -->
+            <div class="pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                @click="showAdvancedEmotions = !showAdvancedEmotions"
+                class="text-xs text-cyan-500 hover:text-cyan-400 font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles class="w-3.5 h-3.5" />
+                <span>{{ showAdvancedEmotions ? 'Ocultar Desglose Emoji & Termómetro' : '⚡ Desglosar Emojis Granulares & Termómetro de Humor Social' }}</span>
+              </button>
+
+              <div v-if="showAdvancedEmotions" class="mt-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
+                <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center text-xs">
+                  <div>
+                    <label class="block text-slate-500 font-bold mb-1">👍 Likes</label>
+                    <input v-model.number="formPost.me_gusta" type="number" min="0" class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold" />
+                  </div>
+                  <div>
+                    <label class="block text-rose-500 font-bold mb-1">❤️ Love</label>
+                    <input v-model.number="formPost.me_encanta" type="number" min="0" class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-rose-500" />
+                  </div>
+                  <div>
+                    <label class="block text-amber-500 font-bold mb-1">🥰 Care</label>
+                    <input v-model.number="formPost.me_importa" type="number" min="0" class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-amber-500" />
+                  </div>
+                  <div>
+                    <label class="block text-amber-500 font-bold mb-1">😂 Haha</label>
+                    <input v-model.number="formPost.me_divierte" type="number" min="0" class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-amber-500" />
+                  </div>
+                  <div>
+                    <label class="block text-purple-500 font-bold mb-1">😮 Wow</label>
+                    <input v-model.number="formPost.me_asombra" type="number" min="0" class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-purple-500" />
+                  </div>
+                  <div>
+                    <label class="block text-blue-500 font-bold mb-1">😢 Sad</label>
+                    <input v-model.number="formPost.me_entristece" type="number" min="0" class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-blue-500" />
+                  </div>
+                  <div>
+                    <label class="block text-rose-600 font-bold mb-1">😡 Angry</label>
+                    <input v-model.number="formPost.me_enoja" type="number" min="0" class="w-full text-center px-1 py-1 rounded-lg bg-slate-50 dark:bg-slate-950 border border-rose-500/30 text-xs font-bold text-rose-600" />
+                  </div>
+                </div>
+
+                <!-- Termómetro de Humor Social (1-5 estrellas) -->
+                <div class="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 flex-wrap gap-2">
+                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Termómetro de Humor Social:
+                  </span>
+                  <div class="flex items-center gap-1.5">
+                    <button
+                      v-for="star in 5"
+                      :key="star"
+                      type="button"
+                      @click="formPost.termometro_humor_social = star"
+                      class="p-1 text-amber-400 hover:scale-110 transition-transform cursor-pointer"
+                    >
+                      <Star
+                        class="w-5 h-5"
+                        :class="star <= formPost.termometro_humor_social ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-700'"
+                      />
+                    </button>
+                    <span class="text-xs font-bold text-amber-500 ml-1">
+                      ({{ formPost.termometro_humor_social }}/5 estrellas)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Live Media Preview -->
+          <div v-if="formPost.url_post" class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono block">
+              Vista Previa del Contenido Embebido:
+            </span>
+            <MediaEmbed
+              :url="formPost.url_post"
+              :media-url="formPost.media_url"
+              :formato="formPost.tipo_formato"
+              :plataforma="formPost.plataforma"
+            />
+          </div>
+
+          <!-- Submit Buttons -->
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              @click="isPostModalOpen = false"
+              class="px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              :disabled="formPost.processing"
+              class="px-6 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/25 flex items-center gap-2 cursor-pointer transition-all hover:scale-102 disabled:opacity-50"
+            >
+              <Send class="w-4 h-4" />
+              <span>{{ formPost.processing ? 'Guardando...' : `Guardar Publicación en ${currentRed.nombre}` }}</span>
             </button>
           </div>
         </form>

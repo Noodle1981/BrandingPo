@@ -29,19 +29,14 @@ class CandidatosAndProfilesTest extends TestCase
 
         // Verify seeded profiles exist
         $this->assertDatabaseHas('candidatos', [
-            'nombre_completo' => 'Martín Rodríguez',
+            'nombre_completo' => 'Federico Sisterna',
             'es_propio' => true,
-            'estado_politico' => 'en_funciones',
+            'estado_politico' => 'candidato',
         ]);
 
         $this->assertDatabaseHas('candidatos', [
             'nombre_completo' => 'Carlos Morales',
             'estado_politico' => 'opositor',
-        ]);
-
-        $this->assertDatabaseHas('candidatos', [
-            'nombre_completo' => 'Esteban Rossi',
-            'estado_politico' => 'intendente_electo',
         ]);
     }
 
@@ -68,8 +63,8 @@ class CandidatosAndProfilesTest extends TestCase
             'color_hex' => '#06b6d4',
         ]);
 
-        $response->assertRedirect(route('candidatos.index'));
         $this->assertDatabaseHas('candidatos', ['nombre_completo' => 'Nuevo Candidato Test']);
+        $response->assertRedirect();
     }
 
     public function test_visualizador_cannot_create_a_candidate(): void

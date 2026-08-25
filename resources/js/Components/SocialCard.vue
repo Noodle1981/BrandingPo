@@ -1,7 +1,24 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
-import { Eye, MessageCircle, Share2, Sparkles, DollarSign, Star, Edit3, Trash2, X, Check, Link2, Activity } from '@lucide/vue';
+import { router, useForm, usePage } from '@inertiajs/vue3';
+import {
+  Eye,
+  MessageCircle,
+  Share2,
+  Sparkles,
+  DollarSign,
+  Star,
+  Edit3,
+  Trash2,
+  X,
+  Check,
+  Link2,
+  Activity,
+  Calendar,
+  Bookmark,
+  Flame,
+  Target
+} from '@lucide/vue';
 import Badge from './Badge.vue';
 import MediaEmbed from './MediaEmbed.vue';
 
@@ -13,11 +30,33 @@ const props = defineProps({
   canWrite: {
     type: Boolean,
     default: true,
+  },
+  ejes: {
+    type: Array,
+    default: () => [],
   }
+});
+
+const page = usePage();
+const availableEjes = computed(() => {
+  if (props.ejes && props.ejes.length) return props.ejes;
+  return page.props.ejes || [];
 });
 
 const showComments = ref(false);
 const isEditing = ref(false);
+
+const formatDateForInput = (d) => {
+  if (!d) return new Date().toISOString().slice(0, 16);
+  try {
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return new Date().toISOString().slice(0, 16);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  } catch (e) {
+    return new Date().toISOString().slice(0, 16);
+  }
+};
 
 const parseReacciones = (r, totalLikes = 0) => {
   if (r && typeof r === 'object') {
@@ -46,11 +85,13 @@ const initialReacciones = parseReacciones(props.post.reacciones_detalladas, prop
 
 const editForm = useForm({
   contenido_resumen: props.post.contenido_resumen || '',
+  fecha_publicacion: formatDateForInput(props.post.fecha_publicacion),
   url_post: props.post.url_post || '',
   media_url: props.post.media_url || '',
   tipo_formato: props.post.tipo_formato || 'Reel',
   tipo_pauta: props.post.tipo_pauta || 'organico',
   monto_invertido_pauta: props.post.monto_invertido_pauta || 0,
+  eje_tematico_id: props.post.eje_tematico_id || props.post.eje_tematico?.id || null,
   total_vistas: props.post.total_vistas || 0,
   me_gusta: initialReacciones.me_gusta,
   me_encanta: initialReacciones.me_encanta,
@@ -62,6 +103,7 @@ const editForm = useForm({
   total_likes: props.post.total_likes || 0,
   total_comentarios: props.post.total_comentarios || 0,
   total_compartidos: props.post.total_compartidos || 0,
+  total_guardados: props.post.total_guardados || 0,
   termometro_humor_social: props.post.termometro_humor_social || 4,
 });
 
@@ -92,11 +134,13 @@ const editAiSentiment = computed(() => {
 const openEditModal = () => {
   const r = parseReacciones(props.post.reacciones_detalladas, props.post.total_likes);
   editForm.contenido_resumen = props.post.contenido_resumen || '';
+  editForm.fecha_publicacion = formatDateForInput(props.post.fecha_publicacion);
   editForm.url_post = props.post.url_post || '';
   editForm.media_url = props.post.media_url || '';
   editForm.tipo_formato = props.post.tipo_formato || 'Reel';
   editForm.tipo_pauta = props.post.tipo_pauta || 'organico';
   editForm.monto_invertido_pauta = props.post.monto_invertido_pauta || 0;
+  editForm.eje_tematico_id = props.post.eje_tematico_id || props.post.eje_tematico?.id || null;
   editForm.total_vistas = props.post.total_vistas || 0;
   editForm.me_gusta = r.me_gusta;
   editForm.me_encanta = r.me_encanta;
@@ -108,6 +152,7 @@ const openEditModal = () => {
   editForm.total_likes = props.post.total_likes || 0;
   editForm.total_comentarios = props.post.total_comentarios || 0;
   editForm.total_compartidos = props.post.total_compartidos || 0;
+  editForm.total_guardados = props.post.total_guardados || 0;
   editForm.termometro_humor_social = props.post.termometro_humor_social || 4;
   isEditing.value = true;
 };
@@ -149,7 +194,32 @@ const currentReacciones = computed(() => {
   return parseReacciones(props.post.reacciones_detalladas, props.post.total_likes);
 });
 
-const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', 'Shorts', 'Articulo'];
+const totalInteracciones = computed(() => {
+  return Number(props.post.total_likes || 0) +
+    Number(props.post.total_comentarios || 0) +
+    Number(props.post.total_compartidos || 0) +
+    Number(props.post.total_guardados || 0);
+});
+
+const formatos = [
+  { value: 'Reel', label: '🎬 Reel / Video Vertical' },
+  { value: 'Foto', label: '🖼️ Foto / Imagen' },
+  { value: 'Carrusel', label: '📚 Carrusel / Galería' },
+  { value: 'Story', label: '⚡ Story / Historia' },
+  { value: 'Collab', label: '🤝 Collab / Co-autoría' },
+  { value: 'Video', label: '📹 Video en Feed' },
+  { value: 'Shorts', label: '⚡ Shorts' },
+  { value: 'Tweet', label: '🐦 Tweet / Post' },
+  { value: 'Post', label: '📄 Post Estándar' },
+  { value: 'Live', label: '🎙️ Transmisión En Vivo' },
+];
+
+const tiposPauta = [
+  { value: 'organico', label: '🌱 Orgánica Pura' },
+  { value: 'organico_impulsado', label: '🚀 Post Impulsado (Boosted)' },
+  { value: 'pauta_paga', label: '🎯 Dark Post / Anuncio Directo' },
+  { value: 'colaboracion_pagada', label: '🌟 Colaboración Pagada / Influencer' },
+];
 </script>
 
 <template>
@@ -291,10 +361,19 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
         </span>
       </div>
 
-      <!-- Quick Metrics: Views, Comments, Shares -->
-      <div class="flex items-center gap-4">
-        <div class="flex items-center gap-1" title="Visualizaciones">
-          <Eye class="w-4 h-4 text-cyan-500" />
+      <!-- Quick Metrics: Interacciones Totales, Views, Comments, Shares, Saves -->
+      <div class="flex items-center gap-3.5 flex-wrap">
+        <!-- 🔥 Total Interacciones (Engagement Clave) -->
+        <div
+          class="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-mono font-bold text-xs"
+          title="Interacciones Totales (Likes + Comentarios + Shares + Guardados)"
+        >
+          <Flame class="w-3.5 h-3.5 fill-current text-cyan-500" />
+          <span>{{ formatNumber(totalInteracciones) }}</span>
+        </div>
+
+        <div class="flex items-center gap-1" title="Visualizaciones / Alcance">
+          <Eye class="w-4 h-4 text-slate-400 dark:text-slate-500" />
           <span class="font-mono font-medium">{{ formatNumber(post.total_vistas || 0) }}</span>
         </div>
 
@@ -308,9 +387,14 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
           <span class="font-mono font-medium">{{ formatNumber(post.total_comentarios || 0) }}</span>
         </button>
 
-        <div class="flex items-center gap-1" title="Compartidos">
+        <div class="flex items-center gap-1" title="Compartidos / Reposts">
           <Share2 class="w-4 h-4 text-emerald-500" />
           <span class="font-mono font-medium">{{ formatNumber(post.total_compartidos || 0) }}</span>
+        </div>
+
+        <div v-if="post.total_guardados > 0" class="flex items-center gap-1" title="Guardados (Saves)">
+          <Bookmark class="w-3.5 h-3.5 text-amber-500" />
+          <span class="font-mono font-medium">{{ formatNumber(post.total_guardados) }}</span>
         </div>
       </div>
     </div>
@@ -372,23 +456,104 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
         </div>
 
         <form @submit.prevent="saveEdit" class="space-y-4">
-          <!-- URL / Link -->
+          <!-- 1. Fecha & Formato -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                <Calendar class="w-3.5 h-3.5 text-cyan-500" />
+                <span>Fecha y Hora de Publicación *</span>
+              </label>
+              <input
+                v-model="editForm.fecha_publicacion"
+                type="datetime-local"
+                required
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-cyan-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Tipo de Formato *
+              </label>
+              <select
+                v-model="editForm.tipo_formato"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500 font-semibold"
+              >
+                <option v-for="f in formatos" :key="f.value" :value="f.value">{{ f.label }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 2. URL / Enlace Oficial -->
           <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Enlace del Post / Video (URL)
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+              <Link2 class="w-3.5 h-3.5 text-cyan-500" />
+              <span>Enlace Oficial del Post / Reel (URL)</span>
             </label>
             <div class="relative">
               <input
                 v-model="editForm.url_post"
                 type="url"
-                placeholder="https://..."
+                placeholder="https://www.instagram.com/reel/..."
                 class="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-cyan-500"
               />
               <Link2 class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
-          <!-- Text Content -->
+          <!-- 3. Tipo de Difusión & Pauta -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                <DollarSign class="w-3.5 h-3.5 text-cyan-500" />
+                <span>Estrategia de Difusión / Pauta</span>
+              </label>
+              <select
+                v-model="editForm.tipo_pauta"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500 font-semibold"
+              >
+                <option v-for="tp in tiposPauta" :key="tp.value" :value="tp.value">
+                  {{ tp.label }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Inversión si no es orgánico -->
+            <div v-if="editForm.tipo_pauta !== 'organico'">
+              <label class="block text-xs font-bold text-violet-600 dark:text-violet-400 mb-1">
+                Monto Invertido en Pauta ($ ARS/USD)
+              </label>
+              <input
+                v-model.number="editForm.monto_invertido_pauta"
+                type="number"
+                min="0"
+                placeholder="ej. 25000"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-violet-500/40 text-xs font-mono font-bold text-violet-600 dark:text-violet-400 focus:ring-2 focus:ring-violet-500"
+              />
+            </div>
+          </div>
+
+          <!-- 4. Eje Temático de Campaña -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <Target class="w-3.5 h-3.5 text-cyan-500" />
+                <span>Eje Temático de Campaña</span>
+              </span>
+              <span class="text-[10px] text-slate-400">Clasificación estratégica</span>
+            </label>
+            <select
+              v-model="editForm.eje_tematico_id"
+              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-semibold focus:ring-2 focus:ring-cyan-500"
+            >
+              <option :value="null">-- Sin Eje Temático Asignado --</option>
+              <option v-for="eje in availableEjes" :key="eje.id" :value="eje.id">
+                🎯 {{ eje.nombre }}
+              </option>
+            </select>
+          </div>
+
+          <!-- 5. Text Content -->
           <div>
             <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               Texto o Resumen del Post *
@@ -401,52 +566,22 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
             ></textarea>
           </div>
 
-          <!-- Formato & Pauta -->
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Formato
-              </label>
-              <select
-                v-model="editForm.tipo_formato"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
-              >
-                <option v-for="f in formatos" :key="f" :value="f">{{ f }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Distribución
-              </label>
-              <select
-                v-model="editForm.tipo_pauta"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
-              >
-                <option value="organico">Orgánico</option>
-                <option value="pauta_paga">Pauta Paga</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Inversión si es pauta paga -->
-          <div v-if="editForm.tipo_pauta === 'pauta_paga'">
-            <label class="block text-xs font-bold text-violet-600 dark:text-violet-400 mb-1">
-              Monto Invertido en Pauta ($ ARS)
-            </label>
-            <input
-              v-model.number="editForm.monto_invertido_pauta"
-              type="number"
-              min="0"
-              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-violet-600 dark:text-violet-400"
-            />
-          </div>
-
-          <!-- Reacciones Emoji por Emoji -->
-          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+          <!-- 5. Reacciones Emoji por Emoji & Aprobación Neta -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5">
             <div class="flex items-center justify-between text-xs font-bold">
-              <span class="text-slate-700 dark:text-slate-300">Conteo de Emociones (👍 ❤️ 🥰 😂 😮 😢 😡)</span>
-              <span class="text-cyan-500 font-mono">Total: {{ formatNumber(editTotalReacciones) }}</span>
+              <span class="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Sparkles class="w-3.5 h-3.5 text-cyan-500" />
+                <span>Desglose Emoji por Emoji</span>
+              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-cyan-500 font-mono text-[11px]">Total: {{ formatNumber(editTotalReacciones) }}</span>
+                <span
+                  class="text-[10px] px-2 py-0.5 rounded font-mono font-bold"
+                  :class="editAiSentiment.isCrisis ? 'bg-rose-500/15 text-rose-500' : 'bg-emerald-500/15 text-emerald-500'"
+                >
+                  {{ editAiSentiment.aprobacion }}% Aprobación Neta
+                </span>
+              </div>
             </div>
 
             <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 font-mono text-center">
@@ -481,34 +616,79 @@ const formatos = ['Reel', 'Video', 'Foto', 'Carrusel', 'Tweet', 'Hilo/Thread', '
             </div>
           </div>
 
-          <!-- Views, Comments, Shares -->
-          <div class="grid grid-cols-3 gap-2.5">
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Vistas</label>
+          <!-- 6. Métricas Clave de Interacción (Vistas, Comentarios, Compartidos, Guardados) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono">
+            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1">
+                👁️ Plays / Vistas
+              </label>
               <input
                 v-model.number="editForm.total_vistas"
                 type="number"
                 min="0"
-                class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
+                class="w-full px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-center font-bold text-cyan-600 dark:text-cyan-400"
               />
             </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Comentarios</label>
+
+            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1">
+                💬 Comentarios
+              </label>
               <input
                 v-model.number="editForm.total_comentarios"
                 type="number"
                 min="0"
-                class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
+                class="w-full px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-center font-bold text-blue-500"
               />
             </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-500 mb-0.5">Shares</label>
+
+            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <label class="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                🔄 Shares
+              </label>
               <input
                 v-model.number="editForm.total_compartidos"
                 type="number"
                 min="0"
-                class="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono"
+                class="w-full px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-center font-bold text-slate-700 dark:text-slate-300"
               />
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-amber-500/30">
+              <label class="block text-[10px] uppercase font-bold text-amber-500 mb-1">
+                🔖 Guardados
+              </label>
+              <input
+                v-model.number="editForm.total_guardados"
+                type="number"
+                min="0"
+                class="w-full px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-amber-500/30 text-xs text-center font-bold text-amber-500"
+              />
+            </div>
+          </div>
+
+          <!-- 7. Termómetro de Humor Social -->
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+              <Star class="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span>Termómetro de Humor Social:</span>
+            </span>
+            <div class="flex items-center gap-1.5">
+              <button
+                v-for="star in 5"
+                :key="star"
+                type="button"
+                @click="editForm.termometro_humor_social = star"
+                class="p-1 text-amber-400 hover:scale-125 transition-transform cursor-pointer"
+              >
+                <Star
+                  class="w-4 h-4"
+                  :class="star <= editForm.termometro_humor_social ? 'fill-amber-400' : 'text-slate-300 dark:text-slate-600'"
+                />
+              </button>
+              <span class="ml-1 text-xs font-mono font-bold text-amber-500">
+                {{ editForm.termometro_humor_social }}/5
+              </span>
             </div>
           </div>
 

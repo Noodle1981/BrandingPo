@@ -7,7 +7,9 @@ use App\Models\Candidato;
 use App\Models\EjeTematico;
 use App\Models\PerfilSocial;
 use App\Models\Publicacion;
+use App\Services\SocialProfileScraperService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,6 +17,20 @@ use Inertia\Response;
 
 class PublicacionController extends Controller
 {
+    /**
+     * Extraer datos públicos de una publicación (Instagram, TikTok, YouTube, etc.) con 1 clic.
+     */
+    public function scrapePost(Request $request, SocialProfileScraperService $scraper): JsonResponse
+    {
+        $validated = $request->validate([
+            'url' => ['required', 'string'],
+            'plataforma' => ['nullable', 'string'],
+        ]);
+
+        $data = $scraper->scrapePost($validated['url'], $validated['plataforma'] ?? 'instagram');
+
+        return response()->json($data);
+    }
     /**
      * Muro interactivo estilo red social (Social Wall) del Workspace Activo.
      */
@@ -198,11 +214,13 @@ class PublicacionController extends Controller
 
         $validated = $request->validate([
             'candidato_id' => ['required', 'exists:candidatos,id'],
-            'perfil_social_id' => ['required', 'exists:perfil_socials,id'],
+            'perfil_social_id' => ['nullable', 'exists:perfil_socials,id'],
+            'plataforma' => ['nullable', 'string'],
             'eje_tematico_id' => ['nullable', 'exists:eje_tematicos,id'],
+            'eje_tematico_nombre' => ['nullable', 'string', 'max:255'],
             'fecha_publicacion' => ['required', 'date'],
             'tipo_formato' => ['required', 'string'],
-            'tipo_pauta' => ['required', 'in:organico,pauta_paga'],
+            'tipo_pauta' => ['required', 'string'],
             'monto_invertido_pauta' => ['nullable', 'numeric', 'min:0'],
             'url_post' => ['nullable', 'url', 'max:1000'],
             'media_url' => ['nullable', 'url', 'max:1000'],
@@ -219,14 +237,54 @@ class PublicacionController extends Controller
             'me_enoja' => ['nullable', 'integer', 'min:0'],
             'total_comentarios' => ['nullable', 'integer', 'min:0'],
             'total_compartidos' => ['nullable', 'integer', 'min:0'],
+            'total_guardados' => ['nullable', 'integer', 'min:0'],
             'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
             'comentario_destacado' => ['nullable', 'string'],
             'figura_acompanante' => ['nullable', 'string'],
         ], [
             'candidato_id.required' => 'Debes seleccionar un candidato.',
-            'perfil_social_id.required' => 'Debes seleccionar la red social.',
             'contenido_resumen.required' => 'El texto o resumen del post es obligatorio.',
         ]);
+
+        // Resolver o autogenerar el perfil social si vino por plataforma
+        $perfilSocialId = $validated['perfil_social_id'] ?? null;
+        if (! $perfilSocialId && ! empty($validated['plataforma'])) {
+            $candidato = Candidato::findOrFail($validated['candidato_id']);
+            $perfil = PerfilSocial::firstOrCreate(
+                [
+                    'candidato_id' => $candidato->id,
+                    'plataforma' => $validated['plataforma'],
+                ],
+                [
+                    'handle_usuario' => '@' . strtolower(str_replace(' ', '', $candidato->nombre_completo)),
+                    'esta_activo' => true,
+                    'esta_verificado' => false,
+                ]
+            );
+            $perfilSocialId = $perfil->id;
+        }
+
+        if (! $perfilSocialId) {
+            return redirect()->back()->withErrors(['perfil_social_id' => 'Debes seleccionar o indicar la red social.']);
+        }
+
+        // Resolver o autogenerar eje temático si se ingresó nombre
+        $ejeId = $validated['eje_tematico_id'] ?? null;
+        if (! $ejeId && ! empty($validated['eje_tematico_nombre'])) {
+            $ejeNombre = trim($validated['eje_tematico_nombre']);
+            $eje = EjeTematico::firstOrCreate(
+                [
+                    'workspace_id' => $workspace->id,
+                    'nombre' => $ejeNombre,
+                ],
+                [
+                    'slug' => \Illuminate\Support\Str::slug($ejeNombre),
+                    'color_badge' => '#06b6d4',
+                    'descripcion' => 'Eje temático: ' . $ejeNombre,
+                ]
+            );
+            $ejeId = $eje->id;
+        }
 
         $vistasOrg = (int)($validated['vistas_organicas'] ?? 0);
         $vistasPag = (int)($validated['vistas_pagadas'] ?? 0);
@@ -242,15 +300,15 @@ class PublicacionController extends Controller
 
         $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int)($validated['total_likes'] ?? 0));
 
-        Publicacion::create([
+        $publicacion = Publicacion::create([
             'workspace_id' => $workspace->id,
             'candidato_id' => $validated['candidato_id'],
-            'perfil_social_id' => $validated['perfil_social_id'],
-            'eje_tematico_id' => $validated['eje_tematico_id'] ?? null,
+            'perfil_social_id' => $perfilSocialId,
+            'eje_tematico_id' => $ejeId,
             'fecha_publicacion' => $validated['fecha_publicacion'],
             'tipo_formato' => $validated['tipo_formato'],
             'tipo_pauta' => $validated['tipo_pauta'],
-            'monto_invertido_pauta' => $validated['monto_invertido_pauta'] ?? 0,
+            'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
             'url_post' => $validated['url_post'] ?? null,
             'media_url' => $validated['media_url'] ?? null,
             'vistas_organicas' => $vistasOrg,
@@ -260,6 +318,7 @@ class PublicacionController extends Controller
             'total_likes' => $aiEmocional['total_likes'],
             'total_comentarios' => (int)($validated['total_comentarios'] ?? 0),
             'total_compartidos' => (int)($validated['total_compartidos'] ?? 0),
+            'total_guardados' => (int)($validated['total_guardados'] ?? 0),
             'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
             'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
             'figuras_acompanantes' => $figuras,
@@ -268,8 +327,17 @@ class PublicacionController extends Controller
             'insights_internos_propios' => $aiEmocional['insights_internos_propios'],
         ]);
 
+        // Actualizar contador acumulado del perfil social
+        $perfil = PerfilSocial::find($perfilSocialId);
+        if ($perfil) {
+            $totalPosts = Publicacion::where('perfil_social_id', $perfil->id)->count();
+            if ($totalPosts > $perfil->publicaciones_totales) {
+                $perfil->update(['publicaciones_totales' => $totalPosts]);
+            }
+        }
+
         return redirect()->back()
-            ->with('success', 'Publicación registrada con éxito en Fast-Flow.');
+            ->with('success', 'Publicación registrada con éxito.');
     }
 
     /**
@@ -279,10 +347,11 @@ class PublicacionController extends Controller
     {
         $validated = $request->validate([
             'contenido_resumen' => ['required', 'string'],
+            'fecha_publicacion' => ['nullable', 'date'],
             'url_post' => ['nullable', 'url', 'max:1000'],
             'media_url' => ['nullable', 'url', 'max:1000'],
             'tipo_formato' => ['required', 'string'],
-            'tipo_pauta' => ['required', 'in:organico,pauta_paga'],
+            'tipo_pauta' => ['required', 'string'],
             'monto_invertido_pauta' => ['nullable', 'numeric', 'min:0'],
             'total_vistas' => ['nullable', 'integer', 'min:0'],
             'total_likes' => ['nullable', 'integer', 'min:0'],
@@ -295,27 +364,37 @@ class PublicacionController extends Controller
             'me_enoja' => ['nullable', 'integer', 'min:0'],
             'total_comentarios' => ['nullable', 'integer', 'min:0'],
             'total_compartidos' => ['nullable', 'integer', 'min:0'],
+            'total_guardados' => ['nullable', 'integer', 'min:0'],
+            'eje_tematico_id' => ['nullable', 'exists:eje_tematicos,id'],
             'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
         ]);
 
         $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int)($validated['total_likes'] ?? $publicacion->total_likes));
 
-        $publicacion->update([
+        $updateData = [
             'contenido_resumen' => $validated['contenido_resumen'],
             'url_post' => $validated['url_post'] ?? null,
             'media_url' => $validated['media_url'] ?? null,
             'tipo_formato' => $validated['tipo_formato'],
             'tipo_pauta' => $validated['tipo_pauta'],
-            'monto_invertido_pauta' => $validated['tipo_pauta'] === 'pauta_paga' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
+            'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
+            'eje_tematico_id' => $validated['eje_tematico_id'] ?? null,
             'total_vistas' => (int)($validated['total_vistas'] ?? $publicacion->total_vistas),
             'total_likes' => $aiEmocional['total_likes'],
             'total_comentarios' => (int)($validated['total_comentarios'] ?? $publicacion->total_comentarios),
             'total_compartidos' => (int)($validated['total_compartidos'] ?? $publicacion->total_compartidos),
+            'total_guardados' => (int)($validated['total_guardados'] ?? $publicacion->total_guardados),
             'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
             'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
             'termometro_humor_social' => $validated['termometro_humor_social'] ?? $aiEmocional['termometro_humor_social'],
             'insights_internos_propios' => array_merge($publicacion->insights_internos_propios ?? [], $aiEmocional['insights_internos_propios']),
-        ]);
+        ];
+
+        if (! empty($validated['fecha_publicacion'])) {
+            $updateData['fecha_publicacion'] = $validated['fecha_publicacion'];
+        }
+
+        $publicacion->update($updateData);
 
         return redirect()->back()
             ->with('success', 'Publicación actualizada correctamente.');

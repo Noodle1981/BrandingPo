@@ -531,6 +531,185 @@ class SocialProfileScraperService
     }
 
     /**
+     * Extraer datos públicos de una publicación (Instagram, TikTok, YouTube, etc.)
+     */
+    public function scrapePost(string $input, ?string $plataforma = null): array
+    {
+        $input = trim($input);
+        $result = [
+            'success' => false,
+            'url_post' => '',
+            'plataforma' => $plataforma ?? 'instagram',
+            'tipo_formato' => 'Reel',
+            'contenido_resumen' => '',
+            'total_likes' => 0,
+            'total_comentarios' => 0,
+            'total_vistas' => 0,
+            'fecha_publicacion' => date('Y-m-d\TH:i'),
+            'media_url' => '',
+            'handle_autor' => '',
+            'mensaje' => '',
+        ];
+
+        if (empty($input)) {
+            $result['mensaje'] = 'Ingresa una URL o código de inserción.';
+            return $result;
+        }
+
+        // 1. Extraer URL limpia si el usuario pegó un <blockquote> o HTML embed
+        $url = $input;
+        if (preg_match('/data-instgrm-permalink="([^"]+)"/i', $input, $m)) {
+            $url = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        } elseif (preg_match('/href="([^"]+)"/i', $input, $m)) {
+            $url = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        } elseif (preg_match('/https?:\/\/[^\s"\'<>]+/i', $input, $m)) {
+            $url = $m[0];
+        }
+
+        // Limpiar parámetros de tracking innecesarios
+        $cleanUrl = preg_replace('/\?(?:utm_source|igsh|igsi|utm_medium|utm_campaign)=[^&]*&?/i', '?', $url);
+        $cleanUrl = rtrim($cleanUrl, '?&');
+        $result['url_post'] = $cleanUrl;
+
+        // 2. Detectar plataforma
+        if (str_contains($cleanUrl, 'instagram.com')) {
+            $result['plataforma'] = 'instagram';
+            return $this->scrapeInstagramPost($cleanUrl, $result);
+        } elseif (str_contains($cleanUrl, 'youtube.com') || str_contains($cleanUrl, 'youtu.be')) {
+            $result['plataforma'] = 'youtube';
+            return $this->scrapeYouTubePost($cleanUrl, $result);
+        } elseif (str_contains($cleanUrl, 'tiktok.com')) {
+            $result['plataforma'] = 'tiktok';
+            return $this->scrapeTikTokPost($cleanUrl, $result);
+        }
+
+        return $this->scrapeGenericPost($cleanUrl, $result);
+    }
+
+    /**
+     * Scraping especializado de una publicación o Reel de Instagram.
+     */
+    protected function scrapeInstagramPost(string $url, array $result): array
+    {
+        // Detectar formato
+        if (str_contains(strtolower($url), '/reel/') || str_contains(strtolower($url), '/reels/')) {
+            $result['tipo_formato'] = 'Reel';
+        } elseif (str_contains(strtolower($url), '/p/')) {
+            $result['tipo_formato'] = 'Foto';
+        }
+
+        $response = Http::withHeaders([
+            'User-Agent' => 'Twitterbot/1.0',
+            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
+        ])->timeout(8)->get($url);
+
+        if (!$response->successful()) {
+            $response = Http::withHeaders([
+                'User-Agent' => 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+            ])->timeout(8)->get($url);
+        }
+
+        $html = $response->body();
+
+        $rawDesc = '';
+        if (preg_match('/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]+)"/i', $html, $descMatch)) {
+            $rawDesc = html_entity_decode($descMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        $rawTitle = '';
+        if (preg_match('/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i', $html, $titleMatch)) {
+            $rawTitle = html_entity_decode($titleMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        // Portada / Imagen
+        if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i', $html, $imgMatch)) {
+            $result['media_url'] = html_entity_decode($imgMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        if ($rawDesc || $rawTitle) {
+            // Extraer Likes
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:likes|Me gusta)/i', $rawDesc, $m)) {
+                $result['total_likes'] = $this->parseFormattedNumber($m[1]);
+            }
+
+            // Extraer Comentarios
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:comments|comentarios)/i', $rawDesc, $m)) {
+                $result['total_comentarios'] = $this->parseFormattedNumber($m[1]);
+            }
+
+            // Extraer Handle y Fecha
+            if (preg_match('/-\s*([a-zA-Z0-9_\.\-]+)\s*(?:el|on)\s*([a-zA-Z0-9\s,]+):/i', $rawDesc, $m)) {
+                $result['handle_autor'] = '@' . ltrim($m[1], '@');
+                $time = strtotime(trim($m[2]));
+                if ($time) {
+                    $result['fecha_publicacion'] = date('Y-m-d\TH:i', $time);
+                }
+            }
+
+            // Extraer el Copy completo
+            if (preg_match('/:\s*["“]([\s\S]+)["”]\.?\s*$/', $rawDesc, $m)) {
+                $result['contenido_resumen'] = trim($m[1]);
+            } elseif (preg_match('/en Instagram:\s*["“]([\s\S]+)["”]\.?\s*$/i', $rawTitle, $m)) {
+                $result['contenido_resumen'] = trim($m[1]);
+            } elseif (preg_match('/["“]([\s\S]+)["”]/', $rawTitle, $m)) {
+                $result['contenido_resumen'] = trim($m[1]);
+            }
+        }
+
+        $result['success'] = !empty($result['contenido_resumen']) || $result['total_likes'] > 0 || !empty($result['media_url']);
+        $result['mensaje'] = $result['success']
+            ? '¡Datos del post de Instagram extraídos exitosamente!'
+            : 'No se pudieron extraer los datos automáticamente. Puedes completarlos a mano.';
+
+        return $result;
+    }
+
+    /**
+     * Scraping de YouTube Video / Shorts.
+     */
+    protected function scrapeYouTubePost(string $url, array $result): array
+    {
+        $result['tipo_formato'] = str_contains($url, '/shorts/') ? 'Shorts' : 'Video';
+        $response = Http::withHeaders(['User-Agent' => 'Twitterbot/1.0'])->timeout(6)->get($url);
+        $html = $response->body();
+
+        if (preg_match('/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i', $html, $m)) {
+            $result['contenido_resumen'] = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+        if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i', $html, $m)) {
+            $result['media_url'] = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        $result['success'] = !empty($result['contenido_resumen']);
+        $result['mensaje'] = $result['success'] ? '¡Datos de YouTube extraídos!' : 'No se pudo leer YouTube.';
+        return $result;
+    }
+
+    /**
+     * Scraping genérico OpenGraph para otras redes.
+     */
+    protected function scrapeGenericPost(string $url, array $result): array
+    {
+        $response = Http::withHeaders(['User-Agent' => 'Twitterbot/1.0'])->timeout(6)->get($url);
+        $html = $response->body();
+
+        if (preg_match('/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i', $html, $m)) {
+            $result['contenido_resumen'] = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        } elseif (preg_match('/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i', $html, $m)) {
+            $result['contenido_resumen'] = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i', $html, $m)) {
+            $result['media_url'] = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        $result['success'] = !empty($result['contenido_resumen']);
+        $result['mensaje'] = $result['success'] ? '¡Metadatos extraídos!' : 'URL no accesible.';
+        return $result;
+    }
+
+    /**
      * Parsear cadenas numéricas como "9,4 mil", "9466", "1.359", "14.5K", "1.2M".
      */
     protected function parseFormattedNumber(string $str): int

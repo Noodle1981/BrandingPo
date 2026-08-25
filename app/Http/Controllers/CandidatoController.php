@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\CicloCampana;
+use App\Models\EjeTematico;
 use App\Models\PerfilSocial;
+use App\Models\Publicacion;
 use App\Models\Territorio;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -247,6 +249,13 @@ class CandidatoController extends Controller
                 'crecimiento_neto_posts' => $crecimientoPosts,
                 'crecimiento_neto_me_gusta' => $crecimientoMeGusta,
                 'crecimiento_neto_visualizaciones' => $crecimientoViews,
+                'ultima_auditoria_at' => $perfil?->ultima_auditoria_at ? $perfil->ultima_auditoria_at->diffForHumans() : null,
+                'ultima_auditoria_fecha' => $perfil?->ultima_auditoria_at ? $perfil->ultima_auditoria_at->format('d/m/Y H:i') : null,
+                'delta_seguidores_hoy' => (int)($perfil?->delta_seguidores_24h ?? 0),
+                'delta_seguidos_hoy' => (int)($perfil?->delta_seguidos_24h ?? 0),
+                'delta_posts_hoy' => (int)($perfil?->delta_posts_24h ?? 0),
+                'delta_me_gusta_hoy' => (int)($perfil?->delta_me_gusta_24h ?? 0),
+                'delta_views_hoy' => (int)($perfil?->delta_views_24h ?? 0),
             ];
         })->values();
 
@@ -257,6 +266,64 @@ class CandidatoController extends Controller
         $territorios = Territorio::where('workspace_id', $workspace->id)
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'tipo', 'poblacion_total', 'padron_electoral']);
+
+        $publicaciones = Publicacion::where('workspace_id', $workspace->id)
+            ->where('candidato_id', $candidato->id)
+            ->with(['perfilSocial', 'ejeTematico'])
+            ->orderByDesc('fecha_publicacion')
+            ->get()
+            ->map(function ($p) use ($candidato) {
+                return [
+                    'id' => $p->id,
+                    'candidato' => [
+                        'id' => $candidato->id,
+                        'nombre_completo' => $candidato->nombre_completo,
+                        'partido_coalicion' => $candidato->partido_coalicion,
+                        'estado_politico' => $candidato->estado_politico,
+                        'es_propio' => true,
+                        'color_hex' => $candidato->color_hex,
+                        'avatar_url' => $candidato->avatar_url,
+                    ],
+                    'perfil_social' => [
+                        'id' => $p->perfilSocial?->id,
+                        'plataforma' => $p->perfilSocial?->plataforma,
+                        'handle_usuario' => $p->perfilSocial?->handle_usuario,
+                    ],
+                    'perfil_social_id' => $p->perfil_social_id,
+                    'plataforma' => $p->perfilSocial?->plataforma,
+                    'eje_tematico_id' => $p->eje_tematico_id,
+                    'eje_tematico' => $p->ejeTematico ? [
+                        'id' => $p->ejeTematico->id,
+                        'nombre' => $p->ejeTematico->nombre,
+                        'color_badge' => $p->ejeTematico->color_badge,
+                    ] : null,
+                    'fecha_publicacion' => $p->fecha_publicacion?->format('d/m/Y H:i'),
+                    'fecha_publicacion_raw' => $p->fecha_publicacion?->format('Y-m-d\TH:i'),
+                    'fecha_relativa' => $p->fecha_publicacion?->diffForHumans(),
+                    'tipo_formato' => $p->tipo_formato,
+                    'tipo_pauta' => $p->tipo_pauta,
+                    'monto_invertido_pauta' => (float)$p->monto_invertido_pauta,
+                    'vistas_organicas' => (int)$p->vistas_organicas,
+                    'vistas_pagadas' => (int)$p->vistas_pagadas,
+                    'url_post' => $p->url_post,
+                    'media_url' => $p->media_url,
+                    'contenido_resumen' => $p->contenido_resumen,
+                    'total_vistas' => (int)$p->total_vistas,
+                    'total_likes' => (int)$p->total_likes,
+                    'total_comentarios' => (int)$p->total_comentarios,
+                    'total_compartidos' => (int)$p->total_compartidos,
+                    'total_guardados' => (int)$p->total_guardados,
+                    'reacciones_detalladas' => $p->reacciones_detalladas,
+                    'sentimiento_predominante' => $p->sentimiento_predominante,
+                    'figuras_acompanantes' => $p->figuras_acompanantes,
+                    'comentarios_destacados' => $p->comentarios_destacados,
+                    'termometro_humor_social' => $p->termometro_humor_social,
+                ];
+            });
+
+        $ejes = EjeTematico::where('workspace_id', $workspace->id)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'color_badge']);
 
         return Inertia::render('Candidatos/MiPerfil', [
             'candidato' => [
@@ -277,6 +344,8 @@ class CandidatoController extends Controller
             'redes' => $redesMapeadas,
             'ciclos' => $ciclos,
             'territorios' => $territorios,
+            'publicaciones' => $publicaciones,
+            'ejes' => $ejes,
         ]);
     }
 
@@ -340,6 +409,16 @@ class CandidatoController extends Controller
             }
         }
 
+        // Registrar medición inicial en el histórico
+        $perfil->registrarMedicion([
+            'seguidores' => $perfil->seguidores_actuales,
+            'seguidos' => $perfil->seguidos_actuales,
+            'publicaciones' => $perfil->publicaciones_totales,
+            'me_gusta_totales' => $perfil->me_gusta_totales,
+            'visualizaciones_totales' => $perfil->visualizaciones_totales,
+            'foto_perfil_url' => $perfil->foto_perfil_url,
+        ], 'manual');
+
         return redirect()->back()
             ->with('success', "Canal {$validated['plataforma']} configurado y Punto Cero establecido.");
     }
@@ -357,6 +436,42 @@ class CandidatoController extends Controller
         $data = $scraper->scrapeProfile($request->input('url'), $request->input('plataforma'));
 
         return response()->json($data);
+    }
+
+    /**
+     * Re-auditar / Refrescar métricas en vivo para un perfil social específico.
+     */
+    public function refrescarPerfilSocial(Request $request, PerfilSocial $perfilSocial, \App\Services\SocialProfileScraperService $scraper): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+    {
+        if (empty($perfilSocial->url_perfil)) {
+            if ($request->expectsJson() && !$request->header('X-Inertia')) {
+                return response()->json([
+                    'success' => false,
+                    'mensaje' => 'El canal no tiene una URL configurada para auditar.',
+                ], 422);
+            }
+            return redirect()->back()->with('error', 'El canal no tiene una URL configurada para auditar.');
+        }
+
+        $scraped = $scraper->scrapeProfile($perfilSocial->url_perfil, $perfilSocial->plataforma);
+
+        $metrica = $perfilSocial->registrarMedicion($scraped, 'auto_scraper');
+
+        $deltaSeguidores = $metrica->crecimiento_seguidores_dia;
+        $signo = $deltaSeguidores > 0 ? '+' : '';
+        $deltaMsg = $deltaSeguidores != 0 ? " ({$signo}{$deltaSeguidores} seguidores hoy)" : "";
+        $msg = "¡{$perfilSocial->plataforma} auditado con éxito!{$deltaMsg}";
+
+        if ($request->expectsJson() && !$request->header('X-Inertia')) {
+            return response()->json([
+                'success' => true,
+                'mensaje' => $msg,
+                'metrica' => $metrica,
+                'perfil' => $perfilSocial->fresh(),
+            ]);
+        }
+
+        return redirect()->back()->with('success', $msg);
     }
 
     /**

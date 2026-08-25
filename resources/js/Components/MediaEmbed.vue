@@ -39,13 +39,19 @@ const tiktokUrl = computed(() => {
   return null;
 });
 
+// Detect Instagram Reel or Post
+const isInstagramReel = computed(() => {
+  const target = (props.url || props.mediaUrl || '').toLowerCase();
+  return target.includes('/reel/') || target.includes('/reels/') || props.formato === 'Reel';
+});
+
 // Detect Instagram Embed
 const instagramEmbedUrl = computed(() => {
   const target = props.url || props.mediaUrl;
   if (!target) return null;
-  const match = target.match(/instagram\.com\/(?:p|reel|tv)\/([^/?#&]+)/i);
+  const match = target.match(/instagram\.com\/(?:p|reel|reels|tv)\/([^/?#&]+)/i);
   if (match) {
-    return `https://www.instagram.com/p/${match[1]}/embed/captioned/`;
+    return `https://www.instagram.com/p/${match[1]}/embed/`;
   }
   return null;
 });
@@ -61,8 +67,11 @@ const facebookEmbedUrl = computed(() => {
   return null;
 });
 
-// Detect Direct Image
+// Detect Direct Image (solo cuando no haya un embed interactivo disponible)
 const isDirectImage = computed(() => {
+  if (youtubeId.value || instagramEmbedUrl.value || facebookEmbedUrl.value) {
+    return false;
+  }
   const target = props.mediaUrl || props.url;
   if (!target) return false;
   return /\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i.test(target) || target.includes('images.unsplash.com');
@@ -91,7 +100,7 @@ const plataformaName = computed(() => {
 </script>
 
 <template>
-  <div class="rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 transition-all">
+  <div class="rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 transition-all">
     <!-- 1. YouTube Video Embed -->
     <div v-if="youtubeId" class="relative w-full aspect-video">
       <iframe
@@ -104,24 +113,33 @@ const plataformaName = computed(() => {
       ></iframe>
     </div>
 
-    <!-- 2. Direct Image Preview -->
+    <!-- 2. Instagram Interactive Video/Post Embed (Prioridad alta para reproducir el video) -->
+    <div
+      v-else-if="instagramEmbedUrl"
+      class="relative w-full overflow-hidden flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 rounded-2xl"
+    >
+      <iframe
+        :src="instagramEmbedUrl"
+        class="w-full max-w-[460px] rounded-2xl border-0 shadow-sm transition-all"
+        :style="{
+          height: isInstagramReel ? '620px' : '520px',
+          minHeight: isInstagramReel ? '580px' : '480px'
+        }"
+        frameborder="0"
+        scrolling="no"
+        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+        allowfullscreen
+        allowtransparency="true"
+      ></iframe>
+    </div>
+
+    <!-- 3. Direct Image Preview (Fotos estáticas sin reproductor de video) -->
     <div v-else-if="directImageUrl" class="relative group">
       <img
         :src="directImageUrl"
         alt="Foto de la publicación"
         class="w-full max-h-[440px] object-cover hover:scale-101 transition-transform duration-200"
       />
-    </div>
-
-    <!-- 3. Instagram Embed -->
-    <div v-else-if="instagramEmbedUrl" class="relative w-full overflow-hidden flex justify-center bg-white dark:bg-slate-900 p-2">
-      <iframe
-        :src="instagramEmbedUrl"
-        class="w-full max-w-[540px] min-h-[480px] rounded-lg border-0"
-        frameborder="0"
-        scrolling="no"
-        allowtransparency="true"
-      ></iframe>
     </div>
 
     <!-- 4. Facebook / General Social Media Link Preview Card -->

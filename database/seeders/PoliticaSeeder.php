@@ -45,8 +45,9 @@ class PoliticaSeeder extends Seeder
 
         // Asignar todos los users existentes al workspace
         User::all()->each(function (User $user) use ($workspace) {
+            $roleToAssign = in_array($user->role, ['admin', 'consultor', 'visualizador']) ? $user->role : 'consultor';
             $workspace->usuarios()->syncWithoutDetaching([
-                $user->id => ['role' => $user->role === 'admin' ? 'admin' : 'consultor'],
+                $user->id => ['role' => $roleToAssign],
             ]);
             if (!$user->active_workspace_id) {
                 $user->update(['active_workspace_id' => $workspace->id]);

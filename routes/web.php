@@ -46,6 +46,7 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
         Route::delete('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'destroy'])->name('candidatos.destroy');
         Route::post('/perfiles-sociales', [\App\Http\Controllers\CandidatoController::class, 'storePerfilSocial'])->name('perfiles-sociales.store');
         Route::post('/perfiles-sociales/scrape', [\App\Http\Controllers\CandidatoController::class, 'scrapePerfilSocial'])->name('perfiles-sociales.scrape');
+        Route::post('/perfiles-sociales/{perfilSocial}/refrescar', [\App\Http\Controllers\CandidatoController::class, 'refrescarPerfilSocial'])->name('perfiles-sociales.refrescar');
         Route::put('/perfiles-sociales/{perfilSocial}', [\App\Http\Controllers\CandidatoController::class, 'updatePerfilSocial'])->name('perfiles-sociales.update');
         Route::delete('/perfiles-sociales/{perfilSocial}', [\App\Http\Controllers\CandidatoController::class, 'destroyPerfilSocial'])->name('perfiles-sociales.destroy');
     });
@@ -64,6 +65,8 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
 
     Route::middleware(['can_write'])->group(function () {
         Route::post('/fast-flow', [\App\Http\Controllers\PublicacionController::class, 'store'])->name('fast-flow.store');
+        Route::post('/publicaciones', [\App\Http\Controllers\PublicacionController::class, 'store'])->name('publicaciones.store');
+        Route::post('/publicaciones/scrape-post', [\App\Http\Controllers\PublicacionController::class, 'scrapePost'])->name('publicaciones.scrape-post');
         Route::put('/publicaciones/{publicacion}', [\App\Http\Controllers\PublicacionController::class, 'update'])->name('publicaciones.update');
         Route::delete('/publicaciones/{publicacion}', [\App\Http\Controllers\PublicacionController::class, 'destroy'])->name('publicaciones.destroy');
     });

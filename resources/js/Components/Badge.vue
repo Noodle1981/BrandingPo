@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed } from 'vue';
 
 const props = defineProps({
@@ -80,8 +80,14 @@ const badgeStyles = computed(() => {
   }
 
   // Pauta
-  if (val === 'pauta_paga' || val === 'pago') {
+  if (val === 'pauta_paga' || val === 'pago' || val === 'anuncio_directo') {
     return 'bg-violet-500/15 text-violet-700 border-violet-500/40 dark:bg-violet-500/20 dark:text-violet-300 dark:border-violet-500/50 font-medium';
+  }
+  if (val === 'organico_impulsado') {
+    return 'bg-cyan-500/15 text-cyan-700 border-cyan-500/40 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/50 font-semibold';
+  }
+  if (val === 'colaboracion_pagada' || val === 'partnership') {
+    return 'bg-amber-500/15 text-amber-700 border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/50 font-semibold';
   }
   if (val === 'organico') {
     return 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/40';
@@ -113,7 +119,9 @@ const labelText = computed(() => {
     tiktok: 'TikTok',
     youtube: 'YouTube',
     linkedin: 'LinkedIn',
-    pauta_paga: 'Pauta Paga',
+    pauta_paga: 'Dark Post / Ads',
+    organico_impulsado: 'Post Impulsado (Boosted)',
+    colaboracion_pagada: 'Colaboración Pagada',
     organico: 'Orgánico',
     admin: 'Administrador',
     consultor: 'Consultor',

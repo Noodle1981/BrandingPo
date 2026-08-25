@@ -18,9 +18,6 @@ class CheckCanWrite
         $user = $request->user();
 
         if (! $user || ! $user->canWrite()) {
-            if ($request->expectsJson() || $request->header('X-Inertia')) {
-                return back()->with('error', 'Acción denegada: El rol Visualizador tiene permisos de solo lectura.');
-            }
             abort(403, 'Acceso denegado: Tu perfil es de solo lectura.');
         }
 

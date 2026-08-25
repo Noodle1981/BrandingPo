@@ -327,7 +327,7 @@ const logout = () => {
       <!-- ─────────────────────────────────────────────────────────────
            SIDEBAR ICONIZADO CON GLOBOS DESPLEGABLES (GEMINI PORTAL STYLE)
            ───────────────────────────────────────────────────────────── -->
-      <aside class="w-16 shrink-0 relative z-30 border-r border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex flex-col items-center py-4 gap-3 select-none">
+      <aside class="w-16 shrink-0 sticky top-[57px] self-start h-[calc(100vh-57px)] z-30 border-r border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex flex-col items-center py-4 gap-3 select-none">
 
         <!-- Acceso Directo Dashboard / War Room (Top) -->
         <div class="relative group/dash flex justify-center w-full">

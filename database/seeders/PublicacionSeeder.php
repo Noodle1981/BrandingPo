@@ -23,10 +23,10 @@ class PublicacionSeeder extends Seeder
             return;
         }
 
-        $propio = $candidatos->get('Martín Rodríguez');
-        $rival = $candidatos->get('Carlos Morales');
-        $precandidata = $candidatos->get('Lucía Fernández');
-        $electo = $candidatos->get('Esteban Rossi');
+        $propio = $candidatos->get('Martín Rodríguez') ?? $candidatos->firstWhere('es_propio', true) ?? $candidatos->first();
+        $rival = $candidatos->get('Carlos Morales') ?? $candidatos->where('es_propio', false)->first();
+        $precandidata = $candidatos->get('Lucía Fernández') ?? $candidatos->where('es_propio', false)->skip(1)->first() ?? $rival;
+        $electo = $candidatos->get('Esteban Rossi') ?? $candidatos->where('es_propio', false)->skip(2)->first() ?? $rival;
 
         $now = Carbon::now();
 

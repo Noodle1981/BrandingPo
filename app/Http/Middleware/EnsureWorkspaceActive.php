@@ -32,8 +32,9 @@ class EnsureWorkspaceActive
                 // Si es admin y no tiene asignación directa, asignarle el primer workspace del sistema
                 $primerWorkspaceGlobal = Workspace::first();
                 if ($primerWorkspaceGlobal) {
+                    $roleToAssign = in_array($user->role, ['admin', 'consultor', 'visualizador']) ? $user->role : 'consultor';
                     $primerWorkspaceGlobal->usuarios()->syncWithoutDetaching([
-                        $user->id => ['role' => $user->role === 'admin' ? 'admin' : 'consultor'],
+                        $user->id => ['role' => $roleToAssign],
                     ]);
                     $user->update(['active_workspace_id' => $primerWorkspaceGlobal->id]);
                     $user->refresh();

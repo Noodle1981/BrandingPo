@@ -257,6 +257,7 @@ const formatCurrency = (amount) => {
         :key="post.id"
         :post="post"
         :can-write="canWrite"
+        :ejes="ejes"
       />
     </div>
   </WarRoomLayout>
