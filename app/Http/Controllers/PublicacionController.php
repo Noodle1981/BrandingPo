@@ -161,6 +161,8 @@ class PublicacionController extends Controller
         $candidatoId = $request->input('candidato_id');
         $plataforma = $request->input('plataforma');
         $tipoPauta = $request->input('tipo_pauta');
+        $ejeTematicoId = $request->input('eje_tematico_id');
+        $mes = $request->input('mes');
         $search = $request->input('search');
         $filtro = $request->input('filtro'); // 'propio' | 'oposicion'
 
@@ -184,6 +186,14 @@ class PublicacionController extends Controller
 
         if ($tipoPauta) {
             $query->where('tipo_pauta', $tipoPauta);
+        }
+
+        if ($ejeTematicoId) {
+            $query->where('eje_tematico_id', $ejeTematicoId);
+        }
+
+        if ($mes) {
+            $query->where('fecha_publicacion', 'like', "{$mes}%");
         }
 
         if ($search) {
@@ -219,19 +229,20 @@ class PublicacionController extends Controller
                 'monto_invertido_pauta' => (float)$p->monto_invertido_pauta,
                 'vistas_organicas' => $p->vistas_organicas,
                 'vistas_pagadas' => $p->vistas_pagadas,
-                'url_post' => $p->url_post,
-                'media_url' => $p->media_url,
-                'contenido_resumen' => $p->contenido_resumen,
                 'total_vistas' => $p->total_vistas,
                 'total_likes' => $p->total_likes,
                 'total_comentarios' => $p->total_comentarios,
                 'total_compartidos' => $p->total_compartidos,
                 'total_guardados' => $p->total_guardados,
                 'reacciones_detalladas' => $p->reacciones_detalladas,
-                'sentimiento_predominante' => $p->sentimiento_predominante,
-                'figuras_acompanantes' => $p->figuras_acompanantes,
-                'comentarios_destacados' => $p->comentarios_destacados,
+                'aprobacion_neta_pct' => $p->aprobacion_neta_pct,
                 'termometro_humor_social' => $p->termometro_humor_social,
+                'sentimiento_predominante' => $p->sentimiento_predominante,
+                'comentario_destacado' => $p->comentario_destacado,
+                'figura_acompanante' => $p->figura_acompanante,
+                'url_post' => $p->url_post,
+                'media_embed_url' => $p->media_embed_url,
+                'contenido_resumen' => $p->contenido_resumen,
             ];
         });
 
@@ -245,7 +256,7 @@ class PublicacionController extends Controller
             $candidatosQuery->where('es_propio', false);
         }
 
-        $candidatos = $candidatosQuery->get(['id', 'nombre_completo', 'estado_politico', 'es_propio', 'avatar_url']);
+        $candidatos = $candidatosQuery->with('perfilesSociales')->get();
 
         $ejes = EjeTematico::where('workspace_id', $workspace->id)
             ->orderBy('nombre')
@@ -260,6 +271,8 @@ class PublicacionController extends Controller
                 'candidato_id' => $candidatoId,
                 'plataforma' => $plataforma,
                 'tipo_pauta' => $tipoPauta,
+                'eje_tematico_id' => $ejeTematicoId,
+                'mes' => $mes,
                 'search' => $search,
             ],
             'stats_resumen' => [

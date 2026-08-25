@@ -1447,15 +1447,15 @@ const refrescarCanal = () => {
               </span>
             </button>
 
-            <button
+            <Link
               v-if="canWrite"
-              type="button"
-              @click="openCreatePostModal"
+              :href="`/feed?filtro=propio&plataforma=${currentRed.key}`"
               class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/20 transition-all hover:scale-102 cursor-pointer"
+              :title="`Abrir muro de publicaciones y cargar contenido en ${currentRed.nombre}`"
             >
-              <Plus class="w-4 h-4" />
-              <span>Cargar Publicación en {{ currentRed.nombre }}</span>
-            </button>
+              <Radio class="w-4 h-4" />
+              <span>Ver en Muro Social & Cargar Post</span>
+            </Link>
           </div>
         </div>
 
