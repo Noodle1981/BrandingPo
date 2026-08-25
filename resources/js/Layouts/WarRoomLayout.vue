@@ -255,24 +255,15 @@ const logout = () => {
                 {{ ws.nombre }}
               </option>
             </select>
-            <span v-else class="font-mono font-bold max-w-44 truncate">
+            <span v-else class="font-mono font-bold whitespace-nowrap">
               {{ workspace.nombre }}
             </span>
           </div>
         </div>
       </div>
 
-      <!-- Right: Live, Theme, Role, User -->
+      <!-- Right: Theme, Role, User -->
       <div class="flex items-center gap-2 sm:gap-3">
-        <!-- Live Pulse -->
-        <div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span class="font-mono">LIVE INTELLIGENCE</span>
-        </div>
-
         <ThemeToggle />
         <Badge variant="rol" :value="user.role || 'visualizador'" size="md" />
 
