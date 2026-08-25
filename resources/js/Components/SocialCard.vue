@@ -194,6 +194,18 @@ const currentReacciones = computed(() => {
   return parseReacciones(props.post.reacciones_detalladas, props.post.total_likes);
 });
 
+const approvalPct = computed(() => {
+  if (props.post.aprobacion_neta_pct !== undefined && props.post.aprobacion_neta_pct !== null) {
+    return Math.round(Number(props.post.aprobacion_neta_pct));
+  }
+  const r = currentReacciones.value;
+  const pos = (Number(r.me_gusta) || 0) + (Number(r.me_encanta) || 0) + (Number(r.me_importa) || 0);
+  const neg = (Number(r.me_entristece) || 0) + (Number(r.me_enoja) || 0);
+  const tot = pos + neg + (Number(r.me_divierte) || 0) + (Number(r.me_asombra) || 0);
+  if (tot === 0) return 100;
+  return Math.round(((pos - neg) / tot) * 100);
+});
+
 const totalInteracciones = computed(() => {
   return Number(props.post.total_likes || 0) +
     Number(props.post.total_comentarios || 0) +
@@ -382,15 +394,22 @@ const tiposPauta = [
         </div>
 
         <span
-          v-if="post.sentimiento_predominante"
-          class="text-[10px] font-bold px-2 py-0.5 rounded-md font-mono uppercase"
+          class="text-[11px] font-mono font-black px-2 py-0.5 rounded-lg border flex items-center gap-1 shadow-2xs"
           :class="{
-            'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400': post.sentimiento_predominante === 'positivo',
-            'bg-slate-500/15 text-slate-600 dark:text-slate-400': post.sentimiento_predominante === 'neutro',
-            'bg-rose-500/15 text-rose-600 dark:text-rose-400': post.sentimiento_predominante === 'negativo',
+            'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30': approvalPct >= 80,
+            'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30': approvalPct >= 50 && approvalPct < 80,
+            'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30': approvalPct >= 20 && approvalPct < 50,
+            'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30': approvalPct < 20,
           }"
+          :title="`Índice de Aprobación Neta: ${approvalPct}% (Reacciones favorables vs críticas)`"
         >
-          IA: {{ post.sentimiento_predominante }}
+          <span class="w-1.5 h-1.5 rounded-full" :class="{
+            'bg-emerald-500': approvalPct >= 80,
+            'bg-cyan-500': approvalPct >= 50 && approvalPct < 80,
+            'bg-amber-500': approvalPct >= 20 && approvalPct < 50,
+            'bg-rose-500': approvalPct < 20,
+          }"></span>
+          <span>{{ approvalPct }}%</span>
         </span>
       </div>
 

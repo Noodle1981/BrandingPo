@@ -196,6 +196,15 @@ class PublicacionController extends Controller
             $query->where('fecha_publicacion', 'like', "{$mes}%");
         }
 
+        $rangoAprobacion = $request->input('rango_aprobacion');
+        if ($rangoAprobacion === 'alta') {
+            $query->where('aprobacion_neta_pct', '>=', 80);
+        } elseif ($rangoAprobacion === 'media') {
+            $query->whereBetween('aprobacion_neta_pct', [50, 79]);
+        } elseif ($rangoAprobacion === 'baja') {
+            $query->where('aprobacion_neta_pct', '<', 50);
+        }
+
         if ($search) {
             $query->where('contenido_resumen', 'like', "%{$search}%");
         }
@@ -273,6 +282,7 @@ class PublicacionController extends Controller
                 'tipo_pauta' => $tipoPauta,
                 'eje_tematico_id' => $ejeTematicoId,
                 'mes' => $mes,
+                'rango_aprobacion' => $rangoAprobacion,
                 'search' => $search,
             ],
             'stats_resumen' => [

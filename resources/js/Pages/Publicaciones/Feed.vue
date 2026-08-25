@@ -59,6 +59,7 @@ const selectedPlataforma = ref(props.filtros.plataforma || '');
 const selectedTipoPauta = ref(props.filtros.tipo_pauta || '');
 const selectedEje = ref(props.filtros.eje_tematico_id || '');
 const selectedMes = ref(props.filtros.mes || '');
+const selectedRangoAprobacion = ref(props.filtros.rango_aprobacion || '');
 const searchQuery = ref(props.filtros.search || '');
 
 const plataformas = [
@@ -84,6 +85,7 @@ const applyFilters = () => {
     tipo_pauta: selectedTipoPauta.value || undefined,
     eje_tematico_id: selectedEje.value || undefined,
     mes: selectedMes.value || undefined,
+    rango_aprobacion: selectedRangoAprobacion.value || undefined,
     search: searchQuery.value || undefined,
   }, {
     preserveState: true,
@@ -107,6 +109,7 @@ const clearFilters = () => {
   selectedTipoPauta.value = '';
   selectedEje.value = '';
   selectedMes.value = '';
+  selectedRangoAprobacion.value = '';
   searchQuery.value = '';
   applyFilters();
 };
@@ -400,8 +403,8 @@ const formatCurrency = (amount) => {
           </button>
         </div>
 
-        <!-- Fila 2: Selectores de Eje, Tipo de Pauta, Mes y Buscador -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <!-- Fila 2: Selectores de Eje, Tipo de Pauta, Aprobación %, Mes y Buscador -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
           <!-- Buscador -->
           <div class="relative">
             <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -420,7 +423,7 @@ const formatCurrency = (amount) => {
             @change="applyFilters"
             class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
           >
-            <option value="">Todos los Ejes Temáticos</option>
+            <option value="">Todos los Ejes</option>
             <option v-for="eje in ejes" :key="eje.id" :value="eje.id">
               {{ eje.nombre }}
             </option>
@@ -432,10 +435,22 @@ const formatCurrency = (amount) => {
             @change="applyFilters"
             class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
           >
-            <option value="">Orgánico & Pauta (Todos)</option>
+            <option value="">Orgánico & Pauta</option>
             <option value="organico">Orgánico Puro</option>
             <option value="organico_impulsado">Orgánico Impulsado (Boost)</option>
             <option value="pauta_paga">Anuncio Directo / Pauta</option>
+          </select>
+
+          <!-- Selector de Aprobación Neta (%) -->
+          <select
+            v-model="selectedRangoAprobacion"
+            @change="applyFilters"
+            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
+          >
+            <option value="">Aprobación (%) — Todas</option>
+            <option value="alta">🟢 Alta (≥ 80%)</option>
+            <option value="media">🔵 Media (50% - 79%)</option>
+            <option value="baja">🔴 Baja / Alerta (&lt; 50%)</option>
           </select>
 
           <!-- Selector de Mes -->
