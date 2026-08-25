@@ -4,6 +4,7 @@ import { Head, Link, router, usePage, useForm } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import SocialCard from '../../Components/SocialCard.vue';
 import Badge from '../../Components/Badge.vue';
+import SocialPlatformIcon from '../../Components/SocialPlatformIcon.vue';
 import {
   Radio,
   Search,
@@ -376,13 +377,13 @@ const formatCurrency = (amount) => {
           </button>
         </div>
 
-        <!-- Fila 1: Píldoras de Red Social -->
+        <!-- Fila 1: Píldoras de Red Social con Logos Oficiales -->
         <div class="flex items-center gap-2 overflow-x-auto pb-1">
           <button
             type="button"
             @click="filterByPlatform('')"
-            class="px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer whitespace-nowrap"
-            :class="!selectedPlataforma ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs' : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800'"
+            class="px-3 py-2 rounded-2xl text-xs font-mono font-bold border transition-all cursor-pointer whitespace-nowrap"
+            :class="!selectedPlataforma ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs' : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-cyan-500/40'"
           >
             Todas las Redes
           </button>
@@ -391,11 +392,11 @@ const formatCurrency = (amount) => {
             :key="plat.key"
             type="button"
             @click="filterByPlatform(plat.key)"
-            class="px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
-            :class="selectedPlataforma === plat.key ? 'bg-cyan-500 text-slate-950 border-cyan-500 shadow-xs' : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-cyan-500/40'"
+            class="p-2 rounded-2xl border transition-all cursor-pointer flex items-center justify-center hover:scale-105 shadow-2xs"
+            :class="selectedPlataforma === plat.key ? 'bg-cyan-500/20 border-cyan-500 ring-2 ring-cyan-500/30' : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'"
+            :title="`Filtrar por ${plat.label}`"
           >
-            <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: plat.color }"></span>
-            <span>{{ plat.label }}</span>
+            <SocialPlatformIcon :platform="plat.key" size="sm" />
           </button>
         </div>
 
