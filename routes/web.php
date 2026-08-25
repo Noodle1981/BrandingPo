@@ -1,11 +1,20 @@
 <?php
 
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BriefingController;
+use App\Http\Controllers\CalendarioController;
+use App\Http\Controllers\CandidatoController;
+use App\Http\Controllers\CrisisController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MediosController;
+use App\Http\Controllers\PresupuestoController;
+use App\Http\Controllers\PublicacionController;
+use App\Http\Controllers\TerritorioController;
 use App\Http\Controllers\UserController;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 // --- Rutas Públicas / Autenticación ---
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -21,7 +30,7 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
         $tieneAcceso = $user->role === 'admin'
             || $user->workspaces()->where('workspaces.id', $workspace->id)->exists();
 
-        if (!$tieneAcceso) {
+        if (! $tieneAcceso) {
             abort(403, 'No tienes acceso a esta campaña / workspace.');
         }
 
@@ -30,92 +39,92 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
         return redirect()->back()->with('success', "Campaña cambiada a: {$workspace->nombre}");
     })->name('workspace.cambiar');
 
-    Route::get('/', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index']);
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 
     // Gestión del Perfil Propio (Cliente) y Oposición (Competencia)
-    Route::get('/mi-candidato', [\App\Http\Controllers\CandidatoController::class, 'miCandidato'])->name('mi-candidato');
-    Route::get('/candidatos', [\App\Http\Controllers\CandidatoController::class, 'index'])->name('candidatos.index');
+    Route::get('/mi-candidato', [CandidatoController::class, 'miCandidato'])->name('mi-candidato');
+    Route::get('/candidatos', [CandidatoController::class, 'index'])->name('candidatos.index');
     // IMPORTANTE: benchmarking debe ir ANTES de /candidatos/{candidato} para que Laravel no confunda "benchmarking" como ID
-    Route::get('/candidatos/benchmarking', [\App\Http\Controllers\CandidatoController::class, 'benchmarking'])->name('candidatos.benchmarking');
-    Route::get('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'show'])->name('candidatos.show');
-    Route::get('/perfiles-sociales/{perfilSocial}/metricas', [\App\Http\Controllers\CandidatoController::class, 'metricasCanal'])->name('perfiles-sociales.metricas');
+    Route::get('/candidatos/benchmarking', [CandidatoController::class, 'benchmarking'])->name('candidatos.benchmarking');
+    Route::get('/candidatos/{candidato}', [CandidatoController::class, 'show'])->name('candidatos.show');
+    Route::get('/perfiles-sociales/{perfilSocial}/metricas', [CandidatoController::class, 'metricasCanal'])->name('perfiles-sociales.metricas');
 
     Route::middleware(['can_write'])->group(function () {
-        Route::post('/candidatos', [\App\Http\Controllers\CandidatoController::class, 'store'])->name('candidatos.store');
-        Route::put('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'update'])->name('candidatos.update');
-        Route::delete('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'destroy'])->name('candidatos.destroy');
-        Route::post('/perfiles-sociales', [\App\Http\Controllers\CandidatoController::class, 'storePerfilSocial'])->name('perfiles-sociales.store');
-        Route::post('/perfiles-sociales/scrape', [\App\Http\Controllers\CandidatoController::class, 'scrapePerfilSocial'])->name('perfiles-sociales.scrape');
-        Route::post('/perfiles-sociales/{perfilSocial}/refrescar', [\App\Http\Controllers\CandidatoController::class, 'refrescarPerfilSocial'])->name('perfiles-sociales.refrescar');
-        Route::put('/perfiles-sociales/{perfilSocial}', [\App\Http\Controllers\CandidatoController::class, 'updatePerfilSocial'])->name('perfiles-sociales.update');
-        Route::delete('/perfiles-sociales/{perfilSocial}', [\App\Http\Controllers\CandidatoController::class, 'destroyPerfilSocial'])->name('perfiles-sociales.destroy');
+        Route::post('/candidatos', [CandidatoController::class, 'store'])->name('candidatos.store');
+        Route::put('/candidatos/{candidato}', [CandidatoController::class, 'update'])->name('candidatos.update');
+        Route::delete('/candidatos/{candidato}', [CandidatoController::class, 'destroy'])->name('candidatos.destroy');
+        Route::post('/perfiles-sociales', [CandidatoController::class, 'storePerfilSocial'])->name('perfiles-sociales.store');
+        Route::post('/perfiles-sociales/scrape', [CandidatoController::class, 'scrapePerfilSocial'])->name('perfiles-sociales.scrape');
+        Route::post('/perfiles-sociales/{perfilSocial}/refrescar', [CandidatoController::class, 'refrescarPerfilSocial'])->name('perfiles-sociales.refrescar');
+        Route::put('/perfiles-sociales/{perfilSocial}', [CandidatoController::class, 'updatePerfilSocial'])->name('perfiles-sociales.update');
+        Route::delete('/perfiles-sociales/{perfilSocial}', [CandidatoController::class, 'destroyPerfilSocial'])->name('perfiles-sociales.destroy');
     });
 
     // Inteligencia Demográfica & Mapa de Situación Territorial
-    Route::get('/territorios', [\App\Http\Controllers\TerritorioController::class, 'index'])->name('territorios.index');
-    Route::get('/territorios/impacto-electoral', [\App\Http\Controllers\TerritorioController::class, 'impactoElectoral'])->name('territorios.impacto-electoral');
-    Route::post('/territorios/auto-detect', [\App\Http\Controllers\TerritorioController::class, 'autoDetect'])->name('territorios.auto-detect');
+    Route::get('/territorios', [TerritorioController::class, 'index'])->name('territorios.index');
+    Route::get('/territorios/impacto-electoral', [TerritorioController::class, 'impactoElectoral'])->name('territorios.impacto-electoral');
+    Route::post('/territorios/auto-detect', [TerritorioController::class, 'autoDetect'])->name('territorios.auto-detect');
     Route::middleware(['can_write'])->group(function () {
-        Route::post('/territorios', [\App\Http\Controllers\TerritorioController::class, 'store'])->name('territorios.store');
-        Route::put('/territorios/{territorio}', [\App\Http\Controllers\TerritorioController::class, 'update'])->name('territorios.update');
+        Route::post('/territorios', [TerritorioController::class, 'store'])->name('territorios.store');
+        Route::put('/territorios/{territorio}', [TerritorioController::class, 'update'])->name('territorios.update');
     });
 
     // Feed Social Multired
-    Route::get('/feed', [\App\Http\Controllers\PublicacionController::class, 'feed'])->name('feed');
+    Route::get('/feed', [PublicacionController::class, 'feed'])->name('feed');
 
     Route::middleware(['can_write'])->group(function () {
-        Route::post('/publicaciones', [\App\Http\Controllers\PublicacionController::class, 'store'])->name('publicaciones.store');
-        Route::post('/publicaciones/scrape-post', [\App\Http\Controllers\PublicacionController::class, 'scrapePost'])->name('publicaciones.scrape-post');
-        Route::post('/publicaciones/{publicacion}/sincronizar', [\App\Http\Controllers\PublicacionController::class, 'sincronizarIndividual'])->name('publicaciones.sincronizar');
-        Route::post('/perfiles-sociales/{perfilSocial}/sincronizar-recientes', [\App\Http\Controllers\PublicacionController::class, 'sincronizarRecientes'])->name('perfiles-sociales.sincronizar-recientes');
-        Route::put('/publicaciones/{publicacion}', [\App\Http\Controllers\PublicacionController::class, 'update'])->name('publicaciones.update');
-        Route::delete('/publicaciones/{publicacion}', [\App\Http\Controllers\PublicacionController::class, 'destroy'])->name('publicaciones.destroy');
+        Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
+        Route::post('/publicaciones/scrape-post', [PublicacionController::class, 'scrapePost'])->name('publicaciones.scrape-post');
+        Route::post('/publicaciones/{publicacion}/sincronizar', [PublicacionController::class, 'sincronizarIndividual'])->name('publicaciones.sincronizar');
+        Route::post('/perfiles-sociales/{perfilSocial}/sincronizar-recientes', [PublicacionController::class, 'sincronizarRecientes'])->name('perfiles-sociales.sincronizar-recientes');
+        Route::put('/publicaciones/{publicacion}', [PublicacionController::class, 'update'])->name('publicaciones.update');
+        Route::delete('/publicaciones/{publicacion}', [PublicacionController::class, 'destroy'])->name('publicaciones.destroy');
     });
 
     // Observatorio de Medios & Clipping
-    Route::get('/medios', [\App\Http\Controllers\MediosController::class, 'index'])->name('medios.index');
+    Route::get('/medios', [MediosController::class, 'index'])->name('medios.index');
     Route::middleware(['can_write'])->group(function () {
-        Route::post('/medios/clipping', [\App\Http\Controllers\MediosController::class, 'storeNota'])->name('medios.clipping.store');
-        Route::delete('/medios/clipping/{nota}', [\App\Http\Controllers\MediosController::class, 'destroyNota'])->name('medios.clipping.destroy');
+        Route::post('/medios/clipping', [MediosController::class, 'storeNota'])->name('medios.clipping.store');
+        Route::delete('/medios/clipping/{nota}', [MediosController::class, 'destroyNota'])->name('medios.clipping.destroy');
     });
 
     // Centro de Situación de Crisis & Matriz de Alianzas
-    Route::get('/crisis', [\App\Http\Controllers\CrisisController::class, 'index'])->name('crisis.index');
+    Route::get('/crisis', [CrisisController::class, 'index'])->name('crisis.index');
     Route::middleware(['can_write'])->group(function () {
-        Route::post('/crisis', [\App\Http\Controllers\CrisisController::class, 'storeCrisis'])->name('crisis.store');
-        Route::put('/crisis/{crisis}', [\App\Http\Controllers\CrisisController::class, 'updateCrisis'])->name('crisis.update');
-        Route::post('/crisis/alianza', [\App\Http\Controllers\CrisisController::class, 'storeAlianza'])->name('crisis.alianza.store');
-        Route::delete('/crisis/alianza/{alianza}', [\App\Http\Controllers\CrisisController::class, 'destroyAlianza'])->name('crisis.alianza.destroy');
+        Route::post('/crisis', [CrisisController::class, 'storeCrisis'])->name('crisis.store');
+        Route::put('/crisis/{crisis}', [CrisisController::class, 'updateCrisis'])->name('crisis.update');
+        Route::post('/crisis/alianza', [CrisisController::class, 'storeAlianza'])->name('crisis.alianza.store');
+        Route::delete('/crisis/alianza/{alianza}', [CrisisController::class, 'destroyAlianza'])->name('crisis.alianza.destroy');
     });
 
     // War Room Analytics & Predictor de Pauta
-    Route::get('/analytics', [\App\Http\Controllers\AnalyticsController::class, 'index'])->name('analytics.index');
-    Route::get('/predictor', [\App\Http\Controllers\AnalyticsController::class, 'index'])->name('predictor.index');
-    Route::post('/analytics/predict', [\App\Http\Controllers\AnalyticsController::class, 'predictApi'])->name('analytics.predict');
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+    Route::get('/predictor', [AnalyticsController::class, 'index'])->name('predictor.index');
+    Route::post('/analytics/predict', [AnalyticsController::class, 'predictApi'])->name('analytics.predict');
 
     // Calendario & Agenda de Campaña
-    Route::get('/calendario', [\App\Http\Controllers\CalendarioController::class, 'index'])->name('calendario.index');
+    Route::get('/calendario', [CalendarioController::class, 'index'])->name('calendario.index');
     Route::middleware(['can_write'])->group(function () {
-        Route::post('/calendario', [\App\Http\Controllers\CalendarioController::class, 'store'])->name('calendario.store');
-        Route::delete('/calendario/{evento}', [\App\Http\Controllers\CalendarioController::class, 'destroy'])->name('calendario.destroy');
+        Route::post('/calendario', [CalendarioController::class, 'store'])->name('calendario.store');
+        Route::delete('/calendario/{evento}', [CalendarioController::class, 'destroy'])->name('calendario.destroy');
     });
 
     // Control Presupuestario & Finanzas de Campaña
-    Route::get('/presupuesto', [\App\Http\Controllers\PresupuestoController::class, 'index'])->name('presupuesto.index');
+    Route::get('/presupuesto', [PresupuestoController::class, 'index'])->name('presupuesto.index');
     Route::middleware(['can_write'])->group(function () {
-        Route::post('/presupuesto', [\App\Http\Controllers\PresupuestoController::class, 'store'])->name('presupuesto.store');
-        Route::delete('/presupuesto/{partida}', [\App\Http\Controllers\PresupuestoController::class, 'destroy'])->name('presupuesto.destroy');
+        Route::post('/presupuesto', [PresupuestoController::class, 'store'])->name('presupuesto.store');
+        Route::delete('/presupuesto/{partida}', [PresupuestoController::class, 'destroy'])->name('presupuesto.destroy');
     });
 
     // Briefings & Informes Ejecutivos
-    Route::get('/briefings', [\App\Http\Controllers\BriefingController::class, 'index'])->name('briefings.index');
-    Route::get('/briefing', [\App\Http\Controllers\BriefingController::class, 'index']);
-    Route::get('/briefings/{informe}', [\App\Http\Controllers\BriefingController::class, 'show'])->name('briefings.show');
-    Route::get('/briefing/{informe}', [\App\Http\Controllers\BriefingController::class, 'show']);
+    Route::get('/briefings', [BriefingController::class, 'index'])->name('briefings.index');
+    Route::get('/briefing', [BriefingController::class, 'index']);
+    Route::get('/briefings/{informe}', [BriefingController::class, 'show'])->name('briefings.show');
+    Route::get('/briefing/{informe}', [BriefingController::class, 'show']);
     Route::middleware(['can_write'])->group(function () {
-        Route::post('/briefings', [\App\Http\Controllers\BriefingController::class, 'store'])->name('briefings.store');
-        Route::post('/briefing', [\App\Http\Controllers\BriefingController::class, 'store']);
+        Route::post('/briefings', [BriefingController::class, 'store'])->name('briefings.store');
+        Route::post('/briefing', [BriefingController::class, 'store']);
     });
 
     // Gestión de Usuarios (Exclusivo Administrador)

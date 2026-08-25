@@ -2,18 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\AlianzaPolitica;
 use App\Models\Candidato;
 use App\Models\CicloCampana;
 use App\Models\EjeTematico;
-use App\Models\EventoCalendario;
-use App\Models\EventoCrisis;
-use App\Models\InformeEjecutivo;
 use App\Models\MedioPrensa;
-use App\Models\NotaPrensa;
 use App\Models\PerfilSocial;
-use App\Models\PresupuestoPartida;
-use App\Models\Publicacion;
 use App\Models\Territorio;
 use App\Models\User;
 use App\Models\Workspace;
@@ -37,7 +30,7 @@ class CleanCampanaBaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $demoService = new DemographicIntelligenceService();
+        $demoService = new DemographicIntelligenceService;
 
         // ─────────────────────────────────────────────────────────
         // 1. USUARIOS DEL SISTEMA
@@ -163,7 +156,6 @@ class CleanCampanaBaseSeeder extends Seeder
             ]
         );
 
-
         // ─────────────────────────────────────────────────────────
         // 5. EJES TEMÁTICOS
         // ─────────────────────────────────────────────────────────
@@ -262,7 +254,6 @@ class CleanCampanaBaseSeeder extends Seeder
             );
         }
 
-
         // ─────────────────────────────────────────────────────────
         // 7. CANDIDATO PROPIO (Base en Blanco — Listo para Punto Cero)
         // ─────────────────────────────────────────────────────────
@@ -283,7 +274,6 @@ class CleanCampanaBaseSeeder extends Seeder
                 'bio_resumen' => 'Espacio "Ahora Albardón", alternativa ciudadana para transformar el departamento con obras, producción y cercanía vecinal.',
             ]
         );
-
 
         // Inicializar canales de redes en blanco (inactivos)
         $plataformas = ['instagram', 'facebook', 'tiktok', 'x_twitter', 'youtube', 'linkedin'];

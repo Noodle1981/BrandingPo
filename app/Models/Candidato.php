@@ -70,6 +70,7 @@ class Candidato extends Model
         if ($estado) {
             return $query->where('estado_politico', $estado);
         }
+
         return $query;
     }
 
@@ -81,6 +82,7 @@ class Candidato extends Model
         if ($cicloId) {
             return $query->where('ciclo_campana_id', $cicloId);
         }
+
         return $query;
     }
 }

@@ -9,11 +9,10 @@ class AdsImpactPredictorService
     /**
      * Predecir el impacto de visualizaciones y engagement para una publicación con pauta.
      *
-     * @param float $montoInvertido Monto en ARS
-     * @param string $formato Tipo de formato (Reel, Video, Foto, Carrusel, Tweet, etc.)
-     * @param string|null $plataforma Red social (instagram, facebook, tiktok, etc.)
-     * @param int|null $candidatoId ID del candidato (opcional para afinamiento)
-     * @return array
+     * @param  float  $montoInvertido  Monto en ARS
+     * @param  string  $formato  Tipo de formato (Reel, Video, Foto, Carrusel, Tweet, etc.)
+     * @param  string|null  $plataforma  Red social (instagram, facebook, tiktok, etc.)
+     * @param  int|null  $candidatoId  ID del candidato (opcional para afinamiento)
      */
     public function predecirImpacto(
         float $montoInvertido,
@@ -71,18 +70,18 @@ class AdsImpactPredictorService
         $proximidadBase = 65;
         $incrementoMuestras = min(20, $cantidadMuestras * 3.5);
         $bonoFormatoEspecifico = ($formato === 'Reel' || $formato === 'Video') ? 5 : 2;
-        $porcentajeProximidad = (int)min(96, round($proximidadBase + $incrementoMuestras + $bonoFormatoEspecifico));
+        $porcentajeProximidad = (int) min(96, round($proximidadBase + $incrementoMuestras + $bonoFormatoEspecifico));
 
         // 5. Cálculo de Vistas Estimadas con rango de dispersión
-        $vistasEsperadas = (int)round($montoInvertido * $vistasPorPeso);
+        $vistasEsperadas = (int) round($montoInvertido * $vistasPorPeso);
         $margenDispersion = (100 - $porcentajeProximidad) / 100;
 
-        $vistasMinimas = (int)round($vistasEsperadas * (1 - $margenDispersion * 0.7));
-        $vistasMaximas = (int)round($vistasEsperadas * (1 + $margenDispersion * 0.9));
+        $vistasMinimas = (int) round($vistasEsperadas * (1 - $margenDispersion * 0.7));
+        $vistasMaximas = (int) round($vistasEsperadas * (1 + $margenDispersion * 0.9));
 
-        $likesEstimados = (int)round($vistasEsperadas * $tasaLikesPorVista);
-        $comentariosEstimados = (int)round($vistasEsperadas * $tasaComentariosPorVista);
-        $compartidosEstimados = (int)round($vistasEsperadas * $tasaCompartidosPorVista);
+        $likesEstimados = (int) round($vistasEsperadas * $tasaLikesPorVista);
+        $comentariosEstimados = (int) round($vistasEsperadas * $tasaComentariosPorVista);
+        $compartidosEstimados = (int) round($vistasEsperadas * $tasaCompartidosPorVista);
 
         $cpvEstimado = $vistasEsperadas > 0 ? round($montoInvertido / $vistasEsperadas, 3) : 0.75;
         $cpmEstimado = $cpvEstimado * 1000;
@@ -118,9 +117,9 @@ class AdsImpactPredictorService
         }
 
         if ($monto >= 100000) {
-            return "Para presupuestos superiores a $100.000, se aconseja segmentación geolocalizada por circuitos electorales clave para maximizar impacto barrial.";
+            return 'Para presupuestos superiores a $100.000, se aconseja segmentación geolocalizada por circuitos electorales clave para maximizar impacto barrial.';
         }
 
-        return "Con una inversión de $" . number_format($monto, 0, ',', '.') . ", el algoritmo proyecta excelente rendimiento en engagement orgánico residual derivado de la pauta.";
+        return 'Con una inversión de $'.number_format($monto, 0, ',', '.').', el algoritmo proyecta excelente rendimiento en engagement orgánico residual derivado de la pauta.';
     }
 }

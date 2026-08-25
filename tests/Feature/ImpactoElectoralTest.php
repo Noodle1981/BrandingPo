@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Candidato;
-use App\Models\Territorio;
 use App\Models\User;
 use Database\Seeders\PoliticaSeeder;
 use Database\Seeders\PublicacionSeeder;

@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Candidato;
 use App\Models\EjeTematico;
-use App\Models\PerfilSocial;
-use App\Models\Publicacion;
 use App\Models\User;
 use Database\Seeders\PoliticaSeeder;
 use Database\Seeders\PublicacionSeeder;
@@ -29,12 +27,11 @@ class MiCandidatoPublicacionesTest extends TestCase
 
         $response = $this->actingAs($consultor)->get('/mi-candidato');
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) =>
-            $page->component('Candidatos/MiPerfil')
-                ->has('candidato')
-                ->has('redes')
-                ->has('publicaciones')
-                ->has('ejes')
+        $response->assertInertia(fn ($page) => $page->component('Candidatos/MiPerfil')
+            ->has('candidato')
+            ->has('redes')
+            ->has('publicaciones')
+            ->has('ejes')
         );
     }
 

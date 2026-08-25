@@ -77,7 +77,7 @@ class CalendarioController extends Controller
                 ['key' => 'caravana', 'label' => 'Caravana / Recorrida'],
                 ['key' => 'rueda_prensa', 'label' => 'Rueda de Prensa'],
                 ['key' => 'reunion_privada', 'label' => 'Reunión Estratégica'],
-            ]
+            ],
         ]);
     }
 

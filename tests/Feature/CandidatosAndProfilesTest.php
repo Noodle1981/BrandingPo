@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Candidato;
 use App\Models\CicloCampana;
 use App\Models\User;
 use Database\Seeders\PoliticaSeeder;

@@ -41,6 +41,7 @@ class AuthController extends Controller
             $request->session()->regenerate();
 
             $user = Auth::user();
+
             return redirect()->intended(route('dashboard'))
                 ->with('success', "¡Bienvenido a la Sala de Situación, {$user->name}!");
         }

@@ -99,7 +99,7 @@ class MediosController extends Controller
                 'neutras' => $totalNeutras,
                 'criticas' => $totalCriticas,
                 'total' => $todasNotas->count(),
-            ]
+            ],
         ]);
     }
 
@@ -133,7 +133,7 @@ class MediosController extends Controller
             'url_nota' => $validated['url_nota'] ?? null,
             'tono_mencion' => $validated['tono_mencion'],
             'es_tapa_o_principal' => $request->boolean('es_tapa_o_principal'),
-            'interacciones_en_redes_del_medio' => (int)($validated['interacciones_en_redes_del_medio'] ?? 0),
+            'interacciones_en_redes_del_medio' => (int) ($validated['interacciones_en_redes_del_medio'] ?? 0),
             'respuesta_replica_candidato' => $validated['respuesta_replica_candidato'] ?? null,
         ]);
 

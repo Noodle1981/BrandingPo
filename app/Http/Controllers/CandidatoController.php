@@ -9,9 +9,10 @@ use App\Models\EjeTematico;
 use App\Models\PerfilSocial;
 use App\Models\Publicacion;
 use App\Models\Territorio;
+use App\Services\SocialProfileScraperService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -43,6 +44,7 @@ class CandidatoController extends Controller
             ->get()
             ->map(function ($c) {
                 $totalSeguidores = $c->perfilesSociales->sum('seguidores_actuales');
+
                 return [
                     'id' => $c->id,
                     'nombre_completo' => $c->nombre_completo,
@@ -112,38 +114,37 @@ class CandidatoController extends Controller
             ->orderBy('nombre_completo')
             ->get()
             ->map(fn ($c) => [
-                'id'        => $c->id,
-                'nombre'    => $c->nombre_completo,
-                'partido'   => $c->partido_coalicion,
-                'cargo'     => $c->cargo_aspirado,
+                'id' => $c->id,
+                'nombre' => $c->nombre_completo,
+                'partido' => $c->partido_coalicion,
+                'cargo' => $c->cargo_aspirado,
                 'es_propio' => $c->es_propio,
-                'color'     => $c->color_hex ?? ($c->es_propio ? '#06b6d4' : '#8b5cf6'),
-                'avatar'    => $c->avatar_url,
-                'territorio'=> $c->territorio?->nombre,
-                'redes'     => $c->perfilesSociales->map(fn ($p) => [
-                    'plataforma'            => $p->plataforma,
-                    'handle'                => $p->handle_usuario,
-                    'seguidores_actuales'   => $p->seguidores_actuales,
+                'color' => $c->color_hex ?? ($c->es_propio ? '#06b6d4' : '#8b5cf6'),
+                'avatar' => $c->avatar_url,
+                'territorio' => $c->territorio?->nombre,
+                'redes' => $c->perfilesSociales->map(fn ($p) => [
+                    'plataforma' => $p->plataforma,
+                    'handle' => $p->handle_usuario,
+                    'seguidores_actuales' => $p->seguidores_actuales,
                     'seguidores_punto_cero' => $p->seguidores_punto_cero ?? 0,
-                    'crecimiento_neto'      => $p->seguidores_actuales - ($p->seguidores_punto_cero ?? 0),
-                    'crecimiento_pct'       => ($p->seguidores_punto_cero ?? 0) > 0
+                    'crecimiento_neto' => $p->seguidores_actuales - ($p->seguidores_punto_cero ?? 0),
+                    'crecimiento_pct' => ($p->seguidores_punto_cero ?? 0) > 0
                         ? round((($p->seguidores_actuales - $p->seguidores_punto_cero) / $p->seguidores_punto_cero) * 100, 1)
                         : 0,
-                    'esta_activo'           => $p->esta_activo,
-                    'fecha_punto_cero'      => $p->fecha_punto_cero,
+                    'esta_activo' => $p->esta_activo,
+                    'fecha_punto_cero' => $p->fecha_punto_cero,
                 ]),
             ]);
 
         return Inertia::render('Candidatos/Benchmarking', [
             'candidatos' => $candidatos,
-            'workspace'  => [
-                'id'           => $workspace->id,
-                'nombre'       => $workspace->nombre,
-                'nivel_label'  => $workspace->nivel_politico_label,
+            'workspace' => [
+                'id' => $workspace->id,
+                'nombre' => $workspace->nombre,
+                'nivel_label' => $workspace->nivel_politico_label,
             ],
         ]);
     }
-
 
     /**
      * Vista de Gestión Exclusiva del Perfil Propio (Cliente / Campaña) del Workspace Activo.
@@ -163,7 +164,7 @@ class CandidatoController extends Controller
             ->with(['perfilesSociales', 'territorio', 'cicloCampana'])
             ->first();
 
-        if (!$candidato) {
+        if (! $candidato) {
             $cargoPorDefecto = match ($workspace->nivel_politico) {
                 'gobernador' => 'Candidato a Gobernador',
                 'legislador_nacional' => 'Candidato a Diputado Nacional',
@@ -174,7 +175,7 @@ class CandidatoController extends Controller
 
             $candidato = Candidato::create([
                 'workspace_id' => $workspace->id,
-                'nombre_completo' => 'Mi Candidato (' . $workspace->nombre . ')',
+                'nombre_completo' => 'Mi Candidato ('.$workspace->nombre.')',
                 'partido_coalicion' => 'Frente de Campaña',
                 'cargo_aspirado' => $cargoPorDefecto,
                 'estado_politico' => 'candidato',
@@ -201,24 +202,24 @@ class CandidatoController extends Controller
         $redesMapeadas = collect($plataformasEstandar)->map(function ($info, $key) use ($candidato) {
             $perfil = $candidato->perfilesSociales->firstWhere('plataforma', $key);
 
-            $estaActivo = $perfil ? (bool)$perfil->esta_activo : false;
-            $estaVerificado = $perfil ? (bool)$perfil->esta_verificado : false;
+            $estaActivo = $perfil ? (bool) $perfil->esta_activo : false;
+            $estaVerificado = $perfil ? (bool) $perfil->esta_verificado : false;
             $colorEstado = $estaVerificado ? 'azul' : ($estaActivo ? 'naranja' : 'rojo');
 
-            $seguidoresActuales = $perfil ? (int)$perfil->seguidores_actuales : 0;
-            $seguidoresBaseline = $perfil ? (int)$perfil->seguidores_punto_cero : 0;
+            $seguidoresActuales = $perfil ? (int) $perfil->seguidores_actuales : 0;
+            $seguidoresBaseline = $perfil ? (int) $perfil->seguidores_punto_cero : 0;
             $crecimientoSeguidores = $seguidoresActuales - $seguidoresBaseline;
 
-            $postsActuales = $perfil ? (int)$perfil->publicaciones_totales : 0;
-            $postsBaseline = $perfil ? (int)$perfil->publicaciones_punto_cero : 0;
+            $postsActuales = $perfil ? (int) $perfil->publicaciones_totales : 0;
+            $postsBaseline = $perfil ? (int) $perfil->publicaciones_punto_cero : 0;
             $crecimientoPosts = $postsActuales - $postsBaseline;
 
-            $meGustaActuales = $perfil ? (int)$perfil->me_gusta_totales : 0;
-            $meGustaBaseline = $perfil ? (int)$perfil->me_gusta_punto_cero : 0;
+            $meGustaActuales = $perfil ? (int) $perfil->me_gusta_totales : 0;
+            $meGustaBaseline = $perfil ? (int) $perfil->me_gusta_punto_cero : 0;
             $crecimientoMeGusta = $meGustaActuales - $meGustaBaseline;
 
-            $viewsActuales = $perfil ? (int)$perfil->visualizaciones_totales : 0;
-            $viewsBaseline = $perfil ? (int)$perfil->visualizaciones_punto_cero : 0;
+            $viewsActuales = $perfil ? (int) $perfil->visualizaciones_totales : 0;
+            $viewsBaseline = $perfil ? (int) $perfil->visualizaciones_punto_cero : 0;
             $crecimientoViews = $viewsActuales - $viewsBaseline;
 
             return [
@@ -226,21 +227,21 @@ class CandidatoController extends Controller
                 'nombre' => $info['nombre'],
                 'color_estado' => $colorEstado,
                 'perfil_id' => $perfil?->id,
-                'existe' => (bool)$perfil,
+                'existe' => (bool) $perfil,
                 'esta_activo' => $estaActivo,
                 'esta_verificado' => $estaVerificado,
                 'handle_usuario' => $perfil?->handle_usuario ?? '',
                 'url_perfil' => $perfil?->url_perfil ?? '',
                 'foto_perfil_url' => $perfil?->foto_perfil_url ?? $candidato->avatar_url,
                 'seguidores_actuales' => $seguidoresActuales,
-                'seguidos_actuales' => $perfil ? (int)$perfil->seguidos_actuales : 0,
+                'seguidos_actuales' => $perfil ? (int) $perfil->seguidos_actuales : 0,
                 'publicaciones_totales' => $postsActuales,
                 'me_gusta_totales' => $meGustaActuales,
                 'visualizaciones_totales' => $viewsActuales,
                 // Punto Cero (Baseline Inicial)
                 'fecha_punto_cero' => $perfil?->fecha_punto_cero ? $perfil->fecha_punto_cero->format('Y-m-d') : date('Y-m-d'),
                 'seguidores_punto_cero' => $seguidoresBaseline,
-                'seguidos_punto_cero' => $perfil ? (int)$perfil->seguidos_punto_cero : 0,
+                'seguidos_punto_cero' => $perfil ? (int) $perfil->seguidos_punto_cero : 0,
                 'publicaciones_punto_cero' => $postsBaseline,
                 'me_gusta_punto_cero' => $meGustaBaseline,
                 'visualizaciones_punto_cero' => $viewsBaseline,
@@ -251,11 +252,11 @@ class CandidatoController extends Controller
                 'crecimiento_neto_visualizaciones' => $crecimientoViews,
                 'ultima_auditoria_at' => $perfil?->ultima_auditoria_at ? $perfil->ultima_auditoria_at->diffForHumans() : null,
                 'ultima_auditoria_fecha' => $perfil?->ultima_auditoria_at ? $perfil->ultima_auditoria_at->format('d/m/Y H:i') : null,
-                'delta_seguidores_hoy' => (int)($perfil?->delta_seguidores_24h ?? 0),
-                'delta_seguidos_hoy' => (int)($perfil?->delta_seguidos_24h ?? 0),
-                'delta_posts_hoy' => (int)($perfil?->delta_posts_24h ?? 0),
-                'delta_me_gusta_hoy' => (int)($perfil?->delta_me_gusta_24h ?? 0),
-                'delta_views_hoy' => (int)($perfil?->delta_views_24h ?? 0),
+                'delta_seguidores_hoy' => (int) ($perfil?->delta_seguidores_24h ?? 0),
+                'delta_seguidos_hoy' => (int) ($perfil?->delta_seguidos_24h ?? 0),
+                'delta_posts_hoy' => (int) ($perfil?->delta_posts_24h ?? 0),
+                'delta_me_gusta_hoy' => (int) ($perfil?->delta_me_gusta_24h ?? 0),
+                'delta_views_hoy' => (int) ($perfil?->delta_views_24h ?? 0),
             ];
         })->values();
 
@@ -302,17 +303,17 @@ class CandidatoController extends Controller
                     'fecha_relativa' => $p->fecha_publicacion?->diffForHumans(),
                     'tipo_formato' => $p->tipo_formato,
                     'tipo_pauta' => $p->tipo_pauta,
-                    'monto_invertido_pauta' => (float)$p->monto_invertido_pauta,
-                    'vistas_organicas' => (int)$p->vistas_organicas,
-                    'vistas_pagadas' => (int)$p->vistas_pagadas,
+                    'monto_invertido_pauta' => (float) $p->monto_invertido_pauta,
+                    'vistas_organicas' => (int) $p->vistas_organicas,
+                    'vistas_pagadas' => (int) $p->vistas_pagadas,
                     'url_post' => $p->url_post,
                     'media_url' => $p->media_url,
                     'contenido_resumen' => $p->contenido_resumen,
-                    'total_vistas' => (int)$p->total_vistas,
-                    'total_likes' => (int)$p->total_likes,
-                    'total_comentarios' => (int)$p->total_comentarios,
-                    'total_compartidos' => (int)$p->total_compartidos,
-                    'total_guardados' => (int)$p->total_guardados,
+                    'total_vistas' => (int) $p->total_vistas,
+                    'total_likes' => (int) $p->total_likes,
+                    'total_comentarios' => (int) $p->total_comentarios,
+                    'total_compartidos' => (int) $p->total_compartidos,
+                    'total_guardados' => (int) $p->total_guardados,
                     'reacciones_detalladas' => $p->reacciones_detalladas,
                     'sentimiento_predominante' => $p->sentimiento_predominante,
                     'figuras_acompanantes' => $p->figuras_acompanantes,
@@ -387,22 +388,22 @@ class CandidatoController extends Controller
                 'foto_perfil_url' => $validated['foto_perfil_url'] ?? null,
                 'esta_activo' => $validated['esta_activo'],
                 'esta_verificado' => $validated['esta_verificado'],
-                'seguidores_actuales' => (int)($validated['seguidores_actuales'] ?? $validated['seguidores_punto_cero'] ?? 0),
-                'seguidos_actuales' => (int)($validated['seguidos_actuales'] ?? $validated['seguidos_punto_cero'] ?? 0),
-                'publicaciones_totales' => (int)($validated['publicaciones_totales'] ?? $validated['publicaciones_punto_cero'] ?? 0),
-                'me_gusta_totales' => (int)($validated['me_gusta_totales'] ?? $validated['me_gusta_punto_cero'] ?? 0),
-                'visualizaciones_totales' => (int)($validated['visualizaciones_totales'] ?? $validated['visualizaciones_punto_cero'] ?? 0),
+                'seguidores_actuales' => (int) ($validated['seguidores_actuales'] ?? $validated['seguidores_punto_cero'] ?? 0),
+                'seguidos_actuales' => (int) ($validated['seguidos_actuales'] ?? $validated['seguidos_punto_cero'] ?? 0),
+                'publicaciones_totales' => (int) ($validated['publicaciones_totales'] ?? $validated['publicaciones_punto_cero'] ?? 0),
+                'me_gusta_totales' => (int) ($validated['me_gusta_totales'] ?? $validated['me_gusta_punto_cero'] ?? 0),
+                'visualizaciones_totales' => (int) ($validated['visualizaciones_totales'] ?? $validated['visualizaciones_punto_cero'] ?? 0),
                 'fecha_punto_cero' => $validated['fecha_punto_cero'] ?? now(),
-                'seguidores_punto_cero' => (int)($validated['seguidores_punto_cero'] ?? $validated['seguidores_actuales'] ?? 0),
-                'seguidos_punto_cero' => (int)($validated['seguidos_punto_cero'] ?? $validated['seguidos_actuales'] ?? 0),
-                'publicaciones_punto_cero' => (int)($validated['publicaciones_punto_cero'] ?? $validated['publicaciones_totales'] ?? 0),
-                'me_gusta_punto_cero' => (int)($validated['me_gusta_punto_cero'] ?? $validated['me_gusta_totales'] ?? 0),
-                'visualizaciones_punto_cero' => (int)($validated['visualizaciones_punto_cero'] ?? $validated['visualizaciones_totales'] ?? 0),
+                'seguidores_punto_cero' => (int) ($validated['seguidores_punto_cero'] ?? $validated['seguidores_actuales'] ?? 0),
+                'seguidos_punto_cero' => (int) ($validated['seguidos_punto_cero'] ?? $validated['seguidos_actuales'] ?? 0),
+                'publicaciones_punto_cero' => (int) ($validated['publicaciones_punto_cero'] ?? $validated['publicaciones_totales'] ?? 0),
+                'me_gusta_punto_cero' => (int) ($validated['me_gusta_punto_cero'] ?? $validated['me_gusta_totales'] ?? 0),
+                'visualizaciones_punto_cero' => (int) ($validated['visualizaciones_punto_cero'] ?? $validated['visualizaciones_totales'] ?? 0),
                 'notas_punto_cero' => $validated['notas_punto_cero'] ?? null,
             ]
         );
 
-        if (!empty($validated['foto_perfil_url'])) {
+        if (! empty($validated['foto_perfil_url'])) {
             $candidato = Candidato::find($validated['candidato_id']);
             if ($candidato) {
                 $candidato->update(['avatar_url' => $validated['foto_perfil_url']]);
@@ -426,7 +427,7 @@ class CandidatoController extends Controller
     /**
      * Auto-extracción de datos desde el enlace público del perfil.
      */
-    public function scrapePerfilSocial(Request $request, \App\Services\SocialProfileScraperService $scraper): \Illuminate\Http\JsonResponse
+    public function scrapePerfilSocial(Request $request, SocialProfileScraperService $scraper): JsonResponse
     {
         $request->validate([
             'url' => ['required', 'url'],
@@ -441,15 +442,16 @@ class CandidatoController extends Controller
     /**
      * Re-auditar / Refrescar métricas en vivo para un perfil social específico.
      */
-    public function refrescarPerfilSocial(Request $request, PerfilSocial $perfilSocial, \App\Services\SocialProfileScraperService $scraper): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+    public function refrescarPerfilSocial(Request $request, PerfilSocial $perfilSocial, SocialProfileScraperService $scraper): JsonResponse|RedirectResponse
     {
         if (empty($perfilSocial->url_perfil)) {
-            if ($request->expectsJson() && !$request->header('X-Inertia')) {
+            if ($request->expectsJson() && ! $request->header('X-Inertia')) {
                 return response()->json([
                     'success' => false,
                     'mensaje' => 'El canal no tiene una URL configurada para auditar.',
                 ], 422);
             }
+
             return redirect()->back()->with('error', 'El canal no tiene una URL configurada para auditar.');
         }
 
@@ -459,10 +461,10 @@ class CandidatoController extends Controller
 
         $deltaSeguidores = $metrica->crecimiento_seguidores_dia;
         $signo = $deltaSeguidores > 0 ? '+' : '';
-        $deltaMsg = $deltaSeguidores != 0 ? " ({$signo}{$deltaSeguidores} seguidores hoy)" : "";
+        $deltaMsg = $deltaSeguidores != 0 ? " ({$signo}{$deltaSeguidores} seguidores hoy)" : '';
         $msg = "¡{$perfilSocial->plataforma} auditado con éxito!{$deltaMsg}";
 
-        if ($request->expectsJson() && !$request->header('X-Inertia')) {
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
                 'success' => true,
                 'mensaje' => $msg,
@@ -537,24 +539,24 @@ class CandidatoController extends Controller
         $redesMapeadas = collect($plataformasEstandar)->map(function ($info, $key) use ($candidato) {
             $perfil = $candidato->perfilesSociales->firstWhere('plataforma', $key);
 
-            $estaActivo = $perfil ? (bool)$perfil->esta_activo : false;
-            $estaVerificado = $perfil ? (bool)$perfil->esta_verificado : false;
+            $estaActivo = $perfil ? (bool) $perfil->esta_activo : false;
+            $estaVerificado = $perfil ? (bool) $perfil->esta_verificado : false;
             $colorEstado = $estaVerificado ? 'azul' : ($estaActivo ? 'naranja' : 'rojo');
 
-            $seguidoresActuales = $perfil ? (int)$perfil->seguidores_actuales : 0;
-            $seguidoresBaseline = $perfil ? (int)$perfil->seguidores_punto_cero : 0;
+            $seguidoresActuales = $perfil ? (int) $perfil->seguidores_actuales : 0;
+            $seguidoresBaseline = $perfil ? (int) $perfil->seguidores_punto_cero : 0;
             $crecimientoSeguidores = $seguidoresActuales - $seguidoresBaseline;
 
-            $postsActuales = $perfil ? (int)$perfil->publicaciones_totales : 0;
-            $postsBaseline = $perfil ? (int)$perfil->publicaciones_punto_cero : 0;
+            $postsActuales = $perfil ? (int) $perfil->publicaciones_totales : 0;
+            $postsBaseline = $perfil ? (int) $perfil->publicaciones_punto_cero : 0;
             $crecimientoPosts = $postsActuales - $postsBaseline;
 
-            $meGustaActuales = $perfil ? (int)$perfil->me_gusta_totales : 0;
-            $meGustaBaseline = $perfil ? (int)$perfil->me_gusta_punto_cero : 0;
+            $meGustaActuales = $perfil ? (int) $perfil->me_gusta_totales : 0;
+            $meGustaBaseline = $perfil ? (int) $perfil->me_gusta_punto_cero : 0;
             $crecimientoMeGusta = $meGustaActuales - $meGustaBaseline;
 
-            $viewsActuales = $perfil ? (int)$perfil->visualizaciones_totales : 0;
-            $viewsBaseline = $perfil ? (int)$perfil->visualizaciones_punto_cero : 0;
+            $viewsActuales = $perfil ? (int) $perfil->visualizaciones_totales : 0;
+            $viewsBaseline = $perfil ? (int) $perfil->visualizaciones_punto_cero : 0;
             $crecimientoViews = $viewsActuales - $viewsBaseline;
 
             return [
@@ -562,21 +564,21 @@ class CandidatoController extends Controller
                 'nombre' => $info['nombre'],
                 'color_estado' => $colorEstado,
                 'perfil_id' => $perfil?->id,
-                'existe' => (bool)$perfil,
+                'existe' => (bool) $perfil,
                 'esta_activo' => $estaActivo,
                 'esta_verificado' => $estaVerificado,
                 'handle_usuario' => $perfil?->handle_usuario ?? '',
                 'url_perfil' => $perfil?->url_perfil ?? '',
                 'foto_perfil_url' => $perfil?->foto_perfil_url ?? $candidato->avatar_url,
                 'seguidores_actuales' => $seguidoresActuales,
-                'seguidos_actuales' => $perfil ? (int)$perfil->seguidos_actuales : 0,
+                'seguidos_actuales' => $perfil ? (int) $perfil->seguidos_actuales : 0,
                 'publicaciones_totales' => $postsActuales,
                 'me_gusta_totales' => $meGustaActuales,
                 'visualizaciones_totales' => $viewsActuales,
                 // Punto Cero (Baseline Inicial)
                 'fecha_punto_cero' => $perfil?->fecha_punto_cero ? $perfil->fecha_punto_cero->format('Y-m-d') : date('Y-m-d'),
                 'seguidores_punto_cero' => $seguidoresBaseline,
-                'seguidos_punto_cero' => $perfil ? (int)$perfil->seguidos_punto_cero : 0,
+                'seguidos_punto_cero' => $perfil ? (int) $perfil->seguidos_punto_cero : 0,
                 'publicaciones_punto_cero' => $postsBaseline,
                 'me_gusta_punto_cero' => $meGustaBaseline,
                 'visualizaciones_punto_cero' => $viewsBaseline,
@@ -682,7 +684,7 @@ class CandidatoController extends Controller
         $territorioId = $validated['territorio_id'] ?? $candidato->territorio_id;
 
         // Si se envió un nombre de territorio nuevo o editado
-        if (!empty($validated['territorio_nombre'])) {
+        if (! empty($validated['territorio_nombre'])) {
             $territorio = Territorio::updateOrCreate(
                 ['id' => $territorioId ?: null, 'workspace_id' => $workspace->id],
                 [
@@ -751,25 +753,25 @@ class CandidatoController extends Controller
             ->get();
 
         // 3. Cálculos de Crecimiento & Punto Cero
-        $seguidoresActuales = (int)$perfilSocial->seguidores_actuales;
-        $seguidoresPuntoCero = (int)$perfilSocial->seguidores_punto_cero;
+        $seguidoresActuales = (int) $perfilSocial->seguidores_actuales;
+        $seguidoresPuntoCero = (int) $perfilSocial->seguidores_punto_cero;
         $crecimientoNetoSeguidores = $seguidoresActuales - $seguidoresPuntoCero;
         $crecimientoPctSeguidores = $seguidoresPuntoCero > 0
             ? round(($crecimientoNetoSeguidores / $seguidoresPuntoCero) * 100, 2)
             : 0;
 
-        $postsActuales = (int)$perfilSocial->publicaciones_totales;
-        $postsPuntoCero = (int)$perfilSocial->publicaciones_punto_cero;
+        $postsActuales = (int) $perfilSocial->publicaciones_totales;
+        $postsPuntoCero = (int) $perfilSocial->publicaciones_punto_cero;
         $crecimientoNetoPosts = max(0, $postsActuales - $postsPuntoCero);
 
         // 4. Métricas de Engagement & Interacciones
-        $totalLikes = (int)$publicaciones->sum('total_likes');
-        $totalComentarios = (int)$publicaciones->sum('total_comentarios');
-        $totalCompartidos = (int)$publicaciones->sum('total_compartidos');
-        $totalGuardados = (int)$publicaciones->sum('total_guardados');
+        $totalLikes = (int) $publicaciones->sum('total_likes');
+        $totalComentarios = (int) $publicaciones->sum('total_comentarios');
+        $totalCompartidos = (int) $publicaciones->sum('total_compartidos');
+        $totalGuardados = (int) $publicaciones->sum('total_guardados');
         $totalInteracciones = $totalLikes + $totalComentarios + $totalCompartidos + $totalGuardados;
-        $totalVistas = (int)$publicaciones->sum('total_vistas');
-        $totalPauta = (float)$publicaciones->sum('monto_invertido_pauta');
+        $totalVistas = (int) $publicaciones->sum('total_vistas');
+        $totalPauta = (float) $publicaciones->sum('monto_invertido_pauta');
 
         // Tasa de engagement promedio por post vs seguidores
         $tasaEngagement = ($seguidoresActuales > 0 && $publicaciones->count() > 0)
@@ -779,7 +781,8 @@ class CandidatoController extends Controller
         // Distribución por Ejes Temáticos
         $distribucionEjes = $ejes->map(function ($eje) use ($publicaciones) {
             $postsDelEje = $publicaciones->where('eje_tematico_id', $eje->id);
-            $totalInt = $postsDelEje->sum(fn($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
+            $totalInt = $postsDelEje->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
+
             return [
                 'id' => $eje->id,
                 'nombre' => $eje->nombre,
@@ -789,10 +792,10 @@ class CandidatoController extends Controller
                 'total_likes' => $postsDelEje->sum('total_likes'),
                 'total_comentarios' => $postsDelEje->sum('total_comentarios'),
             ];
-        })->filter(fn($e) => $e['total_posts'] > 0)->values();
+        })->filter(fn ($e) => $e['total_posts'] > 0)->values();
 
         // Top 5 Publicaciones más destacadas
-        $topPublicaciones = $publicaciones->sortByDesc(fn($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados)
+        $topPublicaciones = $publicaciones->sortByDesc(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados)
             ->take(5)
             ->values()
             ->map(function ($p) {
@@ -805,11 +808,11 @@ class CandidatoController extends Controller
                     'url_post' => $p->url_post,
                     'media_url' => $p->media_url,
                     'contenido_resumen' => $p->contenido_resumen,
-                    'total_likes' => (int)$p->total_likes,
-                    'total_comentarios' => (int)$p->total_comentarios,
-                    'total_compartidos' => (int)$p->total_compartidos,
-                    'total_guardados' => (int)$p->total_guardados,
-                    'total_interacciones' => (int)($p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados),
+                    'total_likes' => (int) $p->total_likes,
+                    'total_comentarios' => (int) $p->total_comentarios,
+                    'total_compartidos' => (int) $p->total_compartidos,
+                    'total_guardados' => (int) $p->total_guardados,
+                    'total_interacciones' => (int) ($p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados),
                     'sentimiento_predominante' => $p->sentimiento_predominante,
                     'termometro_humor_social' => $p->termometro_humor_social,
                     'eje_tematico' => $p->ejeTematico ? [
@@ -828,7 +831,7 @@ class CandidatoController extends Controller
                 'estado_politico' => $candidato->estado_politico,
                 'color_hex' => $candidato->color_hex,
                 'avatar_url' => $candidato->avatar_url,
-                'es_propio' => (bool)$candidato->es_propio,
+                'es_propio' => (bool) $candidato->es_propio,
             ],
             'perfilSocial' => [
                 'id' => $perfilSocial->id,
@@ -836,15 +839,15 @@ class CandidatoController extends Controller
                 'handle_usuario' => $perfilSocial->handle_usuario,
                 'url_perfil' => $perfilSocial->url_perfil,
                 'foto_perfil_url' => $perfilSocial->foto_perfil_url,
-                'esta_activo' => (bool)$perfilSocial->esta_activo,
-                'es_verificado' => (bool)$perfilSocial->es_verificado,
+                'esta_activo' => (bool) $perfilSocial->esta_activo,
+                'es_verificado' => (bool) $perfilSocial->es_verificado,
                 'semaforo_color' => $perfilSocial->semaforo_color,
                 'seguidores_actuales' => $seguidoresActuales,
                 'seguidores_punto_cero' => $seguidoresPuntoCero,
-                'seguidos_actuales' => (int)$perfilSocial->seguidos_actuales,
+                'seguidos_actuales' => (int) $perfilSocial->seguidos_actuales,
                 'publicaciones_totales' => $postsActuales,
                 'publicaciones_punto_cero' => $postsPuntoCero,
-                'me_gusta_totales' => (int)$perfilSocial->me_gusta_totales,
+                'me_gusta_totales' => (int) $perfilSocial->me_gusta_totales,
                 'fecha_punto_cero' => $perfilSocial->fecha_punto_cero?->format('d/m/Y'),
                 'fecha_ultima_medicion' => $perfilSocial->ultima_auditoria_at?->format('d/m/Y H:i'),
                 'fecha_ultima_medicion_relativa' => $perfilSocial->ultima_auditoria_at?->diffForHumans(),
@@ -874,12 +877,12 @@ class CandidatoController extends Controller
                     'id' => $m->id,
                     'fecha' => $m->fecha?->format('d/m/Y') ?? $m->created_at?->format('d/m/Y'),
                     'fecha_corta' => $m->fecha?->format('d/m') ?? $m->created_at?->format('d/m'),
-                    'seguidores' => (int)$m->seguidores,
-                    'seguidos' => (int)$m->seguidos,
-                    'publicaciones' => (int)$m->publicaciones_totales,
-                    'me_gusta_totales' => (int)$m->me_gusta_totales,
-                    'crecimiento_neto_seguidores' => (int)$m->crecimiento_seguidores_neto,
-                    'crecimiento_neto_publicaciones' => (int)$m->crecimiento_posts_neto,
+                    'seguidores' => (int) $m->seguidores,
+                    'seguidos' => (int) $m->seguidos,
+                    'publicaciones' => (int) $m->publicaciones_totales,
+                    'me_gusta_totales' => (int) $m->me_gusta_totales,
+                    'crecimiento_neto_seguidores' => (int) $m->crecimiento_seguidores_neto,
+                    'crecimiento_neto_publicaciones' => (int) $m->crecimiento_posts_neto,
                 ];
             }),
             'topPublicaciones' => $topPublicaciones,

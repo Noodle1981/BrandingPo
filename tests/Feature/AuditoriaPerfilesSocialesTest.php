@@ -3,8 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Candidato;
-use App\Models\PerfilSocial;
-use App\Models\PerfilSocialMetrica;
 use App\Models\User;
 use Database\Seeders\PoliticaSeeder;
 use Database\Seeders\PublicacionSeeder;

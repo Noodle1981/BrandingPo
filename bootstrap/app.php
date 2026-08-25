@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Middleware\CheckCanWrite;
+use App\Http\Middleware\CheckIsAdmin;
+use App\Http\Middleware\EnsureWorkspaceActive;
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,12 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
+            HandleInertiaRequests::class,
         ]);
         $middleware->alias([
-            'can_write' => \App\Http\Middleware\CheckCanWrite::class,
-            'is_admin' => \App\Http\Middleware\CheckIsAdmin::class,
-            'workspace_active' => \App\Http\Middleware\EnsureWorkspaceActive::class,
+            'can_write' => CheckCanWrite::class,
+            'is_admin' => CheckIsAdmin::class,
+            'workspace_active' => EnsureWorkspaceActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -74,7 +74,7 @@ class CrisisController extends Controller
         $totalCriticos = $eventos->where('nivel_gravedad', 'critico')->where('estado', '!=', 'resuelto')->count();
         $totalModerados = $eventos->where('nivel_gravedad', 'moderado')->where('estado', '!=', 'resuelto')->count();
         $totalResueltos = $eventos->where('estado', 'resuelto')->count();
-        $promedioRespuestaMin = (int)$eventos->avg('minutos_tiempo_respuesta');
+        $promedioRespuestaMin = (int) $eventos->avg('minutos_tiempo_respuesta');
 
         return Inertia::render('Crisis/Index', [
             'eventos' => $eventos,
@@ -116,7 +116,7 @@ class CrisisController extends Controller
             'titulo' => $validated['titulo'],
             'fecha_evento' => $validated['fecha_evento'],
             'nivel_gravedad' => $validated['nivel_gravedad'],
-            'minutos_tiempo_respuesta' => (int)($validated['minutos_tiempo_respuesta'] ?? 0),
+            'minutos_tiempo_respuesta' => (int) ($validated['minutos_tiempo_respuesta'] ?? 0),
             'estrategia_contencion' => $validated['estrategia_contencion'] ?? null,
             'estado' => $validated['estado'],
             'impacto_estimado' => $validated['impacto_estimado'] ?? 'Medio',

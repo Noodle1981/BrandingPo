@@ -18,12 +18,12 @@ class EnsureWorkspaceActive
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return $next($request);
         }
 
         // Si el usuario no tiene workspace activo, asignarle el primero al que tiene acceso
-        if (!$user->active_workspace_id) {
+        if (! $user->active_workspace_id) {
             $primerWorkspace = $user->workspaces()->first();
             if ($primerWorkspace) {
                 $user->update(['active_workspace_id' => $primerWorkspace->id]);
@@ -48,7 +48,7 @@ class EnsureWorkspaceActive
             : null;
 
         // Si no se encuentra (fue borrado), buscar otro
-        if (!$workspaceActivo) {
+        if (! $workspaceActivo) {
             $primerWorkspace = $user->workspaces()->first() ?? Workspace::first();
             if ($primerWorkspace) {
                 $user->update(['active_workspace_id' => $primerWorkspace->id]);

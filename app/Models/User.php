@@ -59,6 +59,7 @@ class User extends Authenticatable
                 return $pivot->role;
             }
         }
+
         return $this->role ?? 'visualizador';
     }
 

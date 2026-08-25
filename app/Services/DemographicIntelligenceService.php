@@ -18,6 +18,7 @@ class DemographicIntelligenceService
         // Quitar sufijos comunes: / San Juan, San Juan, etc.
         $term = preg_replace('/\s*[\/\-]\s*.*$/iu', '', $term);
         $term = preg_replace('/\s*(san juan|mendoza|cordoba|córdoba|buenos aires|santa fe)\s*$/iu', '', $term);
+
         return trim($term);
     }
 
@@ -61,7 +62,7 @@ class DemographicIntelligenceService
 
             if ($response->successful()) {
                 $data = $response->json();
-                if (!empty($data['departamentos']) && count($data['departamentos']) > 0) {
+                if (! empty($data['departamentos']) && count($data['departamentos']) > 0) {
                     $dep = $data['departamentos'][0];
                     $result['success'] = true;
                     $result['nombre'] = $dep['nombre'];
@@ -74,11 +75,11 @@ class DemographicIntelligenceService
             }
 
             // Si no encontró por departamento, probar por municipios de Georef
-            if (!$result['success']) {
+            if (! $result['success']) {
                 $respMuni = Http::timeout(4)->get('https://apis.datos.gob.ar/georef/api/municipios', $params);
                 if ($respMuni->successful()) {
                     $dataMuni = $respMuni->json();
-                    if (!empty($dataMuni['municipios']) && count($dataMuni['municipios']) > 0) {
+                    if (! empty($dataMuni['municipios']) && count($dataMuni['municipios']) > 0) {
                         $muni = $dataMuni['municipios'][0];
                         $result['success'] = true;
                         $result['nombre'] = $muni['nombre'];
@@ -91,7 +92,7 @@ class DemographicIntelligenceService
                 }
             }
         } catch (\Throwable $e) {
-            Log::warning("Error consultando Georef AR para '{$nombreLimpio}': " . $e->getMessage());
+            Log::warning("Error consultando Georef AR para '{$nombreLimpio}': ".$e->getMessage());
         }
 
         // 2. Enriquecer con base censal INDEC de San Juan y departamentos conocidos
@@ -102,32 +103,41 @@ class DemographicIntelligenceService
             $depKeyNormalizado = strtolower(str_replace(['á', 'é', 'í', 'ó', 'ú', 'ñ', ' '], ['a', 'e', 'i', 'o', 'u', 'n', ''], $depKey));
             if (str_contains($keyBusqueda, $depKeyNormalizado) || str_contains($depKeyNormalizado, $keyBusqueda)) {
                 $result['success'] = true;
-                if (!$result['nombre'] || $result['nombre'] === $nombreOriginal) {
+                if (! $result['nombre'] || $result['nombre'] === $nombreOriginal) {
                     $result['nombre'] = $data['nombre'];
                 }
-                if (!$result['codigo_indec']) $result['codigo_indec'] = $data['codigo_indec'];
-                if (!$result['latitud']) $result['latitud'] = $data['latitud'];
-                if (!$result['longitud']) $result['longitud'] = $data['longitud'];
+                if (! $result['codigo_indec']) {
+                    $result['codigo_indec'] = $data['codigo_indec'];
+                }
+                if (! $result['latitud']) {
+                    $result['latitud'] = $data['latitud'];
+                }
+                if (! $result['longitud']) {
+                    $result['longitud'] = $data['longitud'];
+                }
                 $result['poblacion_total'] = $data['poblacion_total'];
                 $result['padron_electoral'] = $data['padron_electoral'];
                 $result['poblacion_urbana_pct'] = $data['poblacion_urbana_pct'];
                 $result['poblacion_rural_pct'] = $data['poblacion_rural_pct'];
                 $result['hogares_nbi_pct'] = $data['hogares_nbi_pct'];
                 $result['mensaje'] = "¡Departamento {$data['nombre']} ({$provincia}) detectado con datos censales INDEC!";
+
                 return $result;
             }
         }
 
         // Si fue detectado por Georef pero no está en la tabla de San Juan (otra provincia)
         if ($result['success']) {
-            if (!$result['poblacion_total']) {
+            if (! $result['poblacion_total']) {
                 $result['poblacion_total'] = 45000;
                 $result['padron_electoral'] = 35000;
             }
+
             return $result;
         }
 
         $result['mensaje'] = "No se encontró '{$nombreLimpio}' en {$provincia}. Verifica la ortografía o ingresa los datos manualmente.";
+
         return $result;
     }
 
@@ -170,7 +180,7 @@ class DemographicIntelligenceService
     public function generarPiramideEtaria(int $poblacionTotal, int $padronElectoral): array
     {
         if ($padronElectoral <= 0) {
-            $padronElectoral = (int)round($poblacionTotal * 0.78); // Estimación del 78% de población con edad de votar
+            $padronElectoral = (int) round($poblacionTotal * 0.78); // Estimación del 78% de población con edad de votar
         }
 
         $grupos = [
@@ -179,7 +189,7 @@ class DemographicIntelligenceService
                 'rango' => '16 a 17 años',
                 'categoria' => 'Voto Joven (Optativo)',
                 'porcentaje' => 4.2,
-                'electores' => (int)round($padronElectoral * 0.042),
+                'electores' => (int) round($padronElectoral * 0.042),
                 'red_principal' => 'TikTok & Reels',
                 'temas_clave' => ['Primer Voto', 'Becas & Educación', 'Deportes', 'Cultura Urbana'],
                 'color_hex' => '#06b6d4',
@@ -189,7 +199,7 @@ class DemographicIntelligenceService
                 'rango' => '18 a 29 años',
                 'categoria' => 'Juventud & Empleo',
                 'porcentaje' => 24.8,
-                'electores' => (int)round($padronElectoral * 0.248),
+                'electores' => (int) round($padronElectoral * 0.248),
                 'red_principal' => 'Instagram & TikTok',
                 'temas_clave' => ['Primer Empleo', 'Vivienda Joven', 'Innovación', 'Emprendedurismo'],
                 'color_hex' => '#3b82f6',
@@ -199,7 +209,7 @@ class DemographicIntelligenceService
                 'rango' => '30 a 49 años',
                 'categoria' => 'Adultos & Familias',
                 'porcentaje' => 32.5,
-                'electores' => (int)round($padronElectoral * 0.325),
+                'electores' => (int) round($padronElectoral * 0.325),
                 'red_principal' => 'Facebook & Instagram',
                 'temas_clave' => ['Seguridad Barrial', 'Salud & Dispensarios', 'Educación Escolar', 'Obras de Pavimento'],
                 'color_hex' => '#10b981',
@@ -209,7 +219,7 @@ class DemographicIntelligenceService
                 'rango' => '50 a 69 años',
                 'categoria' => 'Adultos Mayores (Decisores)',
                 'porcentaje' => 25.5,
-                'electores' => (int)round($padronElectoral * 0.255),
+                'electores' => (int) round($padronElectoral * 0.255),
                 'red_principal' => 'Facebook & Radio / Prensa',
                 'temas_clave' => ['Servicios Públicos', 'Tranquilidad Vecinal', 'Gestión Transparente', 'Salud Mayor'],
                 'color_hex' => '#f59e0b',
@@ -219,7 +229,7 @@ class DemographicIntelligenceService
                 'rango' => '70 años o más',
                 'categoria' => 'Tercera Edad (Optativo)',
                 'porcentaje' => 13.0,
-                'electores' => (int)round($padronElectoral * 0.130),
+                'electores' => (int) round($padronElectoral * 0.130),
                 'red_principal' => 'Medios Tradicionales & Boca a Boca',
                 'temas_clave' => ['Asistencia Social', 'Centros de Jubilados', 'Medicamentos', 'Atención Médica'],
                 'color_hex' => '#8b5cf6',
@@ -230,9 +240,9 @@ class DemographicIntelligenceService
             'padron_total' => $padronElectoral,
             'poblacion_total' => $poblacionTotal,
             'grupos_etarios' => $grupos,
-            'resumen_voto_joven' => (int)round($padronElectoral * 0.29),
-            'resumen_voto_adulto' => (int)round($padronElectoral * 0.58),
-            'resumen_voto_senior' => (int)round($padronElectoral * 0.13),
+            'resumen_voto_joven' => (int) round($padronElectoral * 0.29),
+            'resumen_voto_adulto' => (int) round($padronElectoral * 0.58),
+            'resumen_voto_senior' => (int) round($padronElectoral * 0.13),
         ];
     }
 

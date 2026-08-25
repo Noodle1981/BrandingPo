@@ -179,7 +179,9 @@ class MediosAndCrisisSeeder extends Seeder
 
         foreach ($notas as $n) {
             $medioObj = $mediosMap[$n['medio']] ?? null;
-            if (! $medioObj) continue;
+            if (! $medioObj) {
+                continue;
+            }
 
             NotaPrensa::create([
                 'medio_prensa_id' => $medioObj->id,
@@ -191,7 +193,7 @@ class MediosAndCrisisSeeder extends Seeder
                 'es_tapa_o_principal' => $n['tapa'],
                 'interacciones_en_redes_del_medio' => $n['interacciones'],
                 'respuesta_replica_candidato' => $n['replica'],
-                'url_nota' => "{$medioObj->url_sitio}/noticia-demo-" . rand(100, 999),
+                'url_nota' => "{$medioObj->url_sitio}/noticia-demo-".rand(100, 999),
             ]);
         }
 

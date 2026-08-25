@@ -27,7 +27,7 @@ class PoliticaSeeder extends Seeder
      */
     public function run(): void
     {
-        $demoService = new DemographicIntelligenceService();
+        $demoService = new DemographicIntelligenceService;
 
         // ─────────────────────────────────────────────────────────
         // 0. WORKSPACE PRINCIPAL — Campaña Sisterna (Albardón 2025)
@@ -49,7 +49,7 @@ class PoliticaSeeder extends Seeder
             $workspace->usuarios()->syncWithoutDetaching([
                 $user->id => ['role' => $roleToAssign],
             ]);
-            if (!$user->active_workspace_id) {
+            if (! $user->active_workspace_id) {
                 $user->update(['active_workspace_id' => $workspace->id]);
             }
         });
@@ -378,7 +378,7 @@ class PoliticaSeeder extends Seeder
                 PerfilSocial::updateOrCreate(
                     ['candidato_id' => $cand->id, 'plataforma' => 'instagram'],
                     [
-                        'handle_usuario' => '@' . strtolower(str_replace(' ', '', $aliado['nombre'])),
+                        'handle_usuario' => '@'.strtolower(str_replace(' ', '', $aliado['nombre'])),
                         'esta_activo' => true,
                         'seguidores_actuales' => $aliado['seguidores'],
                         'publicaciones_totales' => 110,

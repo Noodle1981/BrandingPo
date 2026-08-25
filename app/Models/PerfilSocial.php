@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PerfilSocial extends Model
 {
@@ -73,7 +75,7 @@ class PerfilSocial extends Model
     /**
      * Historial de auditorías y mediciones time-series.
      */
-    public function metricas(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function metricas(): HasMany
     {
         return $this->hasMany(PerfilSocialMetrica::class)->orderByDesc('fecha');
     }
@@ -81,7 +83,7 @@ class PerfilSocial extends Model
     /**
      * Historial de auditorías y mediciones time-series orden cronológico ascendente.
      */
-    public function metricasHistoricas(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function metricasHistoricas(): HasMany
     {
         return $this->hasMany(PerfilSocialMetrica::class)->orderBy('fecha', 'asc');
     }
@@ -89,7 +91,7 @@ class PerfilSocial extends Model
     /**
      * Última medición registrada.
      */
-    public function ultimaMetrica(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function ultimaMetrica(): HasOne
     {
         return $this->hasOne(PerfilSocialMetrica::class)->latestOfMany('fecha');
     }
@@ -101,27 +103,27 @@ class PerfilSocial extends Model
     {
         $hoy = now()->toDateString();
 
-        $seguidores = isset($data['seguidores']) && $data['seguidores'] !== null ? (int)$data['seguidores'] : (int)$this->seguidores_actuales;
-        $seguidos = isset($data['seguidos']) && $data['seguidos'] !== null ? (int)$data['seguidos'] : (int)$this->seguidos_actuales;
-        $publicaciones = isset($data['publicaciones']) && $data['publicaciones'] !== null ? (int)$data['publicaciones'] : (int)$this->publicaciones_totales;
-        $meGusta = isset($data['me_gusta_totales']) && $data['me_gusta_totales'] !== null ? (int)$data['me_gusta_totales'] : (int)$this->me_gusta_totales;
-        $vistas = isset($data['visualizaciones_totales']) && $data['visualizaciones_totales'] !== null ? (int)$data['visualizaciones_totales'] : (int)$this->visualizaciones_totales;
+        $seguidores = isset($data['seguidores']) && $data['seguidores'] !== null ? (int) $data['seguidores'] : (int) $this->seguidores_actuales;
+        $seguidos = isset($data['seguidos']) && $data['seguidos'] !== null ? (int) $data['seguidos'] : (int) $this->seguidos_actuales;
+        $publicaciones = isset($data['publicaciones']) && $data['publicaciones'] !== null ? (int) $data['publicaciones'] : (int) $this->publicaciones_totales;
+        $meGusta = isset($data['me_gusta_totales']) && $data['me_gusta_totales'] !== null ? (int) $data['me_gusta_totales'] : (int) $this->me_gusta_totales;
+        $vistas = isset($data['visualizaciones_totales']) && $data['visualizaciones_totales'] !== null ? (int) $data['visualizaciones_totales'] : (int) $this->visualizaciones_totales;
 
         // Buscar última medición previa a hoy
         $medicionAnterior = $this->metricas()
             ->where('fecha', '<', $hoy)
             ->first();
 
-        $baseSeguidores = $medicionAnterior ? $medicionAnterior->seguidores : (int)($this->seguidores_actuales ?: $this->seguidores_punto_cero);
-        $baseSeguidos = $medicionAnterior ? $medicionAnterior->seguidos : (int)($this->seguidos_actuales ?: $this->seguidos_punto_cero);
-        $basePosts = $medicionAnterior ? $medicionAnterior->publicaciones_totales : (int)($this->publicaciones_totales ?: $this->publicaciones_punto_cero);
+        $baseSeguidores = $medicionAnterior ? $medicionAnterior->seguidores : (int) ($this->seguidores_actuales ?: $this->seguidores_punto_cero);
+        $baseSeguidos = $medicionAnterior ? $medicionAnterior->seguidos : (int) ($this->seguidos_actuales ?: $this->seguidos_punto_cero);
+        $basePosts = $medicionAnterior ? $medicionAnterior->publicaciones_totales : (int) ($this->publicaciones_totales ?: $this->publicaciones_punto_cero);
 
         $deltaSeguidoresDia = $seguidores - $baseSeguidores;
         $deltaSeguidosDia = $seguidos - $baseSeguidos;
         $deltaPostsDia = $publicaciones - $basePosts;
 
-        $deltaSeguidoresNeto = $seguidores - (int)$this->seguidores_punto_cero;
-        $deltaPostsNeto = $publicaciones - (int)$this->publicaciones_punto_cero;
+        $deltaSeguidoresNeto = $seguidores - (int) $this->seguidores_punto_cero;
+        $deltaPostsNeto = $publicaciones - (int) $this->publicaciones_punto_cero;
 
         // Crear o actualizar la medición de hoy
         $metrica = PerfilSocialMetrica::updateOrCreate(
@@ -156,11 +158,11 @@ class PerfilSocial extends Model
             'delta_seguidores_24h' => $deltaSeguidoresDia,
             'delta_seguidos_24h' => $deltaSeguidosDia,
             'delta_posts_24h' => $deltaPostsDia,
-            'delta_me_gusta_24h' => $meGusta - (int)($this->me_gusta_totales ?: $this->me_gusta_punto_cero),
-            'delta_views_24h' => $vistas - (int)($this->visualizaciones_totales ?: $this->visualizaciones_punto_cero),
+            'delta_me_gusta_24h' => $meGusta - (int) ($this->me_gusta_totales ?: $this->me_gusta_punto_cero),
+            'delta_views_24h' => $vistas - (int) ($this->visualizaciones_totales ?: $this->visualizaciones_punto_cero),
         ];
 
-        if (!empty($data['foto_perfil_url'])) {
+        if (! empty($data['foto_perfil_url'])) {
             $updateFields['foto_perfil_url'] = $data['foto_perfil_url'];
         }
 

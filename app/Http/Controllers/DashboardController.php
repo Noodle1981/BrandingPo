@@ -29,7 +29,7 @@ class DashboardController extends Controller
             : (clone $candidatoQuery)->where('es_propio', true)->first();
 
         // Fallback si no hay candidato propio marcado en el workspace
-        if (!$candidato) {
+        if (! $candidato) {
             $candidato = (clone $candidatoQuery)->first();
         }
 
@@ -38,7 +38,7 @@ class DashboardController extends Controller
             ->select('id', 'nombre_completo', 'partido_coalicion', 'cargo_aspirado', 'estado_politico', 'color_hex', 'es_propio', 'avatar_url')
             ->get();
 
-        if (!$candidato) {
+        if (! $candidato) {
             return Inertia::render('Dashboard', [
                 'candidato' => null,
                 'candidatos_lista' => [],
@@ -83,6 +83,7 @@ class DashboardController extends Controller
         // Desglose por Red Social del Candidato
         $redesDesglose = $candidato->perfilesSociales->map(function ($perfil) use ($publicaciones) {
             $postsRed = $publicaciones->where('perfil_social_id', $perfil->id);
+
             return [
                 'id' => $perfil->id,
                 'plataforma' => $perfil->plataforma,
@@ -182,11 +183,11 @@ class DashboardController extends Controller
                 'total_vistas' => number_format($totalVistas),
                 'total_vistas_raw' => $totalVistas,
                 'total_publicaciones' => $totalPosts,
-                'engagement_promedio' => $engagementRate . '%',
+                'engagement_promedio' => $engagementRate.'%',
                 'inversion_pauta_total' => $totalPauta,
                 'humor_social_promedio' => $humorPromedioFormateado,
-                'ratio_penetracion' => $ratioPenetracion . '%',
-                'share_of_voice' => $shareOfVoicePropio . '%',
+                'ratio_penetracion' => $ratioPenetracion.'%',
+                'share_of_voice' => $shareOfVoicePropio.'%',
             ],
             'redes_desglose' => $redesDesglose,
             'ultimas_publicaciones' => $ultimasPublicaciones,

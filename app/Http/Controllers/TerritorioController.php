@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
-use App\Models\EjeTematico;
 use App\Models\Publicacion;
 use App\Models\Territorio;
 use App\Services\DemographicIntelligenceService;
@@ -39,7 +38,7 @@ class TerritorioController extends Controller
             ->first();
 
         // Si no hay provincia creada en el workspace pero hay alguna en la BD o fallback
-        if (!$provincia) {
+        if (! $provincia) {
             $provincia = Territorio::where('tipo', 'provincia')->first();
         }
 
@@ -68,7 +67,7 @@ class TerritorioController extends Controller
             ->first();
 
         // Determinar territorio activo según el nivel político
-        if ($esGobernador && !$territorioId) {
+        if ($esGobernador && ! $territorioId) {
             $territorioActivo = $provincia ?: $departamentos->first();
         } elseif ($territorioId) {
             $territorioActivo = $departamentos->firstWhere('id', $territorioId) ?: ($provincia ?: $departamentos->first());
@@ -87,7 +86,7 @@ class TerritorioController extends Controller
             );
             $estrategia = $this->demographicService->recomendarEstrategiaDigital(
                 $piramide,
-                (float)($territorioActivo->poblacion_urbana_pct ?: 70)
+                (float) ($territorioActivo->poblacion_urbana_pct ?: 70)
             );
         }
 
@@ -114,11 +113,11 @@ class TerritorioController extends Controller
                     'codigo_indec' => $d->codigo_indec,
                     'latitud' => $d->latitud,
                     'longitud' => $d->longitud,
-                    'poblacion_total' => (int)$d->poblacion_total,
-                    'padron_electoral' => (int)$d->padron_electoral,
-                    'poblacion_urbana_pct' => (float)$d->poblacion_urbana_pct,
-                    'poblacion_rural_pct' => (float)$d->poblacion_rural_pct,
-                    'hogares_nbi_pct' => (float)$d->hogares_nbi_pct,
+                    'poblacion_total' => (int) $d->poblacion_total,
+                    'padron_electoral' => (int) $d->padron_electoral,
+                    'poblacion_urbana_pct' => (float) $d->poblacion_urbana_pct,
+                    'poblacion_rural_pct' => (float) $d->poblacion_rural_pct,
+                    'hogares_nbi_pct' => (float) $d->hogares_nbi_pct,
                     'candidato_propio' => $candidato ? [
                         'id' => $candidato->id,
                         'nombre_completo' => $candidato->nombre_completo,
@@ -137,11 +136,11 @@ class TerritorioController extends Controller
                 'codigo_indec' => $territorioActivo->codigo_indec,
                 'latitud' => $territorioActivo->latitud,
                 'longitud' => $territorioActivo->longitud,
-                'poblacion_total' => (int)$territorioActivo->poblacion_total,
-                'padron_electoral' => (int)$territorioActivo->padron_electoral,
-                'poblacion_urbana_pct' => (float)$territorioActivo->poblacion_urbana_pct,
-                'poblacion_rural_pct' => (float)$territorioActivo->poblacion_rural_pct,
-                'hogares_nbi_pct' => (float)$territorioActivo->hogares_nbi_pct,
+                'poblacion_total' => (int) $territorioActivo->poblacion_total,
+                'padron_electoral' => (int) $territorioActivo->padron_electoral,
+                'poblacion_urbana_pct' => (float) $territorioActivo->poblacion_urbana_pct,
+                'poblacion_rural_pct' => (float) $territorioActivo->poblacion_rural_pct,
+                'hogares_nbi_pct' => (float) $territorioActivo->hogares_nbi_pct,
                 'piramide' => $piramide,
                 'estrategia' => $estrategia,
                 'candidato_propio' => $territorioActivo->candidatoPropio ? [
@@ -156,7 +155,7 @@ class TerritorioController extends Controller
                 'padron_total_provincial' => $padronProvincialTotal,
                 'poblacion_total_provincial' => $poblacionProvincialTotal,
                 'total_departamentos' => $departamentos->count(),
-                'departamentos_con_candidato' => $departamentos->filter(fn($d) => $d->candidatoPropio !== null)->count(),
+                'departamentos_con_candidato' => $departamentos->filter(fn ($d) => $d->candidatoPropio !== null)->count(),
             ],
         ]);
     }
@@ -176,14 +175,14 @@ class TerritorioController extends Controller
             $request->input('provincia', 'San Juan')
         );
 
-        if (!empty($data['poblacion_total']) && !empty($data['padron_electoral'])) {
+        if (! empty($data['poblacion_total']) && ! empty($data['padron_electoral'])) {
             $data['piramide'] = $this->demographicService->generarPiramideEtaria(
-                (int)$data['poblacion_total'],
-                (int)$data['padron_electoral']
+                (int) $data['poblacion_total'],
+                (int) $data['padron_electoral']
             );
             $data['estrategia'] = $this->demographicService->recomendarEstrategiaDigital(
                 $data['piramide'],
-                (float)($data['poblacion_urbana_pct'] ?? 70)
+                (float) ($data['poblacion_urbana_pct'] ?? 70)
             );
         }
 
@@ -211,8 +210,8 @@ class TerritorioController extends Controller
             'longitud' => ['nullable', 'numeric'],
         ]);
 
-        $poblacion = (int)($validated['poblacion_total'] ?? 0);
-        $padron = (int)($validated['padron_electoral'] ?? 0);
+        $poblacion = (int) ($validated['poblacion_total'] ?? 0);
+        $padron = (int) ($validated['padron_electoral'] ?? 0);
         $piramide = $this->demographicService->generarPiramideEtaria($poblacion, $padron);
 
         $territorio = Territorio::create([
@@ -244,8 +243,8 @@ class TerritorioController extends Controller
             'longitud' => ['nullable', 'numeric'],
         ]);
 
-        $poblacion = (int)($validated['poblacion_total'] ?? $territorio->poblacion_total);
-        $padron = (int)($validated['padron_electoral'] ?? $territorio->padron_electoral);
+        $poblacion = (int) ($validated['poblacion_total'] ?? $territorio->poblacion_total);
+        $padron = (int) ($validated['padron_electoral'] ?? $territorio->padron_electoral);
         $piramide = $this->demographicService->generarPiramideEtaria($poblacion, $padron);
 
         $territorio->update([
@@ -282,20 +281,20 @@ class TerritorioController extends Controller
             $territorioActivo = $candidatoPropio?->territorio ?: $departamentos->first();
         }
 
-        if (!$territorioActivo) {
+        if (! $territorioActivo) {
             $territorioActivo = Territorio::where('tipo', 'provincia')->first() ?: Territorio::first();
         }
 
-        $padronElectoral = (int)($territorioActivo?->padron_electoral ?: 31000);
-        $poblacionTotal = (int)($territorioActivo?->poblacion_total ?: 40000);
-        $metaVotos = (int)round($padronElectoral * 0.40); // 40% del padrón como meta ganadora
+        $padronElectoral = (int) ($territorioActivo?->padron_electoral ?: 31000);
+        $poblacionTotal = (int) ($territorioActivo?->poblacion_total ?: 40000);
+        $metaVotos = (int) round($padronElectoral * 0.40); // 40% del padrón como meta ganadora
 
         // Pirámide Demográfica
         $piramide = $territorioActivo?->piramide_etaria ?: $this->demographicService->generarPiramideEtaria($poblacionTotal, $padronElectoral);
 
         // Perfiles Sociales del Candidato Propio
         $perfiles = $candidatoPropio ? $candidatoPropio->perfilesSociales : collect();
-        $totalSeguidores = (int)$perfiles->sum('seguidores_actuales');
+        $totalSeguidores = (int) $perfiles->sum('seguidores_actuales');
 
         $penetracionPadronPct = $padronElectoral > 0 ? round(($totalSeguidores / $padronElectoral) * 100, 2) : 0;
         $coberturaMetaPct = $metaVotos > 0 ? round(($totalSeguidores / $metaVotos) * 100, 2) : 0;
@@ -306,21 +305,21 @@ class TerritorioController extends Controller
             : collect();
 
         $totalPosts = $publicaciones->count();
-        $totalLikes = (int)$publicaciones->sum('total_likes');
-        $totalComentarios = (int)$publicaciones->sum('total_comentarios');
-        $totalCompartidos = (int)$publicaciones->sum('total_compartidos');
-        $totalGuardados = (int)$publicaciones->sum('total_guardados');
+        $totalLikes = (int) $publicaciones->sum('total_likes');
+        $totalComentarios = (int) $publicaciones->sum('total_comentarios');
+        $totalCompartidos = (int) $publicaciones->sum('total_compartidos');
+        $totalGuardados = (int) $publicaciones->sum('total_guardados');
         $totalInteracciones = $totalLikes + $totalComentarios + $totalCompartidos + $totalGuardados;
-        $totalPautaInvertida = (float)$publicaciones->sum('monto_invertido_pauta');
+        $totalPautaInvertida = (float) $publicaciones->sum('monto_invertido_pauta');
 
         // Métricas de Rendimiento Individual por Publicación (Promedios & Techo Máximo)
         $promedioInteraccionesPorPost = $totalPosts > 0 ? round($totalInteracciones / $totalPosts, 1) : 0;
         $promedioLikesPorPost = $totalPosts > 0 ? round($totalLikes / $totalPosts, 1) : 0;
         $promedioComentariosPorPost = $totalPosts > 0 ? round($totalComentarios / $totalPosts, 1) : 0;
 
-        $picoMaximoPost = $publicaciones->sortByDesc(fn($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados)->first();
+        $picoMaximoPost = $publicaciones->sortByDesc(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados)->first();
         $picoMaximoInteracciones = $picoMaximoPost
-            ? (int)($picoMaximoPost->total_likes + $picoMaximoPost->total_comentarios + $picoMaximoPost->total_compartidos + $picoMaximoPost->total_guardados)
+            ? (int) ($picoMaximoPost->total_likes + $picoMaximoPost->total_comentarios + $picoMaximoPost->total_compartidos + $picoMaximoPost->total_guardados)
             : 0;
 
         $tasaMovilizacionPromedioPct = $padronElectoral > 0 ? round(($promedioInteraccionesPorPost / $padronElectoral) * 100, 2) : 0;
@@ -340,16 +339,17 @@ class TerritorioController extends Controller
                 'valor' => max(0, $padronElectoral - $totalSeguidores),
                 'porcentaje' => round(max(0, 100 - $penetracionPadronPct), 1),
                 'color' => '#334155',
-            ]
+            ],
         ];
 
         // Pastel 2: Participación de la Comunidad por Red Social
         $pastelRedes = $perfiles->map(function ($p) use ($totalSeguidores) {
             $pct = $totalSeguidores > 0 ? round(($p->seguidores_actuales / $totalSeguidores) * 100, 1) : 0;
+
             return [
                 'label' => ucfirst($p->plataforma),
                 'plataforma' => $p->plataforma,
-                'valor' => (int)$p->seguidores_actuales,
+                'valor' => (int) $p->seguidores_actuales,
                 'porcentaje' => $pct,
                 'color' => match ($p->plataforma) {
                     'instagram' => '#E4405F',
@@ -360,12 +360,12 @@ class TerritorioController extends Controller
                     default => '#06b6d4',
                 },
             ];
-        })->filter(fn($r) => $r['valor'] > 0)->values();
+        })->filter(fn ($r) => $r['valor'] > 0)->values();
 
         // Pastel 3: Estructura del Electorado en 4 Sectores Estratégicos
-        $nucleoDuroEstimado = max(10, (int)round($promedioLikesPorPost * 1.3));
+        $nucleoDuroEstimado = max(10, (int) round($promedioLikesPorPost * 1.3));
         $seguidoresPasivos = max(0, $totalSeguidores - $nucleoDuroEstimado);
-        $expansionPautaEstimada = $totalPautaInvertida > 0 ? (int)round($totalPautaInvertida / 1.6) : 0;
+        $expansionPautaEstimada = $totalPautaInvertida > 0 ? (int) round($totalPautaInvertida / 1.6) : 0;
         $silenciosoEstimado = max(0, $padronElectoral - $totalSeguidores - $expansionPautaEstimada);
 
         $pastelElectorado = [
@@ -423,9 +423,9 @@ class TerritorioController extends Controller
         // Cruce por Red Social y Cobertura Etaria
         $redesImpacto = $perfiles->map(function ($p) use ($padronElectoral, $publicaciones) {
             $postsRed = $publicaciones->where('perfil_social_id', $p->id);
-            $totalIntRed = $postsRed->sum(fn($post) => $post->total_likes + $post->total_comentarios + $post->total_compartidos + $post->total_guardados);
+            $totalIntRed = $postsRed->sum(fn ($post) => $post->total_likes + $post->total_comentarios + $post->total_compartidos + $post->total_guardados);
             $pautaRed = $postsRed->sum('monto_invertido_pauta');
-            $seguidores = (int)$p->seguidores_actuales;
+            $seguidores = (int) $p->seguidores_actuales;
             $coberturaPct = $padronElectoral > 0 ? round(($seguidores / $padronElectoral) * 100, 2) : 0;
 
             $rangoObjetivo = match ($p->plataforma) {
@@ -462,28 +462,32 @@ class TerritorioController extends Controller
         // Motor de Oportunidades de Pauta (Boost AI Engine): Ventana de Oro de 48 horas a 7 días
         $ahora = now();
         $candidatosBoost = $publicaciones->filter(function ($pub) use ($ahora) {
-            if (!in_array($pub->tipo_pauta, ['organico', 'organico_impulsado'])) {
+            if (! in_array($pub->tipo_pauta, ['organico', 'organico_impulsado'])) {
                 return false;
             }
             $fecha = $pub->fecha_publicacion ?: $pub->created_at;
-            if (!$fecha) return false;
+            if (! $fecha) {
+                return false;
+            }
             $horas = $fecha->diffInHours($ahora);
+
             // Ventana óptima de maduración: entre 48 horas y 7 días (168h)
             return $horas >= 48 && $horas <= (7 * 24);
         });
 
         // Si aún no hay posts en la ventana estricta, fallback a los posts orgánicos con más likes
         if ($candidatosBoost->isEmpty()) {
-            $candidatosBoost = $publicaciones->filter(fn($pub) => in_array($pub->tipo_pauta, ['organico', 'organico_impulsado']));
+            $candidatosBoost = $publicaciones->filter(fn ($pub) => in_array($pub->tipo_pauta, ['organico', 'organico_impulsado']));
         }
 
         $oportunidadesPauta = $candidatosBoost->sortByDesc(function ($pub) use ($totalSeguidores) {
             $base = max($totalSeguidores, 500);
+
             return (($pub->total_likes + $pub->total_comentarios * 2) / $base) * 100;
         })->take(3)->values()->map(function ($pub) use ($padronElectoral, $ahora) {
             $interacciones = $pub->total_likes + $pub->total_comentarios + $pub->total_compartidos + $pub->total_guardados;
             $sugerenciaPauta = 25000;
-            $alcanceEstimado = min($padronElectoral, (int)round($sugerenciaPauta / 1.6));
+            $alcanceEstimado = min($padronElectoral, (int) round($sugerenciaPauta / 1.6));
             $coberturaEstimadaPct = round(($alcanceEstimado / max($padronElectoral, 1)) * 100, 1);
 
             $fecha = $pub->fecha_publicacion ?: $pub->created_at;
@@ -497,8 +501,8 @@ class TerritorioController extends Controller
                 'contenido_resumen' => $pub->contenido_resumen,
                 'tipo_formato' => $pub->tipo_formato,
                 'plataforma' => $pub->plataforma,
-                'total_likes' => (int)$pub->total_likes,
-                'total_comentarios' => (int)$pub->total_comentarios,
+                'total_likes' => (int) $pub->total_likes,
+                'total_comentarios' => (int) $pub->total_comentarios,
                 'total_interacciones' => $interacciones,
                 'eje_tematico' => $pub->ejeTematico?->nombre ?? 'General',
                 'sugerencia_inversion_ars' => $sugerenciaPauta,
@@ -528,15 +532,15 @@ class TerritorioController extends Controller
                 'tipo' => $territorioActivo?->tipo ?? 'departamento',
                 'padron_electoral' => $padronElectoral,
                 'poblacion_total' => $poblacionTotal,
-                'poblacion_urbana_pct' => (float)($territorioActivo?->poblacion_urbana_pct ?? 85),
-                'poblacion_rural_pct' => (float)($territorioActivo?->poblacion_rural_pct ?? 15),
+                'poblacion_urbana_pct' => (float) ($territorioActivo?->poblacion_urbana_pct ?? 85),
+                'poblacion_rural_pct' => (float) ($territorioActivo?->poblacion_rural_pct ?? 15),
                 'meta_votos' => $metaVotos,
             ],
-            'departamentos' => $departamentos->map(fn($d) => [
+            'departamentos' => $departamentos->map(fn ($d) => [
                 'id' => $d->id,
                 'nombre' => $d->nombre,
-                'padron_electoral' => (int)$d->padron_electoral,
-                'poblacion_total' => (int)$d->poblacion_total,
+                'padron_electoral' => (int) $d->padron_electoral,
+                'poblacion_total' => (int) $d->poblacion_total,
             ]),
             'piramide' => $piramide,
             'stats' => [

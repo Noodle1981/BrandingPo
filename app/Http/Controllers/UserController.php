@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
 use App\Models\User;
-use App\Models\Workspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +20,7 @@ class UserController extends Controller
     {
         $workspace = WorkspaceHelper::activoONull($request);
 
-        $usuarios = User::with('workspaces')->orderBy('name')->get()->map(function ($u) use ($workspace) {
+        $usuarios = User::with('workspaces')->orderBy('name')->get()->map(function ($u) {
             return [
                 'id' => $u->id,
                 'name' => $u->name,

@@ -87,13 +87,13 @@ class Workspace extends Model
     public function getNivelPoliticoLabelAttribute(): string
     {
         return match ($this->nivel_politico) {
-            'intendente'            => '🏛️ Intendente / Municipio',
-            'gobernador'            => '👑 Gobernador / Provincial',
-            'legislador_nacional'   => '🇦🇷 Legislador Nacional',
+            'intendente' => '🏛️ Intendente / Municipio',
+            'gobernador' => '👑 Gobernador / Provincial',
+            'legislador_nacional' => '🇦🇷 Legislador Nacional',
             'legislador_provincial' => '📋 Legislador Provincial',
-            'senador'               => '🏅 Senador',
-            'concejal'              => '🏘️ Concejal',
-            default                 => ucfirst($this->nivel_politico ?? 'Campaña'),
+            'senador' => '🏅 Senador',
+            'concejal' => '🏘️ Concejal',
+            default => ucfirst($this->nivel_politico ?? 'Campaña'),
         };
     }
 }

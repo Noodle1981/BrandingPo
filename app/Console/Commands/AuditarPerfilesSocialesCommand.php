@@ -47,17 +47,17 @@ class AuditarPerfilesSocialesCommand extends Command
             try {
                 $scraped = $scraper->scrapeProfile($perfil->url_perfil, $perfil->plataforma);
 
-                if (!empty($scraped['seguidores']) || !empty($scraped['publicaciones']) || !empty($scraped['foto_perfil_url'])) {
+                if (! empty($scraped['seguidores']) || ! empty($scraped['publicaciones']) || ! empty($scraped['foto_perfil_url'])) {
                     $metrica = $perfil->registrarMedicion($scraped, 'cron_24h');
-                    $deltaStr = ($metrica->crecimiento_seguidores_dia >= 0 ? '+' : '') . $metrica->crecimiento_seguidores_dia;
+                    $deltaStr = ($metrica->crecimiento_seguidores_dia >= 0 ? '+' : '').$metrica->crecimiento_seguidores_dia;
                     $this->info("   ✓ Éxito: {$perfil->seguidores_actuales} seguidores ({$deltaStr} hoy), {$perfil->publicaciones_totales} posts.");
                     $auditados++;
                 } else {
                     $this->warn("   ⚠ No se pudieron extraer datos automáticos para {$perfil->url_perfil}.");
                 }
             } catch (\Throwable $e) {
-                $this->error("   ✗ Error al auditar: " . $e->getMessage());
-                Log::error("Error en cron auditar-perfiles para perfil #{$perfil->id}: " . $e->getMessage());
+                $this->error('   ✗ Error al auditar: '.$e->getMessage());
+                Log::error("Error en cron auditar-perfiles para perfil #{$perfil->id}: ".$e->getMessage());
                 $errores++;
             }
         }

@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -46,10 +47,10 @@ class PublicacionController extends Controller
             return response()->json(['success' => false, 'mensaje' => $scraped['mensaje'] ?? 'No se pudo leer la URL pública.']);
         }
 
-        $oldLikes = (int)$publicacion->total_likes;
-        $oldComments = (int)$publicacion->total_comentarios;
-        $freshLikes = (int)($scraped['total_likes'] ?? $oldLikes);
-        $freshComments = (int)($scraped['total_comentarios'] ?? $oldComments);
+        $oldLikes = (int) $publicacion->total_likes;
+        $oldComments = (int) $publicacion->total_comentarios;
+        $freshLikes = (int) ($scraped['total_likes'] ?? $oldLikes);
+        $freshComments = (int) ($scraped['total_comentarios'] ?? $oldComments);
 
         $deltaLikes = max(0, $freshLikes - $oldLikes);
         $deltaComments = max(0, $freshComments - $oldComments);
@@ -73,7 +74,7 @@ class PublicacionController extends Controller
             'total_comentarios' => $freshComments,
             'url_post' => $publicacion->url_post,
             'fecha' => $publicacion->fecha_publicacion?->format('d/m/Y') ?? 'Reciente',
-            'resumen' => substr($publicacion->contenido_resumen, 0, 45) . (strlen($publicacion->contenido_resumen) > 45 ? '...' : ''),
+            'resumen' => substr($publicacion->contenido_resumen, 0, 45).(strlen($publicacion->contenido_resumen) > 45 ? '...' : ''),
         ]);
     }
 
@@ -96,6 +97,7 @@ class PublicacionController extends Controller
             if ($request->wantsJson()) {
                 return response()->json(['success' => false, 'mensaje' => $msg, 'actualizadas' => 0]);
             }
+
             return redirect()->back()->with('warning', $msg);
         }
 
@@ -106,10 +108,10 @@ class PublicacionController extends Controller
         foreach ($publicaciones as $pub) {
             $scraped = $scraper->scrapePost($pub->url_post, $perfilSocial->plataforma);
             if ($scraped['success']) {
-                $oldLikes = (int)$pub->total_likes;
-                $oldComments = (int)$pub->total_comentarios;
-                $freshLikes = (int)($scraped['total_likes'] ?? $oldLikes);
-                $freshComments = (int)($scraped['total_comentarios'] ?? $oldComments);
+                $oldLikes = (int) $pub->total_likes;
+                $oldComments = (int) $pub->total_comentarios;
+                $freshLikes = (int) ($scraped['total_likes'] ?? $oldLikes);
+                $freshComments = (int) ($scraped['total_comentarios'] ?? $oldComments);
 
                 // Si encontramos datos más frescos o mayores
                 if ($freshLikes > $oldLikes || $freshComments > $oldComments || $freshLikes > 0) {
@@ -152,6 +154,7 @@ class PublicacionController extends Controller
 
         return redirect()->back()->with('success', $msg);
     }
+
     /**
      * Muro interactivo estilo red social (Social Wall) del Workspace Activo.
      */
@@ -235,7 +238,7 @@ class PublicacionController extends Controller
                 'fecha_relativa' => $p->fecha_publicacion?->diffForHumans(),
                 'tipo_formato' => $p->tipo_formato,
                 'tipo_pauta' => $p->tipo_pauta,
-                'monto_invertido_pauta' => (float)$p->monto_invertido_pauta,
+                'monto_invertido_pauta' => (float) $p->monto_invertido_pauta,
                 'vistas_organicas' => $p->vistas_organicas,
                 'vistas_pagadas' => $p->vistas_pagadas,
                 'total_vistas' => $p->total_vistas,
@@ -289,7 +292,7 @@ class PublicacionController extends Controller
                 'total_posts' => $publicaciones->count(),
                 'total_vistas' => $publicaciones->sum('total_vistas'),
                 'total_pauta_invertida' => $publicaciones->sum('monto_invertido_pauta'),
-            ]
+            ],
         ]);
     }
 
@@ -344,7 +347,7 @@ class PublicacionController extends Controller
                     'plataforma' => $validated['plataforma'],
                 ],
                 [
-                    'handle_usuario' => '@' . strtolower(str_replace(' ', '', $candidato->nombre_completo)),
+                    'handle_usuario' => '@'.strtolower(str_replace(' ', '', $candidato->nombre_completo)),
                     'esta_activo' => true,
                     'esta_verificado' => false,
                 ]
@@ -366,16 +369,16 @@ class PublicacionController extends Controller
                     'nombre' => $ejeNombre,
                 ],
                 [
-                    'slug' => \Illuminate\Support\Str::slug($ejeNombre),
+                    'slug' => Str::slug($ejeNombre),
                     'color_badge' => '#06b6d4',
-                    'descripcion' => 'Eje temático: ' . $ejeNombre,
+                    'descripcion' => 'Eje temático: '.$ejeNombre,
                 ]
             );
             $ejeId = $eje->id;
         }
 
-        $vistasOrg = (int)($validated['vistas_organicas'] ?? 0);
-        $vistasPag = (int)($validated['vistas_pagadas'] ?? 0);
+        $vistasOrg = (int) ($validated['vistas_organicas'] ?? 0);
+        $vistasPag = (int) ($validated['vistas_pagadas'] ?? 0);
         $totalVistas = $vistasOrg + $vistasPag;
 
         $comentariosDestacados = ! empty($validated['comentario_destacado'])
@@ -386,7 +389,7 @@ class PublicacionController extends Controller
             ? array_map('trim', explode(',', $validated['figura_acompanante']))
             : [];
 
-        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int)($validated['total_likes'] ?? 0));
+        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int) ($validated['total_likes'] ?? 0));
 
         $publicacion = Publicacion::create([
             'workspace_id' => $workspace->id,
@@ -404,9 +407,9 @@ class PublicacionController extends Controller
             'contenido_resumen' => $validated['contenido_resumen'],
             'total_vistas' => $totalVistas,
             'total_likes' => $aiEmocional['total_likes'],
-            'total_comentarios' => (int)($validated['total_comentarios'] ?? 0),
-            'total_compartidos' => (int)($validated['total_compartidos'] ?? 0),
-            'total_guardados' => (int)($validated['total_guardados'] ?? 0),
+            'total_comentarios' => (int) ($validated['total_comentarios'] ?? 0),
+            'total_compartidos' => (int) ($validated['total_compartidos'] ?? 0),
+            'total_guardados' => (int) ($validated['total_guardados'] ?? 0),
             'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
             'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
             'figuras_acompanantes' => $figuras,
@@ -457,7 +460,7 @@ class PublicacionController extends Controller
             'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
         ]);
 
-        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int)($validated['total_likes'] ?? $publicacion->total_likes));
+        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int) ($validated['total_likes'] ?? $publicacion->total_likes));
 
         $updateData = [
             'contenido_resumen' => $validated['contenido_resumen'],
@@ -467,11 +470,11 @@ class PublicacionController extends Controller
             'tipo_pauta' => $validated['tipo_pauta'],
             'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
             'eje_tematico_id' => $validated['eje_tematico_id'] ?? null,
-            'total_vistas' => (int)($validated['total_vistas'] ?? $publicacion->total_vistas),
+            'total_vistas' => (int) ($validated['total_vistas'] ?? $publicacion->total_vistas),
             'total_likes' => $aiEmocional['total_likes'],
-            'total_comentarios' => (int)($validated['total_comentarios'] ?? $publicacion->total_comentarios),
-            'total_compartidos' => (int)($validated['total_compartidos'] ?? $publicacion->total_compartidos),
-            'total_guardados' => (int)($validated['total_guardados'] ?? $publicacion->total_guardados),
+            'total_comentarios' => (int) ($validated['total_comentarios'] ?? $publicacion->total_comentarios),
+            'total_compartidos' => (int) ($validated['total_compartidos'] ?? $publicacion->total_compartidos),
+            'total_guardados' => (int) ($validated['total_guardados'] ?? $publicacion->total_guardados),
             'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
             'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
             'termometro_humor_social' => $validated['termometro_humor_social'] ?? $aiEmocional['termometro_humor_social'],
@@ -493,21 +496,21 @@ class PublicacionController extends Controller
      */
     private function calcularInteligenciaEmocional(array $data, int $totalLikesFallback = 0): array
     {
-        $meGusta = (int)($data['me_gusta'] ?? 0);
-        $meEncanta = (int)($data['me_encanta'] ?? 0);
-        $meImporta = (int)($data['me_importa'] ?? 0);
-        $meDivierte = (int)($data['me_divierte'] ?? 0);
-        $meAsombra = (int)($data['me_asombra'] ?? 0);
-        $meEntristece = (int)($data['me_entristece'] ?? 0);
-        $meEnoja = (int)($data['me_enoja'] ?? 0);
+        $meGusta = (int) ($data['me_gusta'] ?? 0);
+        $meEncanta = (int) ($data['me_encanta'] ?? 0);
+        $meImporta = (int) ($data['me_importa'] ?? 0);
+        $meDivierte = (int) ($data['me_divierte'] ?? 0);
+        $meAsombra = (int) ($data['me_asombra'] ?? 0);
+        $meEntristece = (int) ($data['me_entristece'] ?? 0);
+        $meEnoja = (int) ($data['me_enoja'] ?? 0);
 
         $totalReacciones = $meGusta + $meEncanta + $meImporta + $meDivierte + $meAsombra + $meEntristece + $meEnoja;
 
         if ($totalReacciones === 0 && $totalLikesFallback > 0) {
             $totalReacciones = $totalLikesFallback;
-            $meGusta = (int)($totalLikesFallback * 0.7);
-            $meEncanta = (int)($totalLikesFallback * 0.2);
-            $meEnoja = (int)($totalLikesFallback * 0.1);
+            $meGusta = (int) ($totalLikesFallback * 0.7);
+            $meEncanta = (int) ($totalLikesFallback * 0.2);
+            $meEnoja = (int) ($totalLikesFallback * 0.1);
         }
 
         $positivas = $meGusta + $meEncanta + $meImporta;

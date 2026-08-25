@@ -29,7 +29,7 @@ return new class extends Migration
         ];
 
         foreach ($tablas as $tabla) {
-            if (Schema::hasTable($tabla) && !Schema::hasColumn($tabla, 'workspace_id')) {
+            if (Schema::hasTable($tabla) && ! Schema::hasColumn($tabla, 'workspace_id')) {
                 Schema::table($tabla, function (Blueprint $table) {
                     $table->foreignId('workspace_id')
                         ->nullable()

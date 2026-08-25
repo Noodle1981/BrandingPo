@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\CicloCampana;
 use App\Models\InformeEjecutivo;
-use App\Models\PresupuestoPartida;
 use App\Models\User;
 use Database\Seeders\CalendarioAndBriefingSeeder;
 use Database\Seeders\MediosAndCrisisSeeder;

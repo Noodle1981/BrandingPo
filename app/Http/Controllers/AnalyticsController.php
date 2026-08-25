@@ -42,6 +42,7 @@ class AnalyticsController extends Controller
         $shareOfVoice = $candidatos->map(function ($c) use ($totalVistas, $publicaciones) {
             $vistasCand = $publicaciones->where('candidato_id', $c->id)->sum('total_vistas');
             $porcentaje = $totalVistas > 0 ? round(($vistasCand / $totalVistas) * 100, 1) : 0;
+
             return [
                 'id' => $c->id,
                 'nombre' => $c->nombre_completo,
@@ -100,10 +101,10 @@ class AnalyticsController extends Controller
      */
     public function predictApi(Request $request): JsonResponse
     {
-        $monto = (float)$request->input('monto', 50000);
-        $formato = (string)$request->input('formato', 'Reel');
-        $plataforma = (string)$request->input('plataforma', 'instagram');
-        $candidatoId = $request->input('candidato_id') ? (int)$request->input('candidato_id') : null;
+        $monto = (float) $request->input('monto', 50000);
+        $formato = (string) $request->input('formato', 'Reel');
+        $plataforma = (string) $request->input('plataforma', 'instagram');
+        $candidatoId = $request->input('candidato_id') ? (int) $request->input('candidato_id') : null;
 
         $resultado = $this->predictorService->predecirImpacto($monto, $formato, $plataforma, $candidatoId);
 

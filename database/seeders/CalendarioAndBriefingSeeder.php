@@ -145,7 +145,7 @@ class CalendarioAndBriefingSeeder extends Seeder
             'titulo' => 'Briefing Estratégico Semanal - Estado de Campaña & Rendimiento de Pauta',
             'fecha_generacion' => $now->copy()->subDays(1),
             'periodo_cubierto' => 'Semana 34 - Agosto 2026',
-            'resumen_ejecutivo' => "La campaña del candidato propio Martín Rodríguez mantiene el liderazgo en Share of Voice digital con un 48.2% de las visualizaciones totales. La estrategia de micro-pauta barrial en Instagram Reels arrojó un CPV promedio de $0.75, un 28% más eficiente que la media histórica. El clima de humor social se consolidó en 4.6/5 estrellas tras la inauguración de luminarias y obras de conectividad vial.",
+            'resumen_ejecutivo' => 'La campaña del candidato propio Martín Rodríguez mantiene el liderazgo en Share of Voice digital con un 48.2% de las visualizaciones totales. La estrategia de micro-pauta barrial en Instagram Reels arrojó un CPV promedio de $0.75, un 28% más eficiente que la media histórica. El clima de humor social se consolidó en 4.6/5 estrellas tras la inauguración de luminarias y obras de conectividad vial.',
             'metricas_clave_snapshot' => [
                 'total_vistas_semana' => 1240000,
                 'inversion_pauta_semana' => 155000,
@@ -163,14 +163,14 @@ class CalendarioAndBriefingSeeder extends Seeder
             'titulo' => 'Informe Ejecutivo de Transición & Cierre de Ciclo Institucional',
             'fecha_generacion' => $now->copy()->subWeeks(2),
             'periodo_cubierto' => 'Ciclo Anterior 2023 - Balance de Mandato',
-            'resumen_ejecutivo' => "Balance consolidado de la gestión de comunicación y marca política. Se alcanzaron más de 18 millones de visualizaciones orgánicas y pagadas en el trienio, con un crecimiento neto del 320% en la comunidad de seguidores del candidato. La gestión de crisis cerró con un tiempo promedio de respuesta de 35 minutos.",
+            'resumen_ejecutivo' => 'Balance consolidado de la gestión de comunicación y marca política. Se alcanzaron más de 18 millones de visualizaciones orgánicas y pagadas en el trienio, con un crecimiento neto del 320% en la comunidad de seguidores del candidato. La gestión de crisis cerró con un tiempo promedio de respuesta de 35 minutos.',
             'metricas_clave_snapshot' => [
                 'total_vistas_ciclo' => 18500000,
                 'inversion_total_ejecutada' => 14250000,
                 'crisis_resueltas' => 14,
                 'tiempo_respuesta_promedio_min' => 35,
             ],
-            'conclusiones_estrategicas' => "El activo digital y la base de datos de simpatizantes geolocalizados constituyen una ventaja táctica decisiva para la contienda electoral venidera.",
+            'conclusiones_estrategicas' => 'El activo digital y la base de datos de simpatizantes geolocalizados constituyen una ventaja táctica decisiva para la contienda electoral venidera.',
         ]);
     }
 }

@@ -29,8 +29,8 @@ class PresupuestoController extends Controller
         }
 
         $partidas = $query->get()->map(function ($p) {
-            $asignado = (float)$p->monto_asignado;
-            $ejecutado = (float)$p->monto_ejecutado;
+            $asignado = (float) $p->monto_asignado;
+            $ejecutado = (float) $p->monto_ejecutado;
             $porcentaje = $asignado > 0 ? round(($ejecutado / $asignado) * 100, 1) : 0;
             $saldo = $asignado - $ejecutado;
 
@@ -81,7 +81,7 @@ class PresupuestoController extends Controller
                 ['key' => 'eventos_territoriales', 'label' => 'Eventos Territoriales & Sonido'],
                 ['key' => 'honorarios', 'label' => 'Honorarios & Consultoría'],
                 ['key' => 'contingencias', 'label' => 'Fondo de Contingencia & Crisis'],
-            ]
+            ],
         ]);
     }
 

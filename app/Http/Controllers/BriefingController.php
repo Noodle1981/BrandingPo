@@ -73,7 +73,7 @@ class BriefingController extends Controller
                 'metricas_snapshot' => $informe->metricas_clave_snapshot,
                 'conclusiones' => $informe->conclusiones_estrategicas,
                 'ciclo' => $informe->cicloCampana?->nombre,
-            ]
+            ],
         ]);
     }
 
@@ -97,7 +97,7 @@ class BriefingController extends Controller
         $snapshot = [
             'total_publicaciones' => $publicaciones->count(),
             'total_vistas' => $publicaciones->sum('total_vistas'),
-            'total_pauta_invertida' => (float)$publicaciones->sum('monto_invertido_pauta'),
+            'total_pauta_invertida' => (float) $publicaciones->sum('monto_invertido_pauta'),
             'fecha_corte' => now()->toDateTimeString(),
         ];
 

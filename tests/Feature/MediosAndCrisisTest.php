@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Candidato;
 use App\Models\EventoCrisis;
 use App\Models\MedioPrensa;
-use App\Models\NotaPrensa;
 use App\Models\User;
 use Database\Seeders\MediosAndCrisisSeeder;
 use Database\Seeders\PoliticaSeeder;

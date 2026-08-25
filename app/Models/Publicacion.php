@@ -114,6 +114,7 @@ class Publicacion extends Model
         if ($plataforma) {
             return $query->whereHas('perfilSocial', fn ($q) => $q->where('plataforma', $plataforma));
         }
+
         return $query;
     }
 }

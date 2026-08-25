@@ -29,6 +29,7 @@ class SocialProfileScraperService
 
         if (empty($url)) {
             $result['mensaje'] = 'La URL está vacía.';
+
             return $result;
         }
 
@@ -50,8 +51,9 @@ class SocialProfileScraperService
                     return $this->scrapeOpenGraphGenerico($url, $result);
             }
         } catch (\Throwable $e) {
-            Log::warning("Error scraping perfil social ({$url}): " . $e->getMessage());
+            Log::warning("Error scraping perfil social ({$url}): ".$e->getMessage());
             $result['mensaje'] = 'Error de conexión. Puedes completar los números manualmente.';
+
             return $result;
         }
     }
@@ -65,7 +67,7 @@ class SocialProfileScraperService
         preg_match('/instagram\.com\/([a-zA-Z0-9_\.\-]+)/i', $url, $handleMatch);
         $username = $handleMatch[1] ?? '';
         if ($username) {
-            $result['handle_usuario'] = '@' . ltrim($username, '@');
+            $result['handle_usuario'] = '@'.ltrim($username, '@');
         }
 
         $response = Http::withHeaders([
@@ -74,7 +76,7 @@ class SocialProfileScraperService
             'Accept-Language' => 'en-US,en;q=0.9',
         ])->timeout(8)->get($url);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             $response = Http::withHeaders([
                 'User-Agent' => 'WhatsApp/2.21.12.21 A',
             ])->timeout(8)->get($url);
@@ -117,7 +119,7 @@ class SocialProfileScraperService
             }
         }
 
-        $result['success'] = !empty($result['foto_perfil_url']) || !is_null($result['seguidores']);
+        $result['success'] = ! empty($result['foto_perfil_url']) || ! is_null($result['seguidores']);
         $result['mensaje'] = $result['success']
             ? '¡Datos de Instagram leídos exitosamente!'
             : 'Instagram protegió la lectura. Puedes completar los números manualmente.';
@@ -132,8 +134,8 @@ class SocialProfileScraperService
     {
         preg_match('/facebook\.com\/([a-zA-Z0-9_\.\-]+)/i', $url, $handleMatch);
         $username = $handleMatch[1] ?? '';
-        if ($username && !in_array(strtolower($username), ['pages', 'profile.php', 'groups'])) {
-            $result['handle_usuario'] = '@' . ltrim($username, '@');
+        if ($username && ! in_array(strtolower($username), ['pages', 'profile.php', 'groups'])) {
+            $result['handle_usuario'] = '@'.ltrim($username, '@');
         }
 
         $response = Http::withHeaders([
@@ -142,7 +144,7 @@ class SocialProfileScraperService
             'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
         ])->timeout(8)->get($url);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             $response = Http::withHeaders([
                 'User-Agent' => 'facebookexternalhit/1.1',
             ])->timeout(8)->get($url);
@@ -181,7 +183,7 @@ class SocialProfileScraperService
             }
         }
 
-        $result['success'] = !empty($result['foto_perfil_url']) || !is_null($result['seguidores']) || !empty($result['handle_usuario']);
+        $result['success'] = ! empty($result['foto_perfil_url']) || ! is_null($result['seguidores']) || ! empty($result['handle_usuario']);
         $result['mensaje'] = $result['success']
             ? '¡Datos de Facebook leídos exitosamente!'
             : 'Facebook protegió la lectura. Puedes completar los números manualmente.';
@@ -195,8 +197,8 @@ class SocialProfileScraperService
     protected function scrapeTikTok(string $url, array $result): array
     {
         preg_match('/tiktok\.com\/@([a-zA-Z0-9_\.\-]+)/i', $url, $handleMatch);
-        if (!empty($handleMatch[1])) {
-            $result['handle_usuario'] = '@' . ltrim($handleMatch[1], '@');
+        if (! empty($handleMatch[1])) {
+            $result['handle_usuario'] = '@'.ltrim($handleMatch[1], '@');
         }
 
         $response = Http::withHeaders([
@@ -205,7 +207,7 @@ class SocialProfileScraperService
             'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
         ])->timeout(8)->get($url);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             $response = Http::withHeaders([
                 'User-Agent' => 'WhatsApp/2.21.12.21 A',
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -250,14 +252,20 @@ class SocialProfileScraperService
             }
         }
 
-        $result['success'] = !empty($result['foto_perfil_url']) || !is_null($result['seguidores']) || !empty($result['handle_usuario']);
+        $result['success'] = ! empty($result['foto_perfil_url']) || ! is_null($result['seguidores']) || ! empty($result['handle_usuario']);
         $mensajeParts = [];
-        if (!is_null($result['seguidores'])) $mensajeParts[] = number_format($result['seguidores'], 0, ',', '.') . ' seguidores';
-        if (!is_null($result['seguidos'])) $mensajeParts[] = number_format($result['seguidos'], 0, ',', '.') . ' seguidos';
-        if (!empty($result['total_likes'])) $mensajeParts[] = number_format($result['total_likes'], 0, ',', '.') . ' Me Gusta';
+        if (! is_null($result['seguidores'])) {
+            $mensajeParts[] = number_format($result['seguidores'], 0, ',', '.').' seguidores';
+        }
+        if (! is_null($result['seguidos'])) {
+            $mensajeParts[] = number_format($result['seguidos'], 0, ',', '.').' seguidos';
+        }
+        if (! empty($result['total_likes'])) {
+            $mensajeParts[] = number_format($result['total_likes'], 0, ',', '.').' Me Gusta';
+        }
 
         $result['mensaje'] = $result['success']
-            ? '¡Datos de TikTok extraídos (' . implode(', ', $mensajeParts) . ')!'
+            ? '¡Datos de TikTok extraídos ('.implode(', ', $mensajeParts).')!'
             : 'TikTok protegió la lectura. Puedes completar los números manualmente.';
 
         return $result;
@@ -269,7 +277,7 @@ class SocialProfileScraperService
     protected function scrapeYouTube(string $url, array $result): array
     {
         preg_match('/youtube\.com\/(@[a-zA-Z0-9_\.\-]+)/i', $url, $handleMatch);
-        if (!empty($handleMatch[1])) {
+        if (! empty($handleMatch[1])) {
             $result['handle_usuario'] = $handleMatch[1];
         }
 
@@ -293,13 +301,13 @@ class SocialProfileScraperService
 
             // 3. Parsear texto en cabecera inicial (suscriptores, videos)
             if (preg_match('/"subscriberCountText":\s*"([^"]+)"/i', $html, $subMatch)) {
-                $result['seguidores'] = (int)preg_replace('/[^\d]/u', '', $subMatch[1]);
+                $result['seguidores'] = (int) preg_replace('/[^\d]/u', '', $subMatch[1]);
             } elseif (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:suscriptores|subscribers)/iu', $html, $subMatch)) {
                 $result['seguidores'] = $this->parseFormattedNumber($subMatch[1]);
             }
 
             if (preg_match('/"videoCountText":\s*"([^"]+)"/i', $html, $vidMatch)) {
-                $result['publicaciones'] = (int)preg_replace('/[^\d]/u', '', $vidMatch[1]);
+                $result['publicaciones'] = (int) preg_replace('/[^\d]/u', '', $vidMatch[1]);
             }
 
             // 4. Obtener datos detallados (Visualizaciones totales) mediante Innertube API
@@ -324,14 +332,14 @@ class SocialProfileScraperService
                     $about = $json['onResponseReceivedEndpoints'][0]['appendContinuationItemsAction']['continuationItems'][0]['aboutChannelRenderer']['metadata']['aboutChannelViewModel'] ?? null;
 
                     if ($about) {
-                        if (!empty($about['subscriberCountText']) && (is_null($result['seguidores']) || $result['seguidores'] === 0)) {
-                            $result['seguidores'] = (int)preg_replace('/[^\d]/u', '', $about['subscriberCountText']);
+                        if (! empty($about['subscriberCountText']) && (is_null($result['seguidores']) || $result['seguidores'] === 0)) {
+                            $result['seguidores'] = (int) preg_replace('/[^\d]/u', '', $about['subscriberCountText']);
                         }
-                        if (!empty($about['videoCountText'])) {
-                            $result['publicaciones'] = (int)preg_replace('/[^\d]/u', '', $about['videoCountText']);
+                        if (! empty($about['videoCountText'])) {
+                            $result['publicaciones'] = (int) preg_replace('/[^\d]/u', '', $about['videoCountText']);
                         }
-                        if (!empty($about['viewCountText'])) {
-                            $viewsClean = (int)preg_replace('/[^\d]/u', '', $about['viewCountText']);
+                        if (! empty($about['viewCountText'])) {
+                            $viewsClean = (int) preg_replace('/[^\d]/u', '', $about['viewCountText']);
                             $result['visualizaciones_totales'] = $viewsClean;
                             $result['visualizaciones_punto_cero'] = $viewsClean;
                         }
@@ -344,14 +352,20 @@ class SocialProfileScraperService
             // Silencioso
         }
 
-        $result['success'] = !empty($result['foto_perfil_url']) || !is_null($result['seguidores']) || !empty($result['handle_usuario']);
+        $result['success'] = ! empty($result['foto_perfil_url']) || ! is_null($result['seguidores']) || ! empty($result['handle_usuario']);
         $mensajeParts = [];
-        if (!is_null($result['seguidores'])) $mensajeParts[] = number_format($result['seguidores'], 0, ',', '.') . ' suscriptores';
-        if (!is_null($result['publicaciones'])) $mensajeParts[] = number_format($result['publicaciones'], 0, ',', '.') . ' videos';
-        if (!empty($result['visualizaciones_totales'])) $mensajeParts[] = number_format($result['visualizaciones_totales'], 0, ',', '.') . ' visualizaciones';
+        if (! is_null($result['seguidores'])) {
+            $mensajeParts[] = number_format($result['seguidores'], 0, ',', '.').' suscriptores';
+        }
+        if (! is_null($result['publicaciones'])) {
+            $mensajeParts[] = number_format($result['publicaciones'], 0, ',', '.').' videos';
+        }
+        if (! empty($result['visualizaciones_totales'])) {
+            $mensajeParts[] = number_format($result['visualizaciones_totales'], 0, ',', '.').' visualizaciones';
+        }
 
         $result['mensaje'] = $result['success']
-            ? '¡Datos de YouTube extraídos (' . implode(', ', $mensajeParts) . ')!'
+            ? '¡Datos de YouTube extraídos ('.implode(', ', $mensajeParts).')!'
             : 'YouTube protegió la lectura. Puedes completar los números manualmente.';
 
         return $result;
@@ -363,8 +377,8 @@ class SocialProfileScraperService
     protected function scrapeXTwitter(string $url, array $result): array
     {
         preg_match('/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/i', $url, $handleMatch);
-        if (!empty($handleMatch[1])) {
-            $result['handle_usuario'] = '@' . $handleMatch[1];
+        if (! empty($handleMatch[1])) {
+            $result['handle_usuario'] = '@'.$handleMatch[1];
         }
 
         try {
@@ -374,7 +388,7 @@ class SocialProfileScraperService
                 'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
             ])->timeout(8)->get($url);
 
-            if (!$response->successful() || strlen($response->body()) < 500) {
+            if (! $response->successful() || strlen($response->body()) < 500) {
                 $response = Http::withHeaders([
                     'User-Agent' => 'Twitterbot/1.0',
                     'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -425,14 +439,20 @@ class SocialProfileScraperService
             // Manejo silencioso
         }
 
-        $result['success'] = !empty($result['foto_perfil_url']) || !is_null($result['seguidores']) || !empty($result['handle_usuario']);
+        $result['success'] = ! empty($result['foto_perfil_url']) || ! is_null($result['seguidores']) || ! empty($result['handle_usuario']);
         $mensajeParts = [];
-        if (!is_null($result['seguidores'])) $mensajeParts[] = number_format($result['seguidores'], 0, ',', '.') . ' seguidores';
-        if (!is_null($result['seguidos'])) $mensajeParts[] = number_format($result['seguidos'], 0, ',', '.') . ' seguidos';
-        if (!is_null($result['publicaciones'])) $mensajeParts[] = number_format($result['publicaciones'], 0, ',', '.') . ' posts';
+        if (! is_null($result['seguidores'])) {
+            $mensajeParts[] = number_format($result['seguidores'], 0, ',', '.').' seguidores';
+        }
+        if (! is_null($result['seguidos'])) {
+            $mensajeParts[] = number_format($result['seguidos'], 0, ',', '.').' seguidos';
+        }
+        if (! is_null($result['publicaciones'])) {
+            $mensajeParts[] = number_format($result['publicaciones'], 0, ',', '.').' posts';
+        }
 
         $result['mensaje'] = $result['success']
-            ? '¡Datos de X / Twitter extraídos (' . (implode(', ', $mensajeParts) ?: $result['handle_usuario']) . ')!'
+            ? '¡Datos de X / Twitter extraídos ('.(implode(', ', $mensajeParts) ?: $result['handle_usuario']).')!'
             : 'X protegió la lectura. Puedes completar los números manualmente.';
 
         return $result;
@@ -445,7 +465,7 @@ class SocialProfileScraperService
     {
         // 1. Extraer slug/handle de la URL
         preg_match('/linkedin\.com\/in\/([a-zA-Z0-9_\.\-]+)/i', $url, $handleMatch);
-        if (!empty($handleMatch[1])) {
+        if (! empty($handleMatch[1])) {
             $result['handle_usuario'] = $handleMatch[1];
         }
 
@@ -491,7 +511,7 @@ class SocialProfileScraperService
 
                     if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:contactos|seguidores|connections|followers)/iu', $desc, $m)) {
                         $clean = str_replace([' ', ','], '', $m[1]);
-                        $result['seguidores'] = (int)$clean;
+                        $result['seguidores'] = (int) $clean;
                     }
                 }
             }
@@ -499,13 +519,17 @@ class SocialProfileScraperService
             // Silencioso
         }
 
-        $result['success'] = !empty($result['foto_perfil_url']) || !is_null($result['seguidores']) || !empty($result['handle_usuario']);
+        $result['success'] = ! empty($result['foto_perfil_url']) || ! is_null($result['seguidores']) || ! empty($result['handle_usuario']);
         $mensajeParts = [];
-        if (!is_null($result['seguidores'])) $mensajeParts[] = number_format($result['seguidores'], 0, ',', '.') . ' contactos/seguidores';
-        if (!empty($result['nombre_completo'])) $mensajeParts[] = $result['nombre_completo'];
+        if (! is_null($result['seguidores'])) {
+            $mensajeParts[] = number_format($result['seguidores'], 0, ',', '.').' contactos/seguidores';
+        }
+        if (! empty($result['nombre_completo'])) {
+            $mensajeParts[] = $result['nombre_completo'];
+        }
 
         $result['mensaje'] = $result['success']
-            ? '¡Datos de LinkedIn extraídos (' . implode(', ', $mensajeParts) . ')!'
+            ? '¡Datos de LinkedIn extraídos ('.implode(', ', $mensajeParts).')!'
             : 'LinkedIn protegió la lectura. Puedes completar los números manualmente.';
 
         return $result;
@@ -527,6 +551,7 @@ class SocialProfileScraperService
         }
 
         $result['success'] = true;
+
         return $result;
     }
 
@@ -553,6 +578,7 @@ class SocialProfileScraperService
 
         if (empty($input)) {
             $result['mensaje'] = 'Ingresa una URL o código de inserción.';
+
             return $result;
         }
 
@@ -574,12 +600,15 @@ class SocialProfileScraperService
         // 2. Detectar plataforma
         if (str_contains($cleanUrl, 'instagram.com')) {
             $result['plataforma'] = 'instagram';
+
             return $this->scrapeInstagramPost($cleanUrl, $result);
         } elseif (str_contains($cleanUrl, 'youtube.com') || str_contains($cleanUrl, 'youtu.be')) {
             $result['plataforma'] = 'youtube';
+
             return $this->scrapeYouTubePost($cleanUrl, $result);
         } elseif (str_contains($cleanUrl, 'tiktok.com')) {
             $result['plataforma'] = 'tiktok';
+
             return $this->scrapeTikTokPost($cleanUrl, $result);
         }
 
@@ -604,7 +633,7 @@ class SocialProfileScraperService
             'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
         ])->timeout(8)->get($url);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             $response = Http::withHeaders([
                 'User-Agent' => 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
             ])->timeout(8)->get($url);
@@ -640,7 +669,7 @@ class SocialProfileScraperService
 
             // Extraer Handle y Fecha
             if (preg_match('/-\s*([a-zA-Z0-9_\.\-]+)\s*(?:el|on)\s*([a-zA-Z0-9\s,]+):/i', $rawDesc, $m)) {
-                $result['handle_autor'] = '@' . ltrim($m[1], '@');
+                $result['handle_autor'] = '@'.ltrim($m[1], '@');
                 $time = strtotime(trim($m[2]));
                 if ($time) {
                     $result['fecha_publicacion'] = date('Y-m-d\TH:i', $time);
@@ -657,7 +686,7 @@ class SocialProfileScraperService
             }
         }
 
-        $result['success'] = !empty($result['contenido_resumen']) || $result['total_likes'] > 0 || !empty($result['media_url']);
+        $result['success'] = ! empty($result['contenido_resumen']) || $result['total_likes'] > 0 || ! empty($result['media_url']);
         $result['mensaje'] = $result['success']
             ? '¡Datos del post de Instagram extraídos exitosamente!'
             : 'No se pudieron extraer los datos automáticamente. Puedes completarlos a mano.';
@@ -681,8 +710,9 @@ class SocialProfileScraperService
             $result['media_url'] = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
-        $result['success'] = !empty($result['contenido_resumen']);
+        $result['success'] = ! empty($result['contenido_resumen']);
         $result['mensaje'] = $result['success'] ? '¡Datos de YouTube extraídos!' : 'No se pudo leer YouTube.';
+
         return $result;
     }
 
@@ -704,8 +734,9 @@ class SocialProfileScraperService
             $result['media_url'] = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
-        $result['success'] = !empty($result['contenido_resumen']);
+        $result['success'] = ! empty($result['contenido_resumen']);
         $result['mensaje'] = $result['success'] ? '¡Metadatos extraídos!' : 'URL no accesible.';
+
         return $result;
     }
 
@@ -718,18 +749,21 @@ class SocialProfileScraperService
 
         // Formato en español "9,4 mil" o "9.4 mil"
         if (preg_match('/([\d\.,]+)\s*mil/i', $str, $m)) {
-            $num = (float)str_replace(',', '.', $m[1]);
-            return (int)round($num * 1000);
+            $num = (float) str_replace(',', '.', $m[1]);
+
+            return (int) round($num * 1000);
         }
 
         if (preg_match('/^([\d\.,]+)[Kk]$/', $str, $m)) {
-            $num = (float)str_replace(',', '.', $m[1]);
-            return (int)round($num * 1000);
+            $num = (float) str_replace(',', '.', $m[1]);
+
+            return (int) round($num * 1000);
         }
 
         if (preg_match('/^([\d\.,]+)[Mm]$/', $str, $m)) {
-            $num = (float)str_replace(',', '.', $m[1]);
-            return (int)round($num * 1000000);
+            $num = (float) str_replace(',', '.', $m[1]);
+
+            return (int) round($num * 1000000);
         }
 
         // Si tiene formato "9.466" o "1,359"
@@ -738,6 +772,6 @@ class SocialProfileScraperService
             $clean = str_replace('.', '', $clean);
         }
 
-        return (int)filter_var($clean, FILTER_SANITIZE_NUMBER_INT);
+        return (int) filter_var($clean, FILTER_SANITIZE_NUMBER_INT);
     }
 }

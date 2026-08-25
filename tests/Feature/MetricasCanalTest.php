@@ -3,9 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Candidato;
-use App\Models\PerfilSocial;
 use App\Models\User;
-use App\Models\Workspace;
+use Database\Seeders\PoliticaSeeder;
+use Database\Seeders\PublicacionSeeder;
+use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +17,7 @@ class MetricasCanalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed([\Database\Seeders\UserSeeder::class, \Database\Seeders\PoliticaSeeder::class, \Database\Seeders\PublicacionSeeder::class]);
+        $this->seed([UserSeeder::class, PoliticaSeeder::class, PublicacionSeeder::class]);
     }
 
     public function test_usuario_puede_acceder_al_dashboard_de_metricas_del_canal()
