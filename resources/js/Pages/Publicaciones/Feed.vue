@@ -267,9 +267,12 @@ const autocompletarScrape = async () => {
       if (data.data.tipo_formato) createForm.tipo_formato = data.data.tipo_formato;
       if (data.data.total_likes) createForm.total_likes = data.data.total_likes;
       if (data.data.total_comentarios) createForm.total_comentarios = data.data.total_comentarios;
-      if (data.data.vistas_organicas) createForm.vistas_organicas = data.data.vistas_organicas;
+      if (data.data.total_vistas || data.data.vistas_organicas) {
+        createForm.vistas_organicas = data.data.total_vistas || data.data.vistas_organicas;
+      }
       if (data.data.contenido_resumen) createForm.contenido_resumen = data.data.contenido_resumen;
       if (data.data.fecha_publicacion) createForm.fecha_publicacion = data.data.fecha_publicacion.slice(0, 16);
+      if (data.data.url_post) createForm.url_post = data.data.url_post;
 
       // Distribuir likes en reacciones
       const lk = data.data.total_likes || 0;
@@ -279,7 +282,7 @@ const autocompletarScrape = async () => {
 
       scrapeSuccessMsg.value = '✅ ¡Datos y métricas extraídos exitosamente!';
     } else {
-      scrapeErrorMsg.value = data.error || 'No se pudieron extraer los datos automáticamente. Puedes completarlos a mano.';
+      scrapeErrorMsg.value = data.error || data.mensaje || 'No se pudieron extraer los datos automáticamente. Puedes completarlos a mano.';
     }
   } catch (err) {
     scrapeErrorMsg.value = 'Error al consultar el lector de redes. Completa los datos a mano.';

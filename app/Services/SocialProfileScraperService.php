@@ -602,6 +602,10 @@ class SocialProfileScraperService
             $result['plataforma'] = 'instagram';
 
             return $this->scrapeInstagramPost($cleanUrl, $result);
+        } elseif (str_contains($cleanUrl, 'facebook.com') || str_contains($cleanUrl, 'fb.watch') || str_contains($cleanUrl, 'fb.com')) {
+            $result['plataforma'] = 'facebook';
+
+            return $this->scrapeFacebookPost($cleanUrl, $result);
         } elseif (str_contains($cleanUrl, 'youtube.com') || str_contains($cleanUrl, 'youtu.be')) {
             $result['plataforma'] = 'youtube';
 
@@ -613,6 +617,108 @@ class SocialProfileScraperService
         }
 
         return $this->scrapeGenericPost($cleanUrl, $result);
+    }
+
+    /**
+     * Scraping especializado de una publicación, Reel o Video de Facebook.
+     */
+    protected function scrapeFacebookPost(string $url, array $result): array
+    {
+        $result['plataforma'] = 'facebook';
+
+        if (preg_match('/(?:\/share\/r\/|\/reel\/|\/reels\/)/i', $url)) {
+            $result['tipo_formato'] = 'Reel';
+        } elseif (preg_match('/(?:\/share\/v\/|\/watch\/|\/videos\/)/i', $url)) {
+            $result['tipo_formato'] = 'Video';
+        } elseif (preg_match('/(?:\/share\/p\/|\/photos\/|\/photo\b)/i', $url)) {
+            $result['tipo_formato'] = 'Foto';
+        } else {
+            $result['tipo_formato'] = 'Post';
+        }
+
+        try {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Accept-Language: es-ES,es;q=0.9,en;q=0.8',
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            ]);
+            $html = curl_exec($ch);
+            $finalUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+            curl_close($ch);
+
+            if ($finalUrl && $finalUrl !== $url) {
+                $result['url_post'] = $finalUrl;
+                if (str_contains($finalUrl, '/reel/')) {
+                    $result['tipo_formato'] = 'Reel';
+                }
+            }
+
+            // og:image
+            if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]*)"/i', $html, $mImg)) {
+                $result['media_url'] = html_entity_decode($mImg[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+
+            // og:title & og:description
+            $rawTitle = '';
+            if (preg_match('/<meta[^>]+property="og:title"[^>]+content="([^"]*)"/i', $html, $mTitle)) {
+                $rawTitle = html_entity_decode($mTitle[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+
+            $rawDesc = '';
+            if (preg_match('/<meta[^>]+property="og:description"[^>]+content="([^"]*)"/i', $html, $mDesc)) {
+                $rawDesc = html_entity_decode($mDesc[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+
+            // Extraer Reproducciones / Vistas
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:reproducciones|views|reproducción)/iu', $rawTitle.' '.$rawDesc, $m)) {
+                $result['total_vistas'] = $this->parseFormattedNumber($m[1]);
+            }
+
+            // Extraer Reacciones / Likes
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:reacciones|reactions|me gusta|likes)/iu', $rawTitle.' '.$rawDesc, $m)) {
+                $result['total_likes'] = $this->parseFormattedNumber($m[1]);
+            }
+
+            // Extraer Comentarios
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:comentarios|comments)/iu', $rawTitle.' '.$rawDesc, $m)) {
+                $result['total_comentarios'] = $this->parseFormattedNumber($m[1]);
+            }
+
+            // Extraer Autor y Copy
+            if (str_contains($rawTitle, '|')) {
+                $parts = explode('|', $rawTitle);
+                if (count($parts) >= 3) {
+                    $result['handle_autor'] = trim(end($parts));
+                    $result['contenido_resumen'] = trim($parts[1]);
+                } elseif (count($parts) === 2) {
+                    if (preg_match('/(?:reproducciones|reacciones)/i', $parts[0])) {
+                        $result['contenido_resumen'] = trim($parts[1]);
+                    } else {
+                        $result['contenido_resumen'] = trim($parts[0]);
+                        $result['handle_autor'] = trim($parts[1]);
+                    }
+                }
+            }
+
+            if (empty($result['contenido_resumen']) && ! empty($rawDesc)) {
+                $result['contenido_resumen'] = $rawDesc;
+            }
+        } catch (\Exception $e) {
+            // Silencioso
+        }
+
+        $result['success'] = ! empty($result['contenido_resumen']) || $result['total_likes'] > 0 || ! empty($result['media_url']);
+        $result['mensaje'] = $result['success']
+            ? '¡Datos del post de Facebook extraídos exitosamente!'
+            : 'Facebook protegió la lectura. Puedes completar los datos manualmente.';
+
+        return $result;
     }
 
     /**

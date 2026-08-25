@@ -19,18 +19,27 @@ use Inertia\Response;
 class PublicacionController extends Controller
 {
     /**
-     * Extraer datos públicos de una publicación (Instagram, TikTok, YouTube, etc.) con 1 clic.
+     * Extraer datos públicos de una publicación (Instagram, Facebook, TikTok, YouTube, etc.) con 1 clic.
      */
     public function scrapePost(Request $request, SocialProfileScraperService $scraper): JsonResponse
     {
-        $validated = $request->validate([
-            'url' => ['required', 'string'],
-            'plataforma' => ['nullable', 'string'],
+        $inputUrl = $request->input('url') ?? $request->input('url_post') ?? '';
+        $plataforma = $request->input('plataforma');
+
+        if (empty($inputUrl)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Ingresa una URL de publicación válida.',
+            ], 422);
+        }
+
+        $data = $scraper->scrapePost($inputUrl, $plataforma);
+
+        return response()->json([
+            'success' => $data['success'] ?? false,
+            'data' => $data,
+            'mensaje' => $data['mensaje'] ?? '',
         ]);
-
-        $data = $scraper->scrapePost($validated['url'], $validated['plataforma'] ?? 'instagram');
-
-        return response()->json($data);
     }
 
     /**
