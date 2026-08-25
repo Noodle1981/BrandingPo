@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
+use App\Models\EjeTematico;
+use App\Models\Publicacion;
 use App\Models\Territorio;
 use App\Services\DemographicIntelligenceService;
 use Illuminate\Http\JsonResponse;
@@ -253,5 +255,320 @@ class TerritorioController extends Controller
 
         return redirect()->back()
             ->with('success', "Territorio {$territorio->nombre} y pirámide demográfica actualizados.");
+    }
+
+    /**
+     * Matriz de Impacto Territorial & Penetración Electoral.
+     * Cruce de Padrón Electoral, Pirámide Etaria y Desempeño en Redes Sociales (Orgánico vs Pauta).
+     */
+    public function impactoElectoral(Request $request): Response
+    {
+        $workspace = WorkspaceHelper::activo($request);
+        $territorioId = $request->query('territorio_id');
+
+        $departamentos = Territorio::where('workspace_id', $workspace->id)
+            ->orderBy('nombre')
+            ->get();
+
+        $candidatoPropio = Candidato::where('workspace_id', $workspace->id)
+            ->where('es_propio', true)
+            ->with(['perfilesSociales.metricas', 'territorio'])
+            ->first();
+
+        // Determinar territorio activo
+        if ($territorioId) {
+            $territorioActivo = $departamentos->firstWhere('id', $territorioId) ?: $candidatoPropio?->territorio;
+        } else {
+            $territorioActivo = $candidatoPropio?->territorio ?: $departamentos->first();
+        }
+
+        if (!$territorioActivo) {
+            $territorioActivo = Territorio::where('tipo', 'provincia')->first() ?: Territorio::first();
+        }
+
+        $padronElectoral = (int)($territorioActivo?->padron_electoral ?: 31000);
+        $poblacionTotal = (int)($territorioActivo?->poblacion_total ?: 40000);
+        $metaVotos = (int)round($padronElectoral * 0.40); // 40% del padrón como meta ganadora
+
+        // Pirámide Demográfica
+        $piramide = $territorioActivo?->piramide_etaria ?: $this->demographicService->generarPiramideEtaria($poblacionTotal, $padronElectoral);
+
+        // Perfiles Sociales del Candidato Propio
+        $perfiles = $candidatoPropio ? $candidatoPropio->perfilesSociales : collect();
+        $totalSeguidores = (int)$perfiles->sum('seguidores_actuales');
+
+        $penetracionPadronPct = $padronElectoral > 0 ? round(($totalSeguidores / $padronElectoral) * 100, 2) : 0;
+        $coberturaMetaPct = $metaVotos > 0 ? round(($totalSeguidores / $metaVotos) * 100, 2) : 0;
+
+        // Cargar Publicaciones del candidato para analítica de impacto
+        $publicaciones = $candidatoPropio
+            ? Publicacion::where('candidato_id', $candidatoPropio->id)->with('ejeTematico')->get()
+            : collect();
+
+        $totalPosts = $publicaciones->count();
+        $totalLikes = (int)$publicaciones->sum('total_likes');
+        $totalComentarios = (int)$publicaciones->sum('total_comentarios');
+        $totalCompartidos = (int)$publicaciones->sum('total_compartidos');
+        $totalGuardados = (int)$publicaciones->sum('total_guardados');
+        $totalInteracciones = $totalLikes + $totalComentarios + $totalCompartidos + $totalGuardados;
+        $totalPautaInvertida = (float)$publicaciones->sum('monto_invertido_pauta');
+
+        // Métricas de Rendimiento Individual por Publicación (Promedios & Techo Máximo)
+        $promedioInteraccionesPorPost = $totalPosts > 0 ? round($totalInteracciones / $totalPosts, 1) : 0;
+        $promedioLikesPorPost = $totalPosts > 0 ? round($totalLikes / $totalPosts, 1) : 0;
+        $promedioComentariosPorPost = $totalPosts > 0 ? round($totalComentarios / $totalPosts, 1) : 0;
+
+        $picoMaximoPost = $publicaciones->sortByDesc(fn($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados)->first();
+        $picoMaximoInteracciones = $picoMaximoPost
+            ? (int)($picoMaximoPost->total_likes + $picoMaximoPost->total_comentarios + $picoMaximoPost->total_compartidos + $picoMaximoPost->total_guardados)
+            : 0;
+
+        $tasaMovilizacionPromedioPct = $padronElectoral > 0 ? round(($promedioInteraccionesPorPost / $padronElectoral) * 100, 2) : 0;
+        $tasaMovilizacionPicoPct = $padronElectoral > 0 ? round(($picoMaximoInteracciones / $padronElectoral) * 100, 2) : 0;
+
+        // Datos para Gráficos de Pastel (Donut Charts)
+        // Pastel 1: Comunidad Digital vs Padrón No Alcanzado
+        $pastelPadron = [
+            [
+                'label' => 'Comunidad en Redes',
+                'valor' => $totalSeguidores,
+                'porcentaje' => $penetracionPadronPct,
+                'color' => '#06b6d4',
+            ],
+            [
+                'label' => 'Padrón No Alcanzado (Oportunidad)',
+                'valor' => max(0, $padronElectoral - $totalSeguidores),
+                'porcentaje' => round(max(0, 100 - $penetracionPadronPct), 1),
+                'color' => '#334155',
+            ]
+        ];
+
+        // Pastel 2: Participación de la Comunidad por Red Social
+        $pastelRedes = $perfiles->map(function ($p) use ($totalSeguidores) {
+            $pct = $totalSeguidores > 0 ? round(($p->seguidores_actuales / $totalSeguidores) * 100, 1) : 0;
+            return [
+                'label' => ucfirst($p->plataforma),
+                'plataforma' => $p->plataforma,
+                'valor' => (int)$p->seguidores_actuales,
+                'porcentaje' => $pct,
+                'color' => match ($p->plataforma) {
+                    'instagram' => '#E4405F',
+                    'facebook' => '#1877F2',
+                    'tiktok' => '#00F2FE',
+                    'youtube' => '#FF0000',
+                    'x_twitter' => '#64748b',
+                    default => '#06b6d4',
+                },
+            ];
+        })->filter(fn($r) => $r['valor'] > 0)->values();
+
+        // Pastel 3: Estructura del Electorado en 4 Sectores Estratégicos
+        $nucleoDuroEstimado = max(10, (int)round($promedioLikesPorPost * 1.3));
+        $seguidoresPasivos = max(0, $totalSeguidores - $nucleoDuroEstimado);
+        $expansionPautaEstimada = $totalPautaInvertida > 0 ? (int)round($totalPautaInvertida / 1.6) : 0;
+        $silenciosoEstimado = max(0, $padronElectoral - $totalSeguidores - $expansionPautaEstimada);
+
+        $pastelElectorado = [
+            [
+                'label' => 'Núcleo Duro Activo (Militancia Fiel)',
+                'valor' => $nucleoDuroEstimado,
+                'porcentaje' => $padronElectoral > 0 ? round(($nucleoDuroEstimado / $padronElectoral) * 100, 1) : 0,
+                'color' => '#10b981',
+                'desc' => 'Electores que interactúan y militan activamente',
+            ],
+            [
+                'label' => 'Comunidad Pasiva (Seguidores Observadores)',
+                'valor' => $seguidoresPasivos,
+                'porcentaje' => $padronElectoral > 0 ? round(($seguidoresPasivos / $padronElectoral) * 100, 1) : 0,
+                'color' => '#06b6d4',
+                'desc' => 'Seguidores que leen y miran historias en silencio',
+            ],
+            [
+                'label' => 'Votantes Conquistados por Pauta',
+                'valor' => $expansionPautaEstimada,
+                'porcentaje' => $padronElectoral > 0 ? round(($expansionPautaEstimada / $padronElectoral) * 100, 1) : 0,
+                'color' => '#8b5cf6',
+                'desc' => 'Vecinos fuera del círculo alcanzados por anuncios',
+            ],
+            [
+                'label' => 'Padrón No Alcanzado (Indecisos)',
+                'valor' => $silenciosoEstimado,
+                'porcentaje' => $padronElectoral > 0 ? round(($silenciosoEstimado / $padronElectoral) * 100, 1) : 0,
+                'color' => '#475569',
+                'desc' => 'Electorado restante por conquistar en el departamento',
+            ],
+        ];
+
+        // Inteligencia de Tiempo & Proyección hacia el Día de la Elección
+        $diasParaEleccion = 118; // Días estimados a comicios
+        $semanasRestantes = max(1, round($diasParaEleccion / 7));
+        $crecimientoSemanalPromedio = 35; // +35 seguidores netos por semana orgánicos
+        $proyeccionOrganicaTotal = $totalSeguidores + ($crecimientoSemanalPromedio * $semanasRestantes);
+        $proyeccionOrganicaPadronPct = $padronElectoral > 0 ? round(($proyeccionOrganicaTotal / $padronElectoral) * 100, 1) : 0;
+        $brechaParaMeta = max(0, $metaVotos - $proyeccionOrganicaTotal);
+        $pautaMensualSugerida = round(($brechaParaMeta * 1.6) / max(1, $semanasRestantes / 4));
+
+        $inteligenciaTiempo = [
+            'dias_para_eleccion' => $diasParaEleccion,
+            'semanas_restantes' => $semanasRestantes,
+            'ritmo_semanal_crecimiento' => $crecimientoSemanalPromedio,
+            'proyeccion_organica_total' => $proyeccionOrganicaTotal,
+            'proyeccion_organica_padron_pct' => $proyeccionOrganicaPadronPct,
+            'brecha_meta_votos' => $brechaParaMeta,
+            'pauta_mensual_sugerida_ars' => $pautaMensualSugerida,
+            'dias_pico' => 'Martes, Jueves y Domingos',
+            'horarios_prime' => '12:30 a 14:30 hs (Almuerzo) & 19:30 a 22:30 hs (Prime Time Nocturno)',
+        ];
+
+        // Cruce por Red Social y Cobertura Etaria
+        $redesImpacto = $perfiles->map(function ($p) use ($padronElectoral, $publicaciones) {
+            $postsRed = $publicaciones->where('perfil_social_id', $p->id);
+            $totalIntRed = $postsRed->sum(fn($post) => $post->total_likes + $post->total_comentarios + $post->total_compartidos + $post->total_guardados);
+            $pautaRed = $postsRed->sum('monto_invertido_pauta');
+            $seguidores = (int)$p->seguidores_actuales;
+            $coberturaPct = $padronElectoral > 0 ? round(($seguidores / $padronElectoral) * 100, 2) : 0;
+
+            $rangoObjetivo = match ($p->plataforma) {
+                'tiktok' => '16 a 24 años (Voto Joven / Primer Votante)',
+                'instagram' => '20 a 42 años (Jóvenes Adultos & Profesionales)',
+                'facebook' => '40 a 70+ años (Familias & Adultos Mayores)',
+                'youtube' => 'Transversal (Debates, Entrevistas y Formatos Largos)',
+                default => 'Población General',
+            };
+
+            $diagnostico = match ($p->plataforma) {
+                'tiktok' => $coberturaPct >= 10 ? '🟢 Penetración óptima en jóvenes' : '🟡 Potencial para captar primer voto',
+                'instagram' => $coberturaPct >= 8 ? '🟢 Comunidad consolidada en sector productivo' : '🟡 Foco en dinamizar historias y reels',
+                'facebook' => $coberturaPct >= 6 ? '🟢 Buen anclaje barrial' : '🔴 Brecha en adultos: se recomienda pauta geolocalizada',
+                default => '🟢 Presencia activa',
+            };
+
+            return [
+                'id' => $p->id,
+                'plataforma' => $p->plataforma,
+                'handle_usuario' => $p->handle_usuario,
+                'url_perfil' => $p->url_perfil,
+                'foto_perfil_url' => $p->foto_perfil_url,
+                'seguidores' => $seguidores,
+                'cobertura_padron_pct' => $coberturaPct,
+                'total_publicaciones' => $postsRed->count(),
+                'total_interacciones' => $totalIntRed,
+                'pauta_invertida' => $pautaRed,
+                'rango_objetivo' => $rangoObjetivo,
+                'diagnostico' => $diagnostico,
+            ];
+        });
+
+        // Motor de Oportunidades de Pauta (Boost AI Engine): Ventana de Oro de 48 horas a 7 días
+        $ahora = now();
+        $candidatosBoost = $publicaciones->filter(function ($pub) use ($ahora) {
+            if (!in_array($pub->tipo_pauta, ['organico', 'organico_impulsado'])) {
+                return false;
+            }
+            $fecha = $pub->fecha_publicacion ?: $pub->created_at;
+            if (!$fecha) return false;
+            $horas = $fecha->diffInHours($ahora);
+            // Ventana óptima de maduración: entre 48 horas y 7 días (168h)
+            return $horas >= 48 && $horas <= (7 * 24);
+        });
+
+        // Si aún no hay posts en la ventana estricta, fallback a los posts orgánicos con más likes
+        if ($candidatosBoost->isEmpty()) {
+            $candidatosBoost = $publicaciones->filter(fn($pub) => in_array($pub->tipo_pauta, ['organico', 'organico_impulsado']));
+        }
+
+        $oportunidadesPauta = $candidatosBoost->sortByDesc(function ($pub) use ($totalSeguidores) {
+            $base = max($totalSeguidores, 500);
+            return (($pub->total_likes + $pub->total_comentarios * 2) / $base) * 100;
+        })->take(3)->values()->map(function ($pub) use ($padronElectoral, $ahora) {
+            $interacciones = $pub->total_likes + $pub->total_comentarios + $pub->total_compartidos + $pub->total_guardados;
+            $sugerenciaPauta = 25000;
+            $alcanceEstimado = min($padronElectoral, (int)round($sugerenciaPauta / 1.6));
+            $coberturaEstimadaPct = round(($alcanceEstimado / max($padronElectoral, 1)) * 100, 1);
+
+            $fecha = $pub->fecha_publicacion ?: $pub->created_at;
+            $horas = $fecha ? $fecha->diffInHours($ahora) : 72;
+            $dias = round($horas / 24, 1);
+            $enVentanaOro = ($horas >= 48 && $horas <= 168);
+
+            return [
+                'id' => $pub->id,
+                'url_post' => $pub->url_post,
+                'contenido_resumen' => $pub->contenido_resumen,
+                'tipo_formato' => $pub->tipo_formato,
+                'plataforma' => $pub->plataforma,
+                'total_likes' => (int)$pub->total_likes,
+                'total_comentarios' => (int)$pub->total_comentarios,
+                'total_interacciones' => $interacciones,
+                'eje_tematico' => $pub->ejeTematico?->nombre ?? 'General',
+                'sugerencia_inversion_ars' => $sugerenciaPauta,
+                'alcance_estimado_electores' => $alcanceEstimado,
+                'cobertura_estimada_padron_pct' => $coberturaEstimadaPct,
+                'horas_publicado' => $horas,
+                'dias_publicado' => $dias,
+                'en_ventana_oro' => $enVentanaOro,
+                'estado_ventana' => $enVentanaOro ? "🟢 Ventana de Oro ({$dias}d de publicado)" : ($horas < 48 ? "🟡 En maduración ({$horas}h)" : "⚪ Vigencia extendida ({$dias}d)"),
+                'justificacion' => "Tiene {$dias} días de maduración orgánica con {$pub->total_likes} likes y {$pub->total_comentarios} comentarios. Es el momento ideal para impulsarlo y alcanzar al {$coberturaEstimadaPct}% del padrón departamental.",
+            ];
+        });
+
+        return Inertia::render('Territorios/ImpactoElectoral', [
+            'candidato' => $candidatoPropio ? [
+                'id' => $candidatoPropio->id,
+                'nombre_completo' => $candidatoPropio->nombre_completo,
+                'partido_coalicion' => $candidatoPropio->partido_coalicion,
+                'cargo_aspirado' => $candidatoPropio->cargo_aspirado,
+                'estado_politico' => $candidatoPropio->estado_politico,
+                'avatar_url' => $candidatoPropio->avatar_url,
+                'color_hex' => $candidatoPropio->color_hex,
+            ] : null,
+            'territorioActivo' => [
+                'id' => $territorioActivo?->id,
+                'nombre' => $territorioActivo?->nombre ?? 'Departamento Local',
+                'tipo' => $territorioActivo?->tipo ?? 'departamento',
+                'padron_electoral' => $padronElectoral,
+                'poblacion_total' => $poblacionTotal,
+                'poblacion_urbana_pct' => (float)($territorioActivo?->poblacion_urbana_pct ?? 85),
+                'poblacion_rural_pct' => (float)($territorioActivo?->poblacion_rural_pct ?? 15),
+                'meta_votos' => $metaVotos,
+            ],
+            'departamentos' => $departamentos->map(fn($d) => [
+                'id' => $d->id,
+                'nombre' => $d->nombre,
+                'padron_electoral' => (int)$d->padron_electoral,
+                'poblacion_total' => (int)$d->poblacion_total,
+            ]),
+            'piramide' => $piramide,
+            'stats' => [
+                'padron_electoral' => $padronElectoral,
+                'poblacion_total' => $poblacionTotal,
+                'meta_votos' => $metaVotos,
+                'total_seguidores_comunidad' => $totalSeguidores,
+                'penetracion_padron_pct' => $penetracionPadronPct,
+                'cobertura_meta_pct' => $coberturaMetaPct,
+                'total_publicaciones' => $totalPosts,
+                'total_interacciones' => $totalInteracciones,
+                'total_likes' => $totalLikes,
+                'total_comentarios' => $totalComentarios,
+                'total_pauta_invertida' => $totalPautaInvertida,
+                'costo_por_interaccion' => $totalInteracciones > 0 ? round($totalPautaInvertida / $totalInteracciones, 2) : 0,
+                // Rendimiento Individual & Promedios Reales
+                'promedio_interacciones_por_post' => $promedioInteraccionesPorPost,
+                'promedio_likes_por_post' => $promedioLikesPorPost,
+                'promedio_comentarios_por_post' => $promedioComentariosPorPost,
+                'pico_maximo_interacciones' => $picoMaximoInteracciones,
+                'pico_maximo_post_resumen' => $picoMaximoPost?->contenido_resumen,
+                'tasa_movilizacion_promedio_pct' => $tasaMovilizacionPromedioPct,
+                'tasa_movilizacion_pico_pct' => $tasaMovilizacionPicoPct,
+            ],
+            'pasteles' => [
+                'padron' => $pastelPadron,
+                'redes' => $pastelRedes,
+                'electorado' => $pastelElectorado,
+            ],
+            'inteligenciaTiempo' => $inteligenciaTiempo,
+            'redesImpacto' => $redesImpacto,
+            'oportunidadesPauta' => $oportunidadesPauta,
+        ]);
     }
 }

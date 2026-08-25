@@ -79,6 +79,14 @@ class PerfilSocial extends Model
     }
 
     /**
+     * Historial de auditorías y mediciones time-series orden cronológico ascendente.
+     */
+    public function metricasHistoricas(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PerfilSocialMetrica::class)->orderBy('fecha', 'asc');
+    }
+
+    /**
      * Última medición registrada.
      */
     public function ultimaMetrica(): \Illuminate\Database\Eloquent\Relations\HasOne

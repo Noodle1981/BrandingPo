@@ -256,14 +256,25 @@ const saveTerritorio = () => {
             </span>
           </div>
 
-          <button
-            type="button"
-            @click="openCreateModal"
-            class="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center gap-1.5 shadow-sm hover:scale-102 transition-all cursor-pointer shrink-0"
-          >
-            <Plus class="w-4 h-4" />
-            <span>Agregar Territorio</span>
-          </button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <Link
+              href="/territorios/impacto-electoral"
+              class="px-3.5 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-sm hover:scale-102 transition-all cursor-pointer shrink-0"
+              title="Abrir Matriz de Impacto & Penetración Electoral"
+            >
+              <Target class="w-4 h-4" />
+              <span>Matriz de Impacto & Padrón</span>
+            </Link>
+
+            <button
+              type="button"
+              @click="openCreateModal"
+              class="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center gap-1.5 shadow-sm hover:scale-102 transition-all cursor-pointer shrink-0"
+            >
+              <Plus class="w-4 h-4" />
+              <span>Agregar Territorio</span>
+            </button>
+          </div>
         </div>
       </div>
 

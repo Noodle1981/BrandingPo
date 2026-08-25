@@ -31,6 +31,127 @@ class PublicacionController extends Controller
 
         return response()->json($data);
     }
+
+    /**
+     * Sincronizar en vivo una publicación individual.
+     */
+    public function sincronizarIndividual(Publicacion $publicacion, SocialProfileScraperService $scraper): JsonResponse
+    {
+        if (empty($publicacion->url_post)) {
+            return response()->json(['success' => false, 'mensaje' => 'La publicación no tiene enlace URL.']);
+        }
+
+        $scraped = $scraper->scrapePost($publicacion->url_post, $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma);
+        if (! $scraped['success']) {
+            return response()->json(['success' => false, 'mensaje' => $scraped['mensaje'] ?? 'No se pudo leer la URL pública.']);
+        }
+
+        $oldLikes = (int)$publicacion->total_likes;
+        $oldComments = (int)$publicacion->total_comentarios;
+        $freshLikes = (int)($scraped['total_likes'] ?? $oldLikes);
+        $freshComments = (int)($scraped['total_comentarios'] ?? $oldComments);
+
+        $deltaLikes = max(0, $freshLikes - $oldLikes);
+        $deltaComments = max(0, $freshComments - $oldComments);
+
+        $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes);
+
+        $publicacion->update([
+            'total_likes' => $freshLikes,
+            'total_comentarios' => $freshComments,
+            'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
+            'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
+            'termometro_humor_social' => $aiEmocional['termometro_humor_social'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'mensaje' => 'Sincronizado',
+            'delta_likes' => $deltaLikes,
+            'delta_comentarios' => $deltaComments,
+            'total_likes' => $freshLikes,
+            'total_comentarios' => $freshComments,
+            'url_post' => $publicacion->url_post,
+            'fecha' => $publicacion->fecha_publicacion?->format('d/m/Y') ?? 'Reciente',
+            'resumen' => substr($publicacion->contenido_resumen, 0, 45) . (strlen($publicacion->contenido_resumen) > 45 ? '...' : ''),
+        ]);
+    }
+
+    /**
+     * Sincronizar en vivo métricas de publicaciones en la ventana activa de 15 días.
+     * Si la publicación tiene >= 16 días, su métrica queda congelada como histórico consolidado.
+     */
+    public function sincronizarRecientes(Request $request, PerfilSocial $perfilSocial, SocialProfileScraperService $scraper): RedirectResponse|JsonResponse
+    {
+        $fechaLimite = Carbon::now()->subDays(15)->startOfDay();
+
+        $publicaciones = Publicacion::where('perfil_social_id', $perfilSocial->id)
+            ->where('fecha_publicacion', '>=', $fechaLimite)
+            ->whereNotNull('url_post')
+            ->where('url_post', '!=', '')
+            ->get();
+
+        if ($publicaciones->isEmpty()) {
+            $msg = 'No hay publicaciones dentro de la ventana de los últimos 15 días para sincronizar.';
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'mensaje' => $msg, 'actualizadas' => 0]);
+            }
+            return redirect()->back()->with('warning', $msg);
+        }
+
+        $actualizadas = 0;
+        $nuevosLikes = 0;
+        $nuevosComentarios = 0;
+
+        foreach ($publicaciones as $pub) {
+            $scraped = $scraper->scrapePost($pub->url_post, $perfilSocial->plataforma);
+            if ($scraped['success']) {
+                $oldLikes = (int)$pub->total_likes;
+                $oldComments = (int)$pub->total_comentarios;
+                $freshLikes = (int)($scraped['total_likes'] ?? $oldLikes);
+                $freshComments = (int)($scraped['total_comentarios'] ?? $oldComments);
+
+                // Si encontramos datos más frescos o mayores
+                if ($freshLikes > $oldLikes || $freshComments > $oldComments || $freshLikes > 0) {
+                    $deltaLikes = max(0, $freshLikes - $oldLikes);
+                    $deltaComments = max(0, $freshComments - $oldComments);
+                    $nuevosLikes += $deltaLikes;
+                    $nuevosComentarios += $deltaComments;
+
+                    // Recalcular reacciones emocionales con los nuevos likes
+                    $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes);
+
+                    $pub->update([
+                        'total_likes' => $freshLikes,
+                        'total_comentarios' => $freshComments,
+                        'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
+                        'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
+                        'termometro_humor_social' => $aiEmocional['termometro_humor_social'],
+                    ]);
+
+                    $actualizadas++;
+                }
+            }
+        }
+
+        if ($actualizadas > 0) {
+            $msg = "✨ Se sincronizaron {$actualizadas} publicaciones recientes (+{$nuevosLikes} likes y +{$nuevosComentarios} comentarios nuevos).";
+        } else {
+            $msg = "✨ Se verificaron {$publicaciones->count()} publicaciones de los últimos 15 días y ya estaban al día.";
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'mensaje' => $msg,
+                'actualizadas' => $actualizadas,
+                'nuevos_likes' => $nuevosLikes,
+                'nuevos_comentarios' => $nuevosComentarios,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $msg);
+    }
     /**
      * Muro interactivo estilo red social (Social Wall) del Workspace Activo.
      */
@@ -150,63 +271,7 @@ class PublicacionController extends Controller
     }
 
     /**
-     * Consola ergonómica de carga rápida Fast-Flow.
-     * Acepta ?tipo=propio|oposicion|todos para pre-filtrar el selector de candidato.
-     */
-    public function fastFlow(Request $request): Response
-    {
-        $workspace = WorkspaceHelper::activo($request);
-        $tipo = $request->query('tipo', 'propio'); // 'propio' (default) | 'oposicion'
-
-        $candidatosQuery = Candidato::where('workspace_id', $workspace->id)
-            ->with('perfilesSociales')
-            ->orderByDesc('es_propio')
-            ->orderBy('nombre_completo');
-
-        if ($tipo === 'propio') {
-            $candidatosQuery->where('es_propio', true);
-        } elseif ($tipo === 'oposicion') {
-            $candidatosQuery->where('es_propio', false);
-        }
-
-        $ejes = EjeTematico::where('workspace_id', $workspace->id)
-            ->orderBy('nombre')
-            ->get(['id', 'nombre', 'color_badge']);
-
-        $ultimasCargasQuery = Publicacion::where('workspace_id', $workspace->id)
-            ->with(['candidato', 'perfilSocial']);
-
-        if ($tipo === 'propio') {
-            $ultimasCargasQuery->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
-        } elseif ($tipo === 'oposicion') {
-            $ultimasCargasQuery->whereHas('candidato', fn ($q) => $q->where('es_propio', false));
-        }
-
-        $ultimasCargas = $ultimasCargasQuery->orderByDesc('id')
-            ->limit(10)
-            ->get()
-            ->map(fn ($p) => [
-                'id' => $p->id,
-                'candidato' => $p->candidato?->nombre_completo,
-                'plataforma' => $p->perfilSocial?->plataforma,
-                'tipo_formato' => $p->tipo_formato,
-                'tipo_pauta' => $p->tipo_pauta,
-                'monto' => $p->monto_invertido_pauta,
-                'vistas' => $p->total_vistas,
-                'likes' => $p->total_likes,
-                'fecha' => $p->fecha_publicacion?->format('d/m H:i'),
-            ]);
-
-        return Inertia::render('Publicaciones/FastFlow', [
-            'candidatos'     => $candidatosQuery->get(),
-            'ejes'           => $ejes,
-            'ultimas_cargas' => $ultimasCargas,
-            'tipo_activo'    => $tipo,
-        ]);
-    }
-
-    /**
-     * Guardar una publicación cargada desde Fast-Flow.
+     * Guardar una nueva publicación.
      */
     public function store(Request $request): RedirectResponse
     {

@@ -723,4 +723,168 @@ class CandidatoController extends Controller
         return redirect()->route('candidatos.index')
             ->with('success', "Candidato {$nombre} eliminado satisfactoriamente.");
     }
+
+    /**
+     * Dashboard Analítico Avanzado para un Canal de Red Social específico.
+     */
+    public function metricasCanal(Request $request, PerfilSocial $perfilSocial): Response
+    {
+        $workspace = WorkspaceHelper::activo($request);
+        $candidato = $perfilSocial->candidato;
+
+        // Validar acceso al workspace
+        if ($candidato->workspace_id !== $workspace->id) {
+            abort(403, 'No autorizado para ver este perfil.');
+        }
+
+        $ejes = EjeTematico::where('workspace_id', $workspace->id)->get();
+
+        // 1. Cargar mediciones históricas time-series
+        $mediciones = $perfilSocial->metricasHistoricas()
+            ->orderBy('fecha_medicion', 'asc')
+            ->get();
+
+        // 2. Cargar publicaciones de este canal
+        $publicaciones = Publicacion::where('perfil_social_id', $perfilSocial->id)
+            ->with(['ejeTematico'])
+            ->orderByDesc('fecha_publicacion')
+            ->get();
+
+        // 3. Cálculos de Crecimiento & Punto Cero
+        $seguidoresActuales = (int)$perfilSocial->seguidores_actuales;
+        $seguidoresPuntoCero = (int)$perfilSocial->seguidores_punto_cero;
+        $crecimientoNetoSeguidores = $seguidoresActuales - $seguidoresPuntoCero;
+        $crecimientoPctSeguidores = $seguidoresPuntoCero > 0
+            ? round(($crecimientoNetoSeguidores / $seguidoresPuntoCero) * 100, 2)
+            : 0;
+
+        $postsActuales = (int)$perfilSocial->publicaciones_totales;
+        $postsPuntoCero = (int)$perfilSocial->publicaciones_punto_cero;
+        $crecimientoNetoPosts = max(0, $postsActuales - $postsPuntoCero);
+
+        // 4. Métricas de Engagement & Interacciones
+        $totalLikes = (int)$publicaciones->sum('total_likes');
+        $totalComentarios = (int)$publicaciones->sum('total_comentarios');
+        $totalCompartidos = (int)$publicaciones->sum('total_compartidos');
+        $totalGuardados = (int)$publicaciones->sum('total_guardados');
+        $totalInteracciones = $totalLikes + $totalComentarios + $totalCompartidos + $totalGuardados;
+        $totalVistas = (int)$publicaciones->sum('total_vistas');
+        $totalPauta = (float)$publicaciones->sum('monto_invertido_pauta');
+
+        // Tasa de engagement promedio por post vs seguidores
+        $tasaEngagement = ($seguidoresActuales > 0 && $publicaciones->count() > 0)
+            ? round((($totalInteracciones / $publicaciones->count()) / $seguidoresActuales) * 100, 2)
+            : 0;
+
+        // Distribución por Ejes Temáticos
+        $distribucionEjes = $ejes->map(function ($eje) use ($publicaciones) {
+            $postsDelEje = $publicaciones->where('eje_tematico_id', $eje->id);
+            $totalInt = $postsDelEje->sum(fn($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
+            return [
+                'id' => $eje->id,
+                'nombre' => $eje->nombre,
+                'color_badge' => $eje->color_badge,
+                'total_posts' => $postsDelEje->count(),
+                'total_interacciones' => $totalInt,
+                'total_likes' => $postsDelEje->sum('total_likes'),
+                'total_comentarios' => $postsDelEje->sum('total_comentarios'),
+            ];
+        })->filter(fn($e) => $e['total_posts'] > 0)->values();
+
+        // Top 5 Publicaciones más destacadas
+        $topPublicaciones = $publicaciones->sortByDesc(fn($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados)
+            ->take(5)
+            ->values()
+            ->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'fecha_publicacion' => $p->fecha_publicacion?->format('d/m/Y H:i'),
+                    'fecha_relativa' => $p->fecha_publicacion?->diffForHumans(),
+                    'tipo_formato' => $p->tipo_formato,
+                    'tipo_pauta' => $p->tipo_pauta,
+                    'url_post' => $p->url_post,
+                    'media_url' => $p->media_url,
+                    'contenido_resumen' => $p->contenido_resumen,
+                    'total_likes' => (int)$p->total_likes,
+                    'total_comentarios' => (int)$p->total_comentarios,
+                    'total_compartidos' => (int)$p->total_compartidos,
+                    'total_guardados' => (int)$p->total_guardados,
+                    'total_interacciones' => (int)($p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados),
+                    'sentimiento_predominante' => $p->sentimiento_predominante,
+                    'termometro_humor_social' => $p->termometro_humor_social,
+                    'eje_tematico' => $p->ejeTematico ? [
+                        'nombre' => $p->ejeTematico->nombre,
+                        'color_badge' => $p->ejeTematico->color_badge,
+                    ] : null,
+                ];
+            });
+
+        return Inertia::render('Candidatos/MetricasCanal', [
+            'candidato' => [
+                'id' => $candidato->id,
+                'nombre_completo' => $candidato->nombre_completo,
+                'partido_coalicion' => $candidato->partido_coalicion,
+                'cargo_aspirado' => $candidato->cargo_aspirado,
+                'estado_politico' => $candidato->estado_politico,
+                'color_hex' => $candidato->color_hex,
+                'avatar_url' => $candidato->avatar_url,
+                'es_propio' => (bool)$candidato->es_propio,
+            ],
+            'perfilSocial' => [
+                'id' => $perfilSocial->id,
+                'plataforma' => $perfilSocial->plataforma,
+                'handle_usuario' => $perfilSocial->handle_usuario,
+                'url_perfil' => $perfilSocial->url_perfil,
+                'foto_perfil_url' => $perfilSocial->foto_perfil_url,
+                'esta_activo' => (bool)$perfilSocial->esta_activo,
+                'es_verificado' => (bool)$perfilSocial->es_verificado,
+                'semaforo_color' => $perfilSocial->semaforo_color,
+                'seguidores_actuales' => $seguidoresActuales,
+                'seguidores_punto_cero' => $seguidoresPuntoCero,
+                'seguidos_actuales' => (int)$perfilSocial->seguidos_actuales,
+                'publicaciones_totales' => $postsActuales,
+                'publicaciones_punto_cero' => $postsPuntoCero,
+                'me_gusta_totales' => (int)$perfilSocial->me_gusta_totales,
+                'fecha_punto_cero' => $perfilSocial->fecha_punto_cero?->format('d/m/Y'),
+                'fecha_ultima_medicion' => $perfilSocial->ultima_auditoria_at?->format('d/m/Y H:i'),
+                'fecha_ultima_medicion_relativa' => $perfilSocial->ultima_auditoria_at?->diffForHumans(),
+            ],
+            'stats' => [
+                'seguidores_actuales' => $seguidoresActuales,
+                'seguidores_punto_cero' => $seguidoresPuntoCero,
+                'crecimiento_neto_seguidores' => $crecimientoNetoSeguidores,
+                'crecimiento_pct_seguidores' => $crecimientoPctSeguidores,
+                'posts_actuales' => $postsActuales,
+                'posts_punto_cero' => $postsPuntoCero,
+                'crecimiento_neto_posts' => $crecimientoNetoPosts,
+                'total_publicaciones_registradas' => $publicaciones->count(),
+                'total_interacciones' => $totalInteracciones,
+                'total_likes' => $totalLikes,
+                'total_comentarios' => $totalComentarios,
+                'total_compartidos' => $totalCompartidos,
+                'total_guardados' => $totalGuardados,
+                'total_vistas' => $totalVistas,
+                'total_pauta_invertida' => $totalPauta,
+                'tasa_engagement' => $tasaEngagement,
+                'promedio_likes_por_post' => $publicaciones->count() > 0 ? round($totalLikes / $publicaciones->count(), 1) : 0,
+                'promedio_comentarios_por_post' => $publicaciones->count() > 0 ? round($totalComentarios / $publicaciones->count(), 1) : 0,
+            ],
+            'historicoMediciones' => $mediciones->map(function ($m) {
+                return [
+                    'id' => $m->id,
+                    'fecha' => $m->fecha?->format('d/m/Y') ?? $m->created_at?->format('d/m/Y'),
+                    'fecha_corta' => $m->fecha?->format('d/m') ?? $m->created_at?->format('d/m'),
+                    'seguidores' => (int)$m->seguidores,
+                    'seguidos' => (int)$m->seguidos,
+                    'publicaciones' => (int)$m->publicaciones_totales,
+                    'me_gusta_totales' => (int)$m->me_gusta_totales,
+                    'crecimiento_neto_seguidores' => (int)$m->crecimiento_seguidores_neto,
+                    'crecimiento_neto_publicaciones' => (int)$m->crecimiento_posts_neto,
+                ];
+            }),
+            'topPublicaciones' => $topPublicaciones,
+            'distribucionEjes' => $distribucionEjes,
+            'ejes' => $ejes,
+        ]);
+    }
 }

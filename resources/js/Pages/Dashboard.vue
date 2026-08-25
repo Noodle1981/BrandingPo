@@ -155,11 +155,11 @@ const plataformaIconColor = (plataforma) => {
           </div>
 
           <Link
-            href="/fast-flow"
+            href="/mi-candidato"
             class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-all shadow-sm hover:scale-102"
           >
-            <Zap class="w-3.5 h-3.5" />
-            <span>Cargar Post</span>
+            <Sparkles class="w-3.5 h-3.5" />
+            <span>Mi Candidato</span>
           </Link>
           <Link
             href="/feed"
@@ -276,11 +276,11 @@ const plataformaIconColor = (plataforma) => {
         <div v-else class="p-8 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500">
           <p class="text-sm">No hay publicaciones registradas recientemente para este perfil.</p>
           <Link
-            href="/fast-flow"
+            href="/mi-candidato"
             class="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs"
           >
-            <Zap class="w-3.5 h-3.5" />
-            <span>Cargar primera publicación</span>
+            <Sparkles class="w-3.5 h-3.5" />
+            <span>Cargar en Mi Candidato</span>
           </Link>
         </div>
       </div>

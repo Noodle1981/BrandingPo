@@ -23,6 +23,7 @@ import {
   Swords,
   Globe,
   ShieldHalf,
+  Target,
   ChevronRight
 } from '@lucide/vue';
 import ThemeToggle from '../Components/ThemeToggle.vue';
@@ -63,16 +64,8 @@ const navigationSecciones = computed(() => [
         current: route().current('mi-candidato*'),
       },
       {
-        name: 'Fast-Flow Propio',
-        desc: 'Carga ágil de publicaciones del candidato',
-        href: '/fast-flow?tipo=propio',
-        icon: Zap,
-        current: route().current('fast-flow*') && page.url.includes('tipo=propio'),
-        readOnly: !canWrite.value,
-      },
-      {
-        name: 'Feed Propio',
-        desc: 'Timeline de publicaciones propias',
+        name: 'Feed de Publicaciones',
+        desc: 'Muro social de publicaciones propias',
         href: '/feed?filtro=propio',
         icon: Radio,
         current: route().current('feed*') && page.url.includes('filtro=propio'),
@@ -97,19 +90,18 @@ const navigationSecciones = computed(() => [
         current: route().current('candidatos*') && !route().current('candidatos.benchmarking'),
       },
       {
-        name: 'Fast-Flow Oposición',
-        desc: 'Auditar publicaciones de los rivales',
-        href: '/fast-flow?tipo=oposicion',
-        icon: Zap,
-        current: route().current('fast-flow*') && page.url.includes('tipo=oposicion'),
-        readOnly: !canWrite.value,
-      },
-      {
         name: 'Benchmarking',
         desc: 'Comparativa de crecimiento neto vs Punto 0',
         href: '/candidatos/benchmarking',
         icon: TrendingUp,
         current: route().current('candidatos.benchmarking'),
+      },
+      {
+        name: 'Feed de Oposición',
+        desc: 'Publicaciones monitoreadas de rivales',
+        href: '/feed?filtro=oposicion',
+        icon: Radio,
+        current: route().current('feed*') && page.url.includes('filtro=oposicion'),
       },
     ],
   },
@@ -128,7 +120,14 @@ const navigationSecciones = computed(() => [
         desc: 'Padrón electoral, pirámide etaria y mapa',
         href: '/territorios',
         icon: MapPin,
-        current: route().current('territorios*'),
+        current: route().current('territorios*') && !route().current('territorios.impacto-electoral'),
+      },
+      {
+        name: 'Matriz de Impacto & Padrón',
+        desc: 'Penetración en electores y simulador',
+        href: '/territorios/impacto-electoral',
+        icon: Target,
+        current: route().current('territorios.impacto-electoral'),
       },
       {
         name: 'Observatorio de Medios',

@@ -201,6 +201,24 @@ const totalInteracciones = computed(() => {
     Number(props.post.total_guardados || 0);
 });
 
+const isPostInActiveWindow = computed(() => {
+  const raw = props.post.fecha_publicacion_raw || props.post.fecha_publicacion;
+  if (!raw) return false;
+  try {
+    let d;
+    if (typeof raw === 'string' && raw.includes('/')) {
+      const parts = raw.split(' ')[0].split('/');
+      d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+    } else {
+      d = new Date(raw);
+    }
+    const limit = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+    return !isNaN(d.getTime()) && d >= limit;
+  } catch (e) {
+    return false;
+  }
+});
+
 const formatos = [
   { value: 'Reel', label: '🎬 Reel / Video Vertical' },
   { value: 'Foto', label: '🖼️ Foto / Imagen' },
@@ -256,8 +274,23 @@ const tiposPauta = [
               size="sm"
             />
           </div>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {{ post.perfil_social?.handle_usuario || '@cuenta' }} &bull; {{ post.fecha_relativa || post.fecha_publicacion }}
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <span>{{ post.perfil_social?.handle_usuario || '@cuenta' }} &bull; {{ post.fecha_relativa || post.fecha_publicacion }}</span>
+            <span
+              v-if="isPostInActiveWindow"
+              class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold"
+              title="En ventana de sincronización activa (menos de 15 días)"
+            >
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Activo (15d)</span>
+            </span>
+            <span
+              v-else
+              class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-mono"
+              title="Métrica histórica consolidada. No sufre modificaciones automáticas."
+            >
+              <span>🔒 Consolidado</span>
+            </span>
           </p>
         </div>
       </div>

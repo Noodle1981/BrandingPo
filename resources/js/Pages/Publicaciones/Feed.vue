@@ -129,11 +129,11 @@ const formatCurrency = (amount) => {
       <div class="flex items-center gap-2">
         <Link
           v-if="canWrite"
-          :href="filtros.filtro === 'propio' ? '/fast-flow?tipo=propio' : '/fast-flow'"
+          href="/mi-candidato"
           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm transition-all shadow-md shadow-cyan-500/20"
         >
-          <Zap class="w-4 h-4" />
-          <span>{{ filtros.filtro === 'propio' ? 'Cargar Post Propio' : 'Carga Rápida Fast-Flow' }}</span>
+          <Sparkles class="w-4 h-4" />
+          <span>Ir a Mi Candidato</span>
         </Link>
       </div>
     </div>

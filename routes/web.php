@@ -39,6 +39,7 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
     // IMPORTANTE: benchmarking debe ir ANTES de /candidatos/{candidato} para que Laravel no confunda "benchmarking" como ID
     Route::get('/candidatos/benchmarking', [\App\Http\Controllers\CandidatoController::class, 'benchmarking'])->name('candidatos.benchmarking');
     Route::get('/candidatos/{candidato}', [\App\Http\Controllers\CandidatoController::class, 'show'])->name('candidatos.show');
+    Route::get('/perfiles-sociales/{perfilSocial}/metricas', [\App\Http\Controllers\CandidatoController::class, 'metricasCanal'])->name('perfiles-sociales.metricas');
 
     Route::middleware(['can_write'])->group(function () {
         Route::post('/candidatos', [\App\Http\Controllers\CandidatoController::class, 'store'])->name('candidatos.store');
@@ -53,20 +54,21 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
 
     // Inteligencia Demográfica & Mapa de Situación Territorial
     Route::get('/territorios', [\App\Http\Controllers\TerritorioController::class, 'index'])->name('territorios.index');
+    Route::get('/territorios/impacto-electoral', [\App\Http\Controllers\TerritorioController::class, 'impactoElectoral'])->name('territorios.impacto-electoral');
     Route::post('/territorios/auto-detect', [\App\Http\Controllers\TerritorioController::class, 'autoDetect'])->name('territorios.auto-detect');
     Route::middleware(['can_write'])->group(function () {
         Route::post('/territorios', [\App\Http\Controllers\TerritorioController::class, 'store'])->name('territorios.store');
         Route::put('/territorios/{territorio}', [\App\Http\Controllers\TerritorioController::class, 'update'])->name('territorios.update');
     });
 
-    // Feed Social Multired & Fast-Flow Entry Desk
+    // Feed Social Multired
     Route::get('/feed', [\App\Http\Controllers\PublicacionController::class, 'feed'])->name('feed');
-    Route::get('/fast-flow', [\App\Http\Controllers\PublicacionController::class, 'fastFlow'])->name('fast-flow');
 
     Route::middleware(['can_write'])->group(function () {
-        Route::post('/fast-flow', [\App\Http\Controllers\PublicacionController::class, 'store'])->name('fast-flow.store');
         Route::post('/publicaciones', [\App\Http\Controllers\PublicacionController::class, 'store'])->name('publicaciones.store');
         Route::post('/publicaciones/scrape-post', [\App\Http\Controllers\PublicacionController::class, 'scrapePost'])->name('publicaciones.scrape-post');
+        Route::post('/publicaciones/{publicacion}/sincronizar', [\App\Http\Controllers\PublicacionController::class, 'sincronizarIndividual'])->name('publicaciones.sincronizar');
+        Route::post('/perfiles-sociales/{perfilSocial}/sincronizar-recientes', [\App\Http\Controllers\PublicacionController::class, 'sincronizarRecientes'])->name('perfiles-sociales.sincronizar-recientes');
         Route::put('/publicaciones/{publicacion}', [\App\Http\Controllers\PublicacionController::class, 'update'])->name('publicaciones.update');
         Route::delete('/publicaciones/{publicacion}', [\App\Http\Controllers\PublicacionController::class, 'destroy'])->name('publicaciones.destroy');
     });

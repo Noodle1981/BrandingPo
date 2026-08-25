@@ -45,14 +45,14 @@ class PublicacionesAndFastFlowTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_consultor_can_store_publication_via_fast_flow(): void
+    public function test_consultor_can_store_publication(): void
     {
         $consultor = User::where('role', 'consultor')->first();
         $candidato = Candidato::first();
         $perfil = $candidato->perfilesSociales->first();
         $eje = EjeTematico::first();
 
-        $response = $this->actingAs($consultor)->post('/fast-flow', [
+        $response = $this->actingAs($consultor)->post('/publicaciones', [
             'candidato_id' => $candidato->id,
             'perfil_social_id' => $perfil->id,
             'eje_tematico_id' => $eje->id,
@@ -62,7 +62,7 @@ class PublicacionesAndFastFlowTest extends TestCase
             'monto_invertido_pauta' => 35000,
             'vistas_organicas' => 12000,
             'vistas_pagadas' => 50000,
-            'contenido_resumen' => 'Post de prueba Fast-Flow con pauta pagada.',
+            'contenido_resumen' => 'Post de prueba con pauta pagada.',
             'total_likes' => 2400,
             'total_comentarios' => 120,
             'total_compartidos' => 310,
@@ -72,19 +72,19 @@ class PublicacionesAndFastFlowTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('publicaciones', [
-            'contenido_resumen' => 'Post de prueba Fast-Flow con pauta pagada.',
+            'contenido_resumen' => 'Post de prueba con pauta pagada.',
             'total_vistas' => 62000, // 12000 + 50000
             'monto_invertido_pauta' => 35000,
         ]);
     }
 
-    public function test_visualizador_cannot_post_via_fast_flow(): void
+    public function test_visualizador_cannot_post_publication(): void
     {
         $visualizador = User::where('role', 'visualizador')->first();
         $candidato = Candidato::first();
         $perfil = $candidato->perfilesSociales->first();
 
-        $response = $this->actingAs($visualizador)->post('/fast-flow', [
+        $response = $this->actingAs($visualizador)->post('/publicaciones', [
             'candidato_id' => $candidato->id,
             'perfil_social_id' => $perfil->id,
             'fecha_publicacion' => now()->toDateTimeString(),
