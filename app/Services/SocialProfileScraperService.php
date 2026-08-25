@@ -582,10 +582,19 @@ class SocialProfileScraperService
             return $result;
         }
 
-        // 1. Extraer URL limpia si el usuario pegó un <blockquote> o HTML embed
+        // 1. Extraer URL limpia si el usuario pegó un <iframe>, <blockquote> o HTML embed
         $url = $input;
-        if (preg_match('/data-instgrm-permalink="([^"]+)"/i', $input, $m)) {
+        if (preg_match('/plugins\/(?:post|video)\.php\?href=([^&"\']+)/i', $input, $m)) {
+            $url = urldecode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        } elseif (preg_match('/data-instgrm-permalink="([^"]+)"/i', $input, $m)) {
             $url = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        } elseif (preg_match('/src="([^"]+)"/i', $input, $m)) {
+            $src = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (preg_match('/href=([^&]+)/i', $src, $hm)) {
+                $url = urldecode($hm[1]);
+            } else {
+                $url = $src;
+            }
         } elseif (preg_match('/href="([^"]+)"/i', $input, $m)) {
             $url = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         } elseif (preg_match('/https?:\/\/[^\s"\'<>]+/i', $input, $m)) {
