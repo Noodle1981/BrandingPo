@@ -755,98 +755,93 @@ const chartOptions = computed(() => {
               :key="item.rango"
               class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5"
             >
-              <div class="flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center gap-2">
-                  <span class="font-black text-slate-900 dark:text-slate-100 text-sm">{{ item.rango }} años</span>
-                  <span class="text-[10px] text-slate-400">({{ item.categoria }})</span>
+              <!-- Encabezado de Franja: Rango y Electores Nominales -->
+              <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-black text-slate-900 dark:text-slate-100 text-sm">{{ item.rango }} años</span>
+                    <span class="text-[10px] text-slate-400">({{ item.categoria }})</span>
+                  </div>
+                  <div class="text-[11px] text-slate-500 font-sans">
+                    Universo en {{ territorioContexto.nombre || 'el Municipio' }}: <strong>{{ Number(item.electores_totales_franja || 0).toLocaleString('es-AR') }} electores</strong>
+                  </div>
                 </div>
-                <div class="flex items-center gap-3">
-                  <span class="text-slate-500">Padrón: <strong>{{ item.pct_padron }}%</strong></span>
-                  <span class="text-cyan-500 font-bold">Tu Red: <strong>{{ item.pct_audiencia }}%</strong></span>
+
+                <div class="text-right">
                   <span
-                    class="px-2 py-0.5 rounded font-bold text-[10px]"
-                    :class="item.brecha >= 0 ? 'bg-cyan-500/15 text-cyan-400' : 'bg-rose-500/15 text-rose-400'"
+                    class="px-2.5 py-1 rounded-xl font-bold text-[10px] font-mono inline-flex items-center gap-1 border"
+                    :class="{
+                      'bg-rose-500/10 border-rose-500/30 text-rose-400': item.pauta_tipo === 'urgente',
+                      'bg-amber-500/10 border-amber-500/30 text-amber-400': item.pauta_tipo === 'moderada',
+                      'bg-emerald-500/10 border-emerald-500/30 text-emerald-400': item.pauta_tipo === 'buena' || item.pauta_tipo === 'victoria',
+                    }"
                   >
-                    {{ item.brecha >= 0 ? '+' : '' }}{{ item.brecha }}%
+                    {{ item.pauta_badge }}
                   </span>
                 </div>
               </div>
 
-              <!-- 1. Bloque de Barras: Demografía (Padrón vs Tu Red) -->
+              <!-- 1. Penetración Nominal en el Padrón Electoral -->
               <div class="space-y-1.5 pt-1">
-                <div class="flex items-center justify-between text-[10px] text-slate-500">
-                  <span class="flex items-center gap-1.5 font-bold">
-                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                    <span>Padrón Electoral: <strong>{{ item.pct_padron }}%</strong></span>
-                  </span>
-                  <span class="flex items-center gap-1.5 font-bold text-cyan-500">
-                    <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
-                    <span>Tu Audiencia: <strong>{{ item.pct_audiencia }}%</strong></span>
-                  </span>
-                </div>
-                <!-- Doble Barra Comparativa Demografía -->
-                <div class="space-y-1">
-                  <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden" title="Distribución en el Padrón">
-                    <div class="h-full bg-slate-400 rounded-full" :style="{ width: `${item.pct_padron * 2.2}%` }"></div>
-                  </div>
-                  <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden" title="Distribución en tu Audiencia Digital">
-                    <div class="h-full bg-cyan-500 rounded-full transition-all" :style="{ width: `${item.pct_audiencia * 2.2}%` }"></div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 2. Bloque de Impacto de Reacciones: Escala Proporcional y Armónica -->
-              <div class="p-3 rounded-2xl bg-slate-100/70 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 space-y-2">
-                <div class="flex items-center justify-between text-[11px] font-sans flex-wrap gap-2">
-                  <div class="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
-                    <Heart class="w-3.5 h-3.5 text-rose-500 fill-rose-500/20" />
-                    <span>Impacto Estimado por Post (Franja {{ item.rango }} años):</span>
-                  </div>
-                  <span class="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                    {{ item.resonancia_nivel || 'Resonancia Moderada ⚡' }}
-                  </span>
-                </div>
-
-                <!-- Métricas Clave en Chips -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
-                  <!-- Actual 30 días -->
-                  <div class="p-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between">
-                    <span class="text-slate-500">Últimos 30 días:</span>
-                    <div class="font-mono font-bold text-rose-500 flex items-center gap-1">
-                      <span>~{{ item.reacciones_actuales_30d || 0 }} reacc.</span>
-                      <span class="text-slate-400 font-normal text-[9px]">(~{{ Number(item.vistas_actuales_30d || 0).toLocaleString('es-AR') }} vistas)</span>
-                    </div>
-                  </div>
-
-                  <!-- Mes Récord Histórico -->
-                  <div class="p-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between">
-                    <span class="text-slate-500">🏆 Récord ({{ item.mes_record_nombre }}):</span>
-                    <span class="font-mono font-bold text-amber-500">
-                      ~{{ item.reacciones_max_historico || 0 }} reacc.
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Barra Proporcional de Rendimiento vs Récord (Escala Compacta) -->
-                <div class="space-y-1 pt-0.5">
-                  <div class="flex items-center justify-between text-[10px] text-slate-400">
-                    <span>Nivel de actividad actual vs. mejor mes histórico:</span>
-                    <strong class="font-mono text-slate-700 dark:text-slate-300">
-                      {{ item.pct_vs_record }}%
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                    <span>👥 Cobertura Real en el Padrón:</span>
+                    <strong class="font-bold font-mono" :class="item.cobertura_padron_franja_pct < 15 ? 'text-rose-500' : (item.cobertura_padron_franja_pct < 30 ? 'text-amber-500' : 'text-emerald-500')">
+                      {{ item.cobertura_padron_franja_pct }}%
                     </strong>
-                  </div>
-                  <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                    <div
-                      class="h-full rounded-full transition-all"
-                      :class="item.pct_vs_record >= 80 ? 'bg-emerald-500' : (item.pct_vs_record >= 50 ? 'bg-amber-500' : 'bg-rose-500')"
-                      :style="{ width: `${Math.min(item.pct_vs_record, 100)}%` }"
-                    ></div>
-                  </div>
+                    <span class="text-[10px] text-slate-400">({{ item.seguidores_en_franja }} de {{ Number(item.electores_totales_franja).toLocaleString('es-AR') }} electores)</span>
+                  </span>
+                  <span class="text-[10px] font-mono text-slate-400">
+                    Faltan: <strong>{{ Number(item.electores_faltantes || 0).toLocaleString('es-AR') }}</strong>
+                  </span>
+                </div>
+
+                <!-- Barra de Cobertura Electoral -->
+                <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    class="h-full rounded-full transition-all"
+                    :class="item.cobertura_padron_franja_pct >= 30 ? 'bg-emerald-500' : (item.cobertura_padron_franja_pct >= 15 ? 'bg-amber-500' : 'bg-rose-500')"
+                    :style="{ width: `${Math.max(item.cobertura_padron_franja_pct, 4)}%` }"
+                  ></div>
                 </div>
               </div>
 
-              <div class="text-[11px] font-sans text-slate-500 dark:text-slate-400 pt-0.5">
-                <span>🎯 {{ item.accion_sugerida }}</span>
+              <!-- 2. Banner de Diagnóstico Táctico de Pauta Publicitaria -->
+              <div
+                class="p-3 rounded-2xl border text-xs font-sans leading-relaxed space-y-1"
+                :class="{
+                  'bg-rose-500/10 border-rose-500/25 text-rose-900 dark:text-rose-300': item.pauta_tipo === 'urgente',
+                  'bg-amber-500/10 border-amber-500/25 text-amber-900 dark:text-amber-300': item.pauta_tipo === 'moderada',
+                  'bg-emerald-500/10 border-emerald-500/25 text-emerald-900 dark:text-emerald-300': item.pauta_tipo === 'buena' || item.pauta_tipo === 'victoria',
+                }"
+              >
+                <div class="font-bold flex items-center gap-1.5 text-[11px]">
+                  <Target class="w-3.5 h-3.5 shrink-0" />
+                  <span>Diagnóstico para el Jefe de Campaña:</span>
+                </div>
+                <p class="text-[11px] leading-snug">
+                  {{ item.diagnostico_pauta }}
+                </p>
+              </div>
+
+              <!-- 3. Rendimiento Interno de la Cuenta (Últimos 30 días) -->
+              <div class="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-500">
+                <div class="flex items-center gap-3">
+                  <span class="flex items-center gap-1">
+                    <Heart class="w-3 h-3 text-rose-500" />
+                    <span>~<strong>{{ item.reacciones_actuales_30d || 0 }}</strong> reacc./post (30d)</span>
+                  </span>
+                  <span class="flex items-center gap-1 text-slate-400">
+                    <Film class="w-3 h-3 text-cyan-500" />
+                    <span>~<strong>{{ Number(item.vistas_actuales_30d || 0).toLocaleString('es-AR') }}</strong> vistas</span>
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] text-slate-400">
+                    Récord histórico: <strong class="text-amber-500 font-mono">~{{ item.reacciones_max_historico || 0 }}</strong> ({{ item.mes_record_nombre }})
+                  </span>
+                </div>
               </div>
             </div>
           </div>

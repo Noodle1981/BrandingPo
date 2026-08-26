@@ -1446,6 +1446,14 @@ class CandidatoController extends Controller
                 $pctAudiencia = (float) $franja['pct'];
                 $brecha = round($pctAudiencia - $pctPadron, 1);
 
+                // Cálculo Nominal contra el Padrón Electoral
+                $electoresTotalesFranja = (int) round($padronElectoral * ($pctPadron / 100));
+                $seguidoresEnFranja = (int) round($seguidoresActuales * ($pctAudiencia / 100));
+                $coberturaPadronFranjaPct = $electoresTotalesFranja > 0
+                    ? round(($seguidoresEnFranja / $electoresTotalesFranja) * 100, 1)
+                    : 0;
+                $electoresFaltantes = max(0, $electoresTotalesFranja - $seguidoresEnFranja);
+
                 // Promedio actual (últimos 30 días) atribuible a esta franja
                 $reacciones30d = round($promedioInteracciones30d * ($pctAudiencia / 100), 1);
                 $vistas30d = round($promedioVistas30d * ($pctAudiencia / 100));
@@ -1454,11 +1462,28 @@ class CandidatoController extends Controller
                 $reaccionesRecord = round($promedioInteraccionesPico * ($pctAudiencia / 100), 1);
                 $pctVsRecord = $reaccionesRecord > 0 ? min(100, round(($reacciones30d / $reaccionesRecord) * 100)) : 100;
 
-                $accion = $brecha >= 5
-                    ? 'Sobre-representado en redes (mantener engagement)'
-                    : ($brecha <= -5
-                        ? '⚠️ Sub-representado: reforzar contenido específico y pauta'
-                        : 'Balance adecuado con el padrón');
+                // Diagnóstico Táctico de Necesidad de Pauta vs Cobertura Electoral
+                if ($coberturaPadronFranjaPct < 15) {
+                    $requierePauta = true;
+                    $pautaTipo = 'urgente';
+                    $pautaBadge = '🚨 Requiere Pauta Urgente';
+                    $diagnosticoPauta = "Burbuja orgánica: solo alcanzás al {$coberturaPadronFranjaPct}% del padrón de {$franja['rango']} años ({$seguidoresEnFranja} de {$electoresTotalesFranja} electores). Es obligatorio inyectar pauta para impactar a los {$electoresFaltantes} jóvenes que no te siguen.";
+                } elseif ($coberturaPadronFranjaPct < 30) {
+                    $requierePauta = true;
+                    $pautaTipo = 'moderada';
+                    $pautaBadge = '⚡ Reforzar con Pauta Meta Ads';
+                    $diagnosticoPauta = "Cobertura inicial ({$coberturaPadronFranjaPct}%). Inyectar pauta segmentada para captar los {$electoresFaltantes} electores antes de la elección.";
+                } elseif ($coberturaPadronFranjaPct < 40) {
+                    $requierePauta = false;
+                    $pautaTipo = 'buena';
+                    $pautaBadge = '🟢 Buena Cobertura Electoral';
+                    $diagnosticoPauta = "Excelente penetración orgánica ({$coberturaPadronFranjaPct}% del padrón). La comunidad de {$franja['rango']} años tiene masa crítica electoral.";
+                } else {
+                    $requierePauta = false;
+                    $pautaTipo = 'victoria';
+                    $pautaBadge = '🏆 Cobertura de Victoria (+40%)';
+                    $diagnosticoPauta = "Dominio electoral en {$franja['rango']} años ({$coberturaPadronFranjaPct}% del padrón). Mantener contenido y desviar presupuesto hacia franjas rezagadas.";
+                }
 
                 $resonanciaNivel = $pctAudiencia >= 30
                     ? 'Alta Resonancia 🔥'
@@ -1472,13 +1497,21 @@ class CandidatoController extends Controller
                     'pct_padron' => $pctPadron,
                     'pct_audiencia' => $pctAudiencia,
                     'brecha' => $brecha,
+                    'electores_totales_franja' => $electoresTotalesFranja,
+                    'seguidores_en_franja' => $seguidoresEnFranja,
+                    'cobertura_padron_franja_pct' => $coberturaPadronFranjaPct,
+                    'electores_faltantes' => $electoresFaltantes,
+                    'requiere_pauta' => $requierePauta,
+                    'pauta_tipo' => $pautaTipo,
+                    'pauta_badge' => $pautaBadge,
+                    'diagnostico_pauta' => $diagnosticoPauta,
                     'reacciones_actuales_30d' => $reacciones30d,
                     'vistas_actuales_30d' => $vistas30d,
                     'reacciones_max_historico' => $reaccionesRecord,
                     'mes_record_nombre' => $mesPicoNombre,
                     'pct_vs_record' => $pctVsRecord,
                     'resonancia_nivel' => $resonanciaNivel,
-                    'accion_sugerida' => $accion,
+                    'accion_sugerida' => $diagnosticoPauta,
                 ];
             }
         }
