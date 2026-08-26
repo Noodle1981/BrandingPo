@@ -753,9 +753,9 @@ const chartOptions = computed(() => {
             <div
               v-for="item in cruceDemografico"
               :key="item.rango"
-              class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2"
+              class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5"
             >
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between flex-wrap gap-2">
                 <div class="flex items-center gap-2">
                   <span class="font-black text-slate-900 dark:text-slate-100 text-sm">{{ item.rango }} años</span>
                   <span class="text-[10px] text-slate-400">({{ item.categoria }})</span>
@@ -772,19 +772,85 @@ const chartOptions = computed(() => {
                 </div>
               </div>
 
-              <!-- Doble Barra Comparativa -->
-              <div class="space-y-1">
-                <!-- Barra Padrón -->
-                <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden" title="Distribución en el Padrón">
-                  <div class="h-full bg-slate-400 rounded-full" :style="{ width: `${item.pct_padron * 2}%` }"></div>
+              <!-- 1. Bloque de Barras: Demografía (Padrón vs Tu Red) -->
+              <div class="space-y-1.5 pt-1">
+                <div class="flex items-center justify-between text-[10px] text-slate-500">
+                  <span class="flex items-center gap-1.5 font-bold">
+                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                    <span>Padrón Electoral: <strong>{{ item.pct_padron }}%</strong></span>
+                  </span>
+                  <span class="flex items-center gap-1.5 font-bold text-cyan-500">
+                    <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
+                    <span>Tu Audiencia: <strong>{{ item.pct_audiencia }}%</strong></span>
+                  </span>
                 </div>
-                <!-- Barra Red Social -->
-                <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden" title="Distribución en tu Audiencia Digital">
-                  <div class="h-full bg-cyan-500 rounded-full transition-all" :style="{ width: `${item.pct_audiencia * 2}%` }"></div>
+                <!-- Doble Barra Comparativa Demografía -->
+                <div class="space-y-1">
+                  <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden" title="Distribución en el Padrón">
+                    <div class="h-full bg-slate-400 rounded-full" :style="{ width: `${item.pct_padron * 2.2}%` }"></div>
+                  </div>
+                  <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden" title="Distribución en tu Audiencia Digital">
+                    <div class="h-full bg-cyan-500 rounded-full transition-all" :style="{ width: `${item.pct_audiencia * 2.2}%` }"></div>
+                  </div>
                 </div>
               </div>
 
-              <div class="flex items-center justify-between text-[11px] font-sans pt-1 text-slate-500">
+              <!-- 2. Bloque de Barras: Volumen de Reacciones (Últimos 30 días vs Máximo Histórico Logrado) -->
+              <div class="p-3 rounded-2xl bg-slate-100/70 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                <div class="flex items-center justify-between text-[11px] font-sans">
+                  <div class="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
+                    <Heart class="w-3.5 h-3.5 text-rose-500 fill-rose-500/20" />
+                    <span>Impacto de Reacciones por Post:</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                    {{ item.resonancia_nivel || 'Resonancia Moderada ⚡' }}
+                  </span>
+                </div>
+
+                <!-- Barra 1: Actual 30 días -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between text-[10px]">
+                    <span class="flex items-center gap-1 text-rose-500 font-bold">
+                      <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                      <span>Promedio Actual (Últimos 30d):</span>
+                    </span>
+                    <span class="font-bold text-rose-500 font-mono">
+                      ~{{ item.reacciones_actuales_30d || 0 }} reacc. <span class="text-slate-400 font-normal font-sans">(~{{ Number(item.vistas_actuales_30d || 0).toLocaleString('es-AR') }} vistas)</span>
+                    </span>
+                  </div>
+                  <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                    <div
+                      class="h-full bg-rose-500 rounded-full transition-all"
+                      :style="{ width: `${Math.min((item.reacciones_actuales_30d / Math.max(item.reacciones_max_historico, 1)) * 100, 100)}%` }"
+                    ></div>
+                  </div>
+                </div>
+
+                <!-- Barra 2: Récord Histórico -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between text-[10px]">
+                    <span class="flex items-center gap-1 text-amber-500 font-bold">
+                      <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                      <span>🏆 Récord Histórico Mensual:</span>
+                    </span>
+                    <span class="font-bold text-amber-500 font-mono">
+                      ~{{ item.reacciones_max_historico || 0 }} reacc./post <span class="text-slate-400 font-normal font-sans">({{ item.mes_record_nombre }})</span>
+                    </span>
+                  </div>
+                  <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                    <div class="h-full bg-amber-500 rounded-full w-full"></div>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                  <span>Rendimiento vs. Mes Récord:</span>
+                  <strong class="font-mono" :class="item.pct_vs_record >= 80 ? 'text-emerald-500' : 'text-amber-500'">
+                    {{ item.pct_vs_record }}% del pico histórico
+                  </strong>
+                </div>
+              </div>
+
+              <div class="text-[11px] font-sans text-slate-500 dark:text-slate-400 pt-0.5">
                 <span>🎯 {{ item.accion_sugerida }}</span>
               </div>
             </div>

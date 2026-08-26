@@ -378,7 +378,7 @@ class CandidatoController extends Controller
             'notas_punto_cero' => ['nullable', 'string'],
         ]);
 
-        PerfilSocial::updateOrCreate(
+        $perfil = PerfilSocial::updateOrCreate(
             [
                 'candidato_id' => $validated['candidato_id'],
                 'plataforma' => $validated['plataforma'],
@@ -1399,10 +1399,45 @@ class CandidatoController extends Controller
             ];
         }
 
-        // Cruce Demográfico: Audiencia Digital vs Padrón Electoral
+        // Cruce Demográfico: Audiencia Digital vs Padrón Electoral con Ventana Móvil (30 días) y Récord Histórico
         $cruceDemografico = [];
         if ($territorio && $territorio->piramide_etaria && ! empty($demografiaInterna['franjas_etarias'])) {
             $gruposPadron = collect($territorio->piramide_etaria['grupos_etarios'] ?? []);
+            
+            // 1. Ventana Móvil Activa: Posts de los últimos 30 días
+            $posts30d = $publicaciones->filter(function ($p) {
+                return $p->fecha_publicacion && $p->fecha_publicacion->greaterThanOrEqualTo(now()->subDays(30));
+            });
+            // Si hay pocos posts en los últimos 30 días, tomar al menos los posts más recientes
+            $muestraReciente = $posts30d->count() >= 3 ? $posts30d : ($publicaciones->take(10)->count() > 0 ? $publicaciones->take(10) : $publicaciones);
+            $totalMuestraCount = $muestraReciente->count();
+
+            $totalInteracciones30d = $muestraReciente->sum(fn ($p) => (int) $p->total_likes + (int) $p->total_comentarios + (int) $p->total_compartidos + (int) $p->total_guardados);
+            $promedioInteracciones30d = $totalMuestraCount > 0 ? round($totalInteracciones30d / $totalMuestraCount, 1) : 0;
+            $promedioVistas30d = $totalMuestraCount > 0 ? round($muestraReciente->avg('visualizaciones') ?: $promedioVistasPorPost) : $promedioVistasPorPost;
+
+            // 2. Máximo Histórico Logrado (Mes Récord de Interacciones)
+            $mesesAgrupados = $publicaciones->groupBy(function ($p) {
+                return $p->fecha_publicacion ? $p->fecha_publicacion->format('Y-m') : '2025-01';
+            })->map(function ($postsMes, $key) {
+                $totalIntMes = $postsMes->sum(fn ($p) => (int) $p->total_likes + (int) $p->total_comentarios + (int) $p->total_compartidos + (int) $p->total_guardados);
+                $promedioMes = $postsMes->count() > 0 ? round($totalIntMes / $postsMes->count(), 1) : 0;
+                $nombreMes = $postsMes->first()->fecha_publicacion ? $postsMes->first()->fecha_publicacion->translatedFormat('F Y') : $key;
+
+                return [
+                    'clave' => $key,
+                    'nombre_mes' => ucfirst($nombreMes),
+                    'promedio_interacciones' => $promedioMes,
+                    'total_posts' => $postsMes->count(),
+                ];
+            })->sortByDesc('promedio_interacciones');
+
+            $mesPico = $mesesAgrupados->first();
+            $promedioInteraccionesPico = $mesPico && $mesPico['promedio_interacciones'] > 0
+                ? $mesPico['promedio_interacciones']
+                : max($promedioInteracciones30d * 1.35, 15);
+            $mesPicoNombre = $mesPico ? $mesPico['nombre_mes'] : 'Mes Récord Campaña';
+
             foreach ($demografiaInterna['franjas_etarias'] as $franja) {
                 $grupoPadron = $gruposPadron->firstWhere('rango', $franja['rango'])
                     ?: $gruposPadron->first(fn ($g) => str_contains($g['rango'], substr($franja['rango'], 0, 2)));
@@ -1411,11 +1446,25 @@ class CandidatoController extends Controller
                 $pctAudiencia = (float) $franja['pct'];
                 $brecha = round($pctAudiencia - $pctPadron, 1);
 
+                // Promedio actual (últimos 30 días) atribuible a esta franja
+                $reacciones30d = round($promedioInteracciones30d * ($pctAudiencia / 100), 1);
+                $vistas30d = round($promedioVistas30d * ($pctAudiencia / 100));
+
+                // Récord histórico logrado atribuible a esta franja
+                $reaccionesRecord = round($promedioInteraccionesPico * ($pctAudiencia / 100), 1);
+                $pctVsRecord = $reaccionesRecord > 0 ? min(100, round(($reacciones30d / $reaccionesRecord) * 100)) : 100;
+
                 $accion = $brecha >= 5
                     ? 'Sobre-representado en redes (mantener engagement)'
                     : ($brecha <= -5
                         ? '⚠️ Sub-representado: reforzar contenido específico y pauta'
                         : 'Balance adecuado con el padrón');
+
+                $resonanciaNivel = $pctAudiencia >= 30
+                    ? 'Alta Resonancia 🔥'
+                    : ($pctAudiencia >= 12
+                        ? 'Interacción Moderada ⚡'
+                        : 'En Desarrollo 🌱');
 
                 $cruceDemografico[] = [
                     'rango' => $franja['rango'],
@@ -1423,6 +1472,12 @@ class CandidatoController extends Controller
                     'pct_padron' => $pctPadron,
                     'pct_audiencia' => $pctAudiencia,
                     'brecha' => $brecha,
+                    'reacciones_actuales_30d' => $reacciones30d,
+                    'vistas_actuales_30d' => $vistas30d,
+                    'reacciones_max_historico' => $reaccionesRecord,
+                    'mes_record_nombre' => $mesPicoNombre,
+                    'pct_vs_record' => $pctVsRecord,
+                    'resonancia_nivel' => $resonanciaNivel,
                     'accion_sugerida' => $accion,
                 ];
             }
