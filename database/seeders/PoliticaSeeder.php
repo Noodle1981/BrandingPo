@@ -12,6 +12,7 @@ use App\Models\InformeEjecutivo;
 use App\Models\MedioPrensa;
 use App\Models\NotaPrensa;
 use App\Models\PerfilSocial;
+use App\Models\PerfilSocialMetrica;
 use App\Models\PresupuestoPartida;
 use App\Models\Publicacion;
 use App\Models\Territorio;
@@ -200,6 +201,54 @@ class PoliticaSeeder extends Seeder
             ]
         );
 
+        $demografiaInstagram = [
+            'fuente_datos' => 'meta_graph_api',
+            'genero' => [
+                'femenino_pct' => 54.2,
+                'masculino_pct' => 45.8,
+            ],
+            'franjas_etarias' => [
+                ['rango' => '16-17', 'categoria' => 'Primer Voto', 'pct' => 6.5],
+                ['rango' => '18-29', 'categoria' => 'Jóvenes / Estudiantes', 'pct' => 34.0],
+                ['rango' => '30-49', 'categoria' => 'Adultos / Productivos', 'pct' => 38.5],
+                ['rango' => '50-69', 'categoria' => 'Adultos Mayores', 'pct' => 16.0],
+                ['rango' => '70+', 'categoria' => 'Tercera Edad', 'pct' => 5.0],
+            ],
+            'ciudades_principales' => [
+                ['ciudad' => 'Albardón', 'pct' => 68.4],
+                ['ciudad' => 'Gran San Juan (Capital/Chimbas)', 'pct' => 22.1],
+                ['ciudad' => 'Resto de San Juan', 'pct' => 9.5],
+            ],
+            'horarios_actividad' => [
+                'dias_pico' => ['Martes', 'Jueves', 'Domingo'],
+                'horas_pico' => ['13:00 - 14:30 hs', '20:30 - 22:30 hs'],
+            ],
+        ];
+
+        $demografiaFacebook = [
+            'fuente_datos' => 'meta_graph_api',
+            'genero' => [
+                'femenino_pct' => 58.0,
+                'masculino_pct' => 42.0,
+            ],
+            'franjas_etarias' => [
+                ['rango' => '16-17', 'categoria' => 'Primer Voto', 'pct' => 2.0],
+                ['rango' => '18-29', 'categoria' => 'Jóvenes / Estudiantes', 'pct' => 18.0],
+                ['rango' => '30-49', 'categoria' => 'Adultos / Productivos', 'pct' => 42.0],
+                ['rango' => '50-69', 'categoria' => 'Adultos Mayores', 'pct' => 28.0],
+                ['rango' => '70+', 'categoria' => 'Tercera Edad', 'pct' => 10.0],
+            ],
+            'ciudades_principales' => [
+                ['ciudad' => 'Albardón', 'pct' => 74.0],
+                ['ciudad' => 'Chimbas & Rivadavia', 'pct' => 18.0],
+                ['ciudad' => 'San Juan Capital', 'pct' => 8.0],
+            ],
+            'horarios_actividad' => [
+                'dias_pico' => ['Lunes', 'Miércoles', 'Sábado'],
+                'horas_pico' => ['12:00 - 14:00 hs', '19:00 - 21:30 hs'],
+            ],
+        ];
+
         $redesPropio = [
             [
                 'plataforma' => 'instagram',
@@ -213,13 +262,14 @@ class PoliticaSeeder extends Seeder
                 'publicaciones_totales' => 64,
                 'me_gusta_totales' => 0,
                 'visualizaciones_totales' => 0,
-                'fecha_punto_cero' => now()->toDateString(),
-                'seguidores_punto_cero' => 1359,
-                'seguidos_punto_cero' => 588,
-                'publicaciones_punto_cero' => 64,
+                'fecha_punto_cero' => now()->subDays(60)->toDateString(),
+                'seguidores_punto_cero' => 980,
+                'seguidos_punto_cero' => 520,
+                'publicaciones_punto_cero' => 38,
                 'me_gusta_punto_cero' => 0,
                 'visualizaciones_punto_cero' => 0,
-                'notas_punto_cero' => 'Punto Cero oficial inicial: 64 publicaciones, 1.359 seguidores, 588 seguidos.',
+                'notas_punto_cero' => 'Punto Cero oficial inicial: 38 publicaciones, 980 seguidores, 520 seguidos.',
+                'demografia_interna_propia' => $demografiaInstagram,
             ],
             [
                 'plataforma' => 'facebook',
@@ -233,13 +283,14 @@ class PoliticaSeeder extends Seeder
                 'publicaciones_totales' => 0,
                 'me_gusta_totales' => 0,
                 'visualizaciones_totales' => 0,
-                'fecha_punto_cero' => now()->toDateString(),
-                'seguidores_punto_cero' => 9466,
-                'seguidos_punto_cero' => 58,
+                'fecha_punto_cero' => now()->subDays(60)->toDateString(),
+                'seguidores_punto_cero' => 8600,
+                'seguidos_punto_cero' => 50,
                 'publicaciones_punto_cero' => 0,
                 'me_gusta_punto_cero' => 0,
                 'visualizaciones_punto_cero' => 0,
-                'notas_punto_cero' => 'Punto Cero oficial Facebook: 9.466 seguidores (Me gusta), 58 seguidos.',
+                'notas_punto_cero' => 'Punto Cero oficial Facebook: 8.600 seguidores (Me gusta), 50 seguidos.',
+                'demografia_interna_propia' => $demografiaFacebook,
             ],
             [
                 'plataforma' => 'tiktok',
@@ -259,13 +310,99 @@ class PoliticaSeeder extends Seeder
                 'publicaciones_punto_cero' => 0,
                 'me_gusta_punto_cero' => 0,
                 'visualizaciones_punto_cero' => 0,
+                'demografia_interna_propia' => null,
             ],
         ];
         foreach ($redesPropio as $r) {
-            PerfilSocial::updateOrCreate(
+            $perfilCreado = PerfilSocial::updateOrCreate(
                 ['candidato_id' => $propio->id, 'plataforma' => $r['plataforma']],
                 $r
             );
+
+            // Poblar curva histórica evolutiva time-series (Punto Cero -> Hoy)
+            if ($r['plataforma'] === 'instagram') {
+                PerfilSocialMetrica::where('perfil_social_id', $perfilCreado->id)->delete();
+
+                $hitosInstagram = [
+                    ['dias' => 60, 'seguidores' => 980, 'seguidos' => 520, 'posts' => 38, 'neto' => 0, 'dia' => 0, 'fuente' => 'manual'],
+                    ['dias' => 45, 'seguidores' => 1045, 'seguidos' => 534, 'posts' => 44, 'neto' => 65, 'dia' => 65, 'fuente' => 'cron_24h'],
+                    ['dias' => 30, 'seguidores' => 1120, 'seguidos' => 550, 'posts' => 49, 'neto' => 140, 'dia' => 75, 'fuente' => 'cron_24h'],
+                    ['dias' => 20, 'seguidores' => 1205, 'seguidos' => 562, 'posts' => 54, 'neto' => 225, 'dia' => 85, 'fuente' => 'cron_24h'],
+                    ['dias' => 10, 'seguidores' => 1278, 'seguidos' => 575, 'posts' => 59, 'neto' => 298, 'dia' => 73, 'fuente' => 'cron_24h'],
+                    ['dias' => 3,  'seguidores' => 1324, 'seguidos' => 582, 'posts' => 62, 'neto' => 344, 'dia' => 46, 'fuente' => 'cron_24h'],
+                    ['dias' => 1,  'seguidores' => 1348, 'seguidos' => 586, 'posts' => 63, 'neto' => 368, 'dia' => 24, 'fuente' => 'cron_24h'],
+                    ['dias' => 0,  'seguidores' => 1359, 'seguidos' => 588, 'posts' => 64, 'neto' => 379, 'dia' => 11, 'fuente' => 'auto_scraper'], // Sincronizado Hoy
+                ];
+
+                foreach ($hitosInstagram as $hito) {
+                    $fechaMedicion = now()->subDays($hito['dias'])->toDateString();
+                    PerfilSocialMetrica::updateOrCreate(
+                        [
+                            'perfil_social_id' => $perfilCreado->id,
+                            'fecha' => $fechaMedicion,
+                        ],
+                        [
+                            'seguidores' => $hito['seguidores'],
+                            'seguidos' => $hito['seguidos'],
+                            'publicaciones_totales' => $hito['posts'],
+                            'me_gusta_totales' => 0,
+                            'visualizaciones_totales' => 0,
+                            'crecimiento_seguidores_dia' => $hito['dia'],
+                            'crecimiento_seguidos_dia' => 2,
+                            'crecimiento_posts_dia' => 1,
+                            'crecimiento_seguidores_neto' => $hito['neto'],
+                            'crecimiento_posts_neto' => $hito['posts'] - 38,
+                            'fuente' => $hito['fuente'],
+                        ]
+                    );
+                }
+
+                $perfilCreado->update([
+                    'ultima_auditoria_at' => now(),
+                    'delta_seguidores_24h' => 11,
+                ]);
+            }
+
+            if ($r['plataforma'] === 'facebook') {
+                PerfilSocialMetrica::where('perfil_social_id', $perfilCreado->id)->delete();
+
+                $hitosFacebook = [
+                    ['dias' => 60, 'seguidores' => 8600, 'seguidos' => 50, 'posts' => 0, 'neto' => 0, 'dia' => 0, 'fuente' => 'manual'],
+                    ['dias' => 45, 'seguidores' => 8780, 'seguidos' => 52, 'posts' => 0, 'neto' => 180, 'dia' => 180, 'fuente' => 'cron_24h'],
+                    ['dias' => 30, 'seguidores' => 8990, 'seguidos' => 54, 'posts' => 0, 'neto' => 390, 'dia' => 210, 'fuente' => 'cron_24h'],
+                    ['dias' => 15, 'seguidores' => 9210, 'seguidos' => 55, 'posts' => 0, 'neto' => 610, 'dia' => 220, 'fuente' => 'cron_24h'],
+                    ['dias' => 5,  'seguidores' => 9380, 'seguidos' => 57, 'posts' => 0, 'neto' => 780, 'dia' => 170, 'fuente' => 'cron_24h'],
+                    ['dias' => 0,  'seguidores' => 9466, 'seguidos' => 58, 'posts' => 0, 'neto' => 866, 'dia' => 86, 'fuente' => 'cron_24h'], // Sincronizado Hoy
+                ];
+
+                foreach ($hitosFacebook as $hito) {
+                    $fechaMedicion = now()->subDays($hito['dias'])->toDateString();
+                    PerfilSocialMetrica::updateOrCreate(
+                        [
+                            'perfil_social_id' => $perfilCreado->id,
+                            'fecha' => $fechaMedicion,
+                        ],
+                        [
+                            'seguidores' => $hito['seguidores'],
+                            'seguidos' => $hito['seguidos'],
+                            'publicaciones_totales' => $hito['posts'],
+                            'me_gusta_totales' => 0,
+                            'visualizaciones_totales' => 0,
+                            'crecimiento_seguidores_dia' => $hito['dia'],
+                            'crecimiento_seguidos_dia' => 1,
+                            'crecimiento_posts_dia' => 0,
+                            'crecimiento_seguidores_neto' => $hito['neto'],
+                            'crecimiento_posts_neto' => 0,
+                            'fuente' => $hito['fuente'],
+                        ]
+                    );
+                }
+
+                $perfilCreado->update([
+                    'ultima_auditoria_at' => now(),
+                    'delta_seguidores_24h' => 86,
+                ]);
+            }
         }
 
         // ─────────────────────────────────────────────────────────

@@ -71,6 +71,46 @@ const props = defineProps({
   }
 });
 
+const vistaModo = ref('mapa'); // 'mapa' o 'tabla'
+const hoveredDept = ref(null);
+
+// Geometría estilizada de los 19 departamentos de San Juan para el mapa SVG
+const sanJuanMapaLayout = [
+  // Zona Norte / Cordillera
+  { slug: 'iglesia', nombre: 'Iglesia', x: 70, y: 50, w: 200, h: 120, labelX: 170, labelY: 110 },
+  { slug: 'jachal', nombre: 'Jáchal', x: 290, y: 50, w: 220, h: 120, labelX: 400, labelY: 110 },
+  { slug: 'valle_fertil', nombre: 'Valle Fértil', x: 530, y: 70, w: 190, h: 160, labelX: 625, labelY: 150 },
+
+  // Zona Oeste & Centro-Oeste
+  { slug: 'calingasta', nombre: 'Calingasta', x: 50, y: 190, w: 180, h: 220, labelX: 140, labelY: 300 },
+  { slug: 'ullum', nombre: 'Ullum', x: 250, y: 190, w: 110, h: 80, labelX: 305, labelY: 230 },
+  { slug: 'zonda', nombre: 'Zonda', x: 250, y: 280, w: 100, h: 90, labelX: 300, labelY: 325 },
+
+  // Corona Gran San Juan & Centro-Norte
+  { slug: 'albardon', nombre: 'Albardón', x: 370, y: 180, w: 110, h: 65, labelX: 425, labelY: 215 },
+  { slug: 'angaco', nombre: 'Angaco', x: 490, y: 190, w: 100, h: 80, labelX: 540, labelY: 230 },
+  { slug: 'chimbas', nombre: 'Chimbas', x: 370, y: 255, w: 85, h: 45, labelX: 412, labelY: 278 },
+  { slug: 'santa_lucia', nombre: 'Santa Lucía', x: 465, y: 265, w: 65, h: 45, labelX: 497, labelY: 288 },
+  { slug: 'capital', nombre: 'Capital', x: 370, y: 305, w: 75, h: 45, labelX: 407, labelY: 328 },
+  { slug: 'rivadavia', nombre: 'Rivadavia', x: 290, y: 280, w: 75, h: 65, labelX: 327, labelY: 312 },
+  { slug: 'rawson', nombre: 'Rawson', x: 370, y: 355, w: 85, h: 55, labelX: 412, labelY: 382 },
+  { slug: 'pocito', nombre: 'Pocito', x: 280, y: 380, w: 95, h: 85, labelX: 327, labelY: 422 },
+
+  // Zona Este & Sur-Este
+  { slug: 'san_martin', nombre: 'San Martín', x: 500, y: 280, w: 80, h: 70, labelX: 540, labelY: 315 },
+  { slug: '9_de_julio', nombre: '9 de Julio', x: 465, y: 345, w: 85, h: 70, labelX: 507, labelY: 380 },
+  { slug: 'caucete', nombre: 'Caucete', x: 560, y: 250, w: 180, h: 170, labelX: 650, labelY: 335 },
+  { slug: '25_de_mayo', nombre: '25 de Mayo', x: 465, y: 425, w: 190, h: 110, labelX: 560, labelY: 480 },
+
+  // Zona Sur
+  { slug: 'sarmiento', nombre: 'Sarmiento', x: 190, y: 445, w: 260, h: 120, labelX: 320, labelY: 505 },
+];
+
+// Obtener datos dinámicos del departamento desde props por slug
+const getDeptData = (slug) => {
+  return props.departamentos.find(d => d.slug_mapa === slug || d.nombre.toLowerCase().includes(slug.replace('_', ' '))) || null;
+};
+
 // Búsqueda y filtrado de departamentos
 const searchDept = ref('');
 const departamentosFiltrados = computed(() => {
@@ -84,6 +124,7 @@ const departamentosFiltrados = computed(() => {
 
 // Territorio seleccionado para ver en detalle
 const seleccionarTerritorio = (id) => {
+  if (!id) return;
   router.get('/territorios', { 
     territorio_id: id 
   }, { preserveScroll: true });
@@ -211,70 +252,45 @@ const saveTerritorio = () => {
 </script>
 
 <template>
-  <Head title="Inteligencia Demográfica & Mapa Territorial" />
+  <Head :title="`Situación Territorial - ${provincia?.nombre || 'San Juan'}`" />
 
   <WarRoomLayout>
-    <div class="space-y-6">
-      <!-- 1. Cabecera Principal & Selector de Escala Multi-Nivel -->
-      <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="p-2 rounded-xl bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
-                <Compass class="w-6 h-6" />
-              </span>
-              <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-                Inteligencia Demográfica & Mapa de Situación
-              </h1>
-              <span class="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/30 uppercase">
-                San Juan (19 Departamentos)
-              </span>
-            </div>
-            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Radiografía censal, pirámide de edades de votantes, perfil urbano/rural y estrategia por red social.
-            </p>
-          </div>
-
-          <!-- Nivel Político del Workspace Activo -->
-          <div class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 self-start lg:self-center">
-            <component :is="props.es_gobernador ? Crown : Building2" class="w-4 h-4 text-cyan-500 shrink-0" />
-            <span class="text-xs font-bold font-mono">
-              {{ props.nivel_label || '🏛️ Intendente / Municipio' }}
+    <div class="space-y-6 max-w-7xl mx-auto pb-16">
+      
+      <!-- 1. Cabecera Principal del Módulo -->
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Compass class="w-6 h-6 text-cyan-500" />
+              <span>Mapa de Situación Territorial & Inteligencia Demográfica</span>
+            </h1>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
+              {{ nivel_label }}
             </span>
           </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Diagnóstico de electores, pirámide de edades y penetración de redes para <strong>{{ provincia?.nombre || 'San Juan' }}</strong>.
+          </p>
         </div>
 
-        <!-- Banner Explicativo según el Nivel Político de la Campaña -->
-        <div class="p-4 rounded-2xl border text-xs leading-relaxed flex items-center justify-between gap-3 flex-wrap bg-cyan-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300">
-          <div class="flex items-center gap-2.5">
-            <Sparkles class="w-5 h-5 shrink-0" />
-            <span v-if="!props.es_gobernador">
-              <strong>Campaña Municipal / Local:</strong> Análisis hiperlocal enfocado en el "metro cuadrado", pirámide barrial de votantes y penetración digital en <strong>{{ territorio_activo?.nombre || 'Municipio' }}</strong>.
-            </span>
-            <span v-else>
-              <strong>Campaña Provincial:</strong> Diagnóstico macro sistémico para la <strong>{{ provincia?.nombre || 'Provincia' }}</strong> ({{ Number(metricas_macro?.padron_total_provincial || 610000).toLocaleString('es-AR') }} electores) y cobertura departamento por departamento.
-            </span>
-          </div>
+        <div class="flex items-center gap-3">
+          <Link
+            href="/territorios/impacto-electoral"
+            class="px-4 py-2 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono flex items-center gap-1.5 shadow-sm transition-all hover:scale-102 cursor-pointer"
+          >
+            <Target class="w-4 h-4" />
+            <span>Matriz de Impacto Electoral</span>
+          </Link>
 
-          <div class="flex items-center gap-2 flex-wrap">
-            <Link
-              href="/territorios/impacto-electoral"
-              class="px-3.5 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-sm hover:scale-102 transition-all cursor-pointer shrink-0"
-              title="Abrir Matriz de Impacto & Penetración Electoral"
-            >
-              <Target class="w-4 h-4" />
-              <span>Matriz de Impacto & Padrón</span>
-            </Link>
-
-            <button
-              type="button"
-              @click="openCreateModal"
-              class="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center gap-1.5 shadow-sm hover:scale-102 transition-all cursor-pointer shrink-0"
-            >
-              <Plus class="w-4 h-4" />
-              <span>Agregar Territorio</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            @click="openCreateModal"
+            class="p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-cyan-500 transition-all shadow-xs cursor-pointer"
+            title="Registrar nuevo territorio"
+          >
+            <Plus class="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -463,33 +479,154 @@ const saveTerritorio = () => {
         </div>
       </div>
 
-      <!-- 4. MATRIZ Y MAPA DE LOS 19 DEPARTAMENTOS DE SAN JUAN (RED DE INTENDENTES) -->
+      <!-- 4. MATRIZ DE DEPARTAMENTOS (CON TOGGLE MAPA SVG / TABLA) -->
       <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-4">
           <div>
             <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Layers class="w-5 h-5 text-emerald-500" />
-              <span>Matriz Departamental de San Juan (19 Territorios)</span>
+              <span>Departamentos de San Juan (19 Territorios)</span>
             </h2>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Auditoría territorial y cobertura del padrón por candidato oficial.
+              Visualización geográfica interactiva y auditoría de penetración del padrón.
             </p>
           </div>
 
-          <!-- Buscador -->
-          <div class="relative w-full sm:w-64">
-            <input
-              v-model="searchDept"
-              type="text"
-              placeholder="Buscar departamento o candidato..."
-              class="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
-            />
-            <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <div class="flex items-center gap-3 flex-wrap">
+            <!-- Toggle Mapa / Tabla -->
+            <div class="p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center gap-1 font-mono text-xs">
+              <button
+                type="button"
+                @click="vistaModo = 'mapa'"
+                class="px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                :class="vistaModo === 'mapa' ? 'bg-white dark:bg-slate-900 text-cyan-500 shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'"
+              >
+                <Compass class="w-3.5 h-3.5" />
+                <span>Mapa SVG</span>
+              </button>
+              <button
+                type="button"
+                @click="vistaModo = 'tabla'"
+                class="px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                :class="vistaModo === 'tabla' ? 'bg-white dark:bg-slate-900 text-cyan-500 shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'"
+              >
+                <Layers class="w-3.5 h-3.5" />
+                <span>Tabla Matriz</span>
+              </button>
+            </div>
+
+            <!-- Buscador -->
+            <div class="relative w-full sm:w-56">
+              <input
+                v-model="searchDept"
+                type="text"
+                placeholder="Buscar departamento..."
+                class="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+              />
+              <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            </div>
           </div>
         </div>
 
-        <!-- Tabla de Departamentos -->
-        <div class="overflow-x-auto">
+        <!-- A. VISTA MAPA SVG INTERACTIVO -->
+        <div v-if="vistaModo === 'mapa'" class="space-y-4">
+          <!-- Leyenda de Semáforo de Calor -->
+          <div class="flex items-center justify-between flex-wrap gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono">
+            <span class="text-slate-500 font-bold uppercase text-[10px]">Semáforo de Penetración en el Padrón:</span>
+            <div class="flex items-center gap-4 text-[11px]">
+              <span class="flex items-center gap-1.5 text-emerald-500">
+                <span class="w-3 h-3 rounded-md bg-emerald-500/20 border border-emerald-500"></span>
+                <span>Alta Cobertura (≥ 20%)</span>
+              </span>
+              <span class="flex items-center gap-1.5 text-amber-500">
+                <span class="w-3 h-3 rounded-md bg-amber-500/20 border border-amber-500"></span>
+                <span>Media (5% - 20%)</span>
+              </span>
+              <span class="flex items-center gap-1.5 text-slate-400">
+                <span class="w-3 h-3 rounded-md bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700"></span>
+                <span>Inicial / Sin Cobertura (&lt; 5%)</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Canvas SVG del Mapa de San Juan -->
+          <div class="w-full bg-slate-50 dark:bg-slate-950 rounded-3xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 relative overflow-hidden flex items-center justify-center min-h-[460px]">
+            <svg viewBox="0 0 780 580" class="w-full max-w-4xl h-auto select-none">
+              <g
+                v-for="item in sanJuanMapaLayout"
+                :key="item.slug"
+                class="cursor-pointer transition-all duration-200"
+                @mouseenter="hoveredDept = getDeptData(item.slug)"
+                @mouseleave="hoveredDept = null"
+                @click="seleccionarTerritorio(getDeptData(item.slug)?.id)"
+              >
+                <!-- Rectángulo / Polígono estilizado del departamento -->
+                <rect
+                  :x="item.x"
+                  :y="item.y"
+                  :width="item.w"
+                  :height="item.h"
+                  rx="14"
+                  class="transition-all duration-200 stroke-2"
+                  :class="{
+                    'fill-emerald-500/20 stroke-emerald-500 hover:fill-emerald-500/30': getDeptData(item.slug)?.semaforo_calor === 'verde',
+                    'fill-amber-500/20 stroke-amber-500 hover:fill-amber-500/30': getDeptData(item.slug)?.semaforo_calor === 'amarillo',
+                    'fill-slate-200/80 dark:fill-slate-800/80 stroke-slate-300 dark:stroke-slate-700 hover:fill-slate-300 dark:hover:fill-slate-700': getDeptData(item.slug)?.semaforo_calor === 'rojo' || !getDeptData(item.slug),
+                    'stroke-cyan-400 stroke-4': territorio_activo?.id === getDeptData(item.slug)?.id,
+                  }"
+                />
+
+                <!-- Nombre del departamento -->
+                <text
+                  :x="item.labelX"
+                  :y="item.labelY"
+                  text-anchor="middle"
+                  class="font-black text-[12px] fill-slate-900 dark:fill-slate-100 font-sans pointer-events-none"
+                >
+                  {{ item.nombre }}
+                </text>
+
+                <!-- Padrón y % cobertura -->
+                <text
+                  :x="item.labelX"
+                  :y="item.labelY + 16"
+                  text-anchor="middle"
+                  class="font-mono text-[10px] fill-slate-500 dark:fill-slate-400 pointer-events-none"
+                >
+                  {{ getDeptData(item.slug) ? `${getDeptData(item.slug).cobertura_padron_pct || 0}% padrón` : 'Auditar' }}
+                </text>
+              </g>
+            </svg>
+
+            <!-- Floating Tooltip del Departamento sobre el Mapa -->
+            <div
+              v-if="hoveredDept"
+              class="absolute bottom-4 right-4 p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 shadow-2xl backdrop-blur-md font-mono text-xs max-w-xs space-y-2 pointer-events-none z-10"
+            >
+              <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                <span class="font-black text-slate-900 dark:text-slate-100 text-sm">
+                  🏛️ {{ hoveredDept.nombre }}
+                </span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold" :class="hoveredDept.semaforo_calor === 'verde' ? 'bg-emerald-500/15 text-emerald-500' : (hoveredDept.semaforo_calor === 'amarillo' ? 'bg-amber-500/15 text-amber-500' : 'bg-slate-200 dark:bg-slate-800 text-slate-400')">
+                  {{ hoveredDept.cobertura_padron_pct }}% Cobertura
+                </span>
+              </div>
+              <div class="space-y-1 text-slate-600 dark:text-slate-300 text-[11px]">
+                <div>Padrón: <strong>{{ Number(hoveredDept.padron_electoral).toLocaleString('es-AR') }}</strong> electores</div>
+                <div>Población: <strong>{{ Number(hoveredDept.poblacion_total).toLocaleString('es-AR') }}</strong> hab.</div>
+                <div v-if="hoveredDept.candidato_propio">
+                  Candidato: <strong>{{ hoveredDept.candidato_propio.nombre_completo }}</strong>
+                </div>
+              </div>
+              <p class="text-[10px] text-cyan-500 pt-1 font-sans">
+                Haz clic para ver la pirámide y métricas del departamento.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- B. VISTA TABLA MATRIZ -->
+        <div v-else class="overflow-x-auto">
           <table class="w-full text-left text-xs border-collapse">
             <thead>
               <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase font-mono text-[11px]">
@@ -498,7 +635,7 @@ const saveTerritorio = () => {
                 <th class="py-3 px-4 font-bold">Población</th>
                 <th class="py-3 px-4 font-bold">% Urbano / Campo</th>
                 <th class="py-3 px-4 font-bold">Candidato Propio</th>
-                <th class="py-3 px-4 font-bold">Cobertura Padrón</th>
+                <th class="py-3 px-4 font-bold">Penetración Única</th>
                 <th class="py-3 px-4 font-bold text-right">Acción</th>
               </tr>
             </thead>

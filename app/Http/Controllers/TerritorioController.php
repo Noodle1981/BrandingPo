@@ -6,6 +6,7 @@ use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\Publicacion;
 use App\Models\Territorio;
+use App\Services\AdsImpactPredictorService;
 use App\Services\DemographicIntelligenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +17,8 @@ use Inertia\Response;
 class TerritorioController extends Controller
 {
     public function __construct(
-        protected DemographicIntelligenceService $demographicService
+        protected DemographicIntelligenceService $demographicService,
+        protected AdsImpactPredictorService $adsPredictorService
     ) {}
 
     /**
@@ -101,14 +103,30 @@ class TerritorioController extends Controller
             'provincia' => $provincia,
             'departamentos' => $departamentos->map(function ($d) {
                 $candidato = $d->candidatoPropio;
-                $totalSeguidores = $candidato ? $candidato->perfilesSociales->where('esta_activo', true)->sum('seguidores_actuales') : 0;
-                $coberturaPadronPct = ($d->padron_electoral > 0 && $totalSeguidores > 0)
-                    ? round(($totalSeguidores / $d->padron_electoral) * 100, 1)
+                $totalSeguidoresBruto = $candidato ? $candidato->perfilesSociales->where('esta_activo', true)->sum('seguidores_actuales') : 0;
+                // Desduplicación inter-redes (30% de solapamiento)
+                $totalSeguidoresDesduplicados = (int) round($totalSeguidoresBruto * 0.70);
+                $coberturaPadronPct = ($d->padron_electoral > 0 && $totalSeguidoresDesduplicados > 0)
+                    ? round(($totalSeguidoresDesduplicados / $d->padron_electoral) * 100, 1)
                     : 0;
+
+                // Semáforo de calor para el mapa SVG
+                $semaforoCalor = 'rojo';
+                if ($coberturaPadronPct >= 20) {
+                    $semaforoCalor = 'verde';
+                } elseif ($coberturaPadronPct >= 5) {
+                    $semaforoCalor = 'amarillo';
+                }
+
+                // Generar slug normalizado para interacción con el mapa SVG
+                $slugMapa = strtolower(trim(str_replace(['Departamento', 'departamento', ' '], ['', '', '_'], $d->nombre)));
+                $slugMapa = str_replace(['á', 'é', 'í', 'ó', 'ú', 'ñ'], ['a', 'e', 'i', 'o', 'u', 'n'], $slugMapa);
+                $slugMapa = trim($slugMapa, '_');
 
                 return [
                     'id' => $d->id,
                     'nombre' => $d->nombre,
+                    'slug_mapa' => $slugMapa,
                     'tipo' => $d->tipo,
                     'codigo_indec' => $d->codigo_indec,
                     'latitud' => $d->latitud,
@@ -118,12 +136,14 @@ class TerritorioController extends Controller
                     'poblacion_urbana_pct' => (float) $d->poblacion_urbana_pct,
                     'poblacion_rural_pct' => (float) $d->poblacion_rural_pct,
                     'hogares_nbi_pct' => (float) $d->hogares_nbi_pct,
+                    'semaforo_calor' => $semaforoCalor,
                     'candidato_propio' => $candidato ? [
                         'id' => $candidato->id,
                         'nombre_completo' => $candidato->nombre_completo,
                         'cargo_aspirado' => $candidato->cargo_aspirado,
                         'avatar_url' => $candidato->avatar_url,
-                        'total_seguidores' => $totalSeguidores,
+                        'total_seguidores_bruto' => $totalSeguidoresBruto,
+                        'total_seguidores' => $totalSeguidoresDesduplicados,
                         'cobertura_padron_pct' => $coberturaPadronPct,
                     ] : null,
                     'total_candidatos' => $d->candidatos->count(),
@@ -182,7 +202,7 @@ class TerritorioController extends Controller
             );
             $data['estrategia'] = $this->demographicService->recomendarEstrategiaDigital(
                 $data['piramide'],
-                (float) ($data['poblacion_urbana_pct'] ?? 70)
+                (float) ($data['poblacion_urbana_pct'] ?? 70.0)
             );
         }
 
@@ -190,7 +210,7 @@ class TerritorioController extends Controller
     }
 
     /**
-     * Guardar nuevo territorio en el workspace.
+     * Guardar nuevo territorio.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -210,22 +230,27 @@ class TerritorioController extends Controller
             'longitud' => ['nullable', 'numeric'],
         ]);
 
-        $poblacion = (int) ($validated['poblacion_total'] ?? 0);
-        $padron = (int) ($validated['padron_electoral'] ?? 0);
+        $poblacion = (int) ($validated['poblacion_total'] ?? 40000);
+        $padron = (int) ($validated['padron_electoral'] ?? 30000);
         $piramide = $this->demographicService->generarPiramideEtaria($poblacion, $padron);
 
         $territorio = Territorio::create([
             'workspace_id' => $workspace->id,
             ...$validated,
+            'poblacion_total' => $poblacion,
+            'padron_electoral' => $padron,
+            'poblacion_urbana_pct' => $validated['poblacion_urbana_pct'] ?? 70.0,
+            'poblacion_rural_pct' => $validated['poblacion_rural_pct'] ?? 30.0,
+            'hogares_nbi_pct' => $validated['hogares_nbi_pct'] ?? 15.0,
             'piramide_etaria' => $piramide,
         ]);
 
         return redirect()->back()
-            ->with('success', "Territorio {$territorio->nombre} registrado exitosamente en {$workspace->nombre}.");
+            ->with('success', "Territorio {$territorio->nombre} registrado satisfactoriamente.");
     }
 
     /**
-     * Actualizar territorio existente.
+     * Actualizar territorio y recalcular pirámide demográfica.
      */
     public function update(Request $request, Territorio $territorio): RedirectResponse
     {
@@ -285,16 +310,18 @@ class TerritorioController extends Controller
             $territorioActivo = Territorio::where('tipo', 'provincia')->first() ?: Territorio::first();
         }
 
-        $padronElectoral = (int) ($territorioActivo?->padron_electoral ?: 31000);
-        $poblacionTotal = (int) ($territorioActivo?->poblacion_total ?: 40000);
+        $padronElectoral = (int) ($territorioActivo?->padron_electoral ?: 24500);
+        $poblacionTotal = (int) ($territorioActivo?->poblacion_total ?: 31200);
         $metaVotos = (int) round($padronElectoral * 0.40); // 40% del padrón como meta ganadora
 
         // Pirámide Demográfica
         $piramide = $territorioActivo?->piramide_etaria ?: $this->demographicService->generarPiramideEtaria($poblacionTotal, $padronElectoral);
 
-        // Perfiles Sociales del Candidato Propio
+        // Perfiles Sociales del Candidato Propio y Desduplicación de Audiencia
         $perfiles = $candidatoPropio ? $candidatoPropio->perfilesSociales : collect();
-        $totalSeguidores = (int) $perfiles->sum('seguidores_actuales');
+        $totalSeguidoresBruto = (int) $perfiles->sum('seguidores_actuales');
+        $tasaSolapamiento = 0.30; // 30% de solapamiento inter-redes
+        $totalSeguidores = (int) round($totalSeguidoresBruto * (1 - $tasaSolapamiento));
 
         $penetracionPadronPct = $padronElectoral > 0 ? round(($totalSeguidores / $padronElectoral) * 100, 2) : 0;
         $coberturaMetaPct = $metaVotos > 0 ? round(($totalSeguidores / $metaVotos) * 100, 2) : 0;
@@ -326,10 +353,10 @@ class TerritorioController extends Controller
         $tasaMovilizacionPicoPct = $padronElectoral > 0 ? round(($picoMaximoInteracciones / $padronElectoral) * 100, 2) : 0;
 
         // Datos para Gráficos de Pastel (Donut Charts)
-        // Pastel 1: Comunidad Digital vs Padrón No Alcanzado
+        // Pastel 1: Comunidad Digital Desduplicada vs Padrón No Alcanzado
         $pastelPadron = [
             [
-                'label' => 'Comunidad en Redes',
+                'label' => 'Comunidad Única en Redes',
                 'valor' => $totalSeguidores,
                 'porcentaje' => $penetracionPadronPct,
                 'color' => '#06b6d4',
@@ -343,8 +370,8 @@ class TerritorioController extends Controller
         ];
 
         // Pastel 2: Participación de la Comunidad por Red Social
-        $pastelRedes = $perfiles->map(function ($p) use ($totalSeguidores) {
-            $pct = $totalSeguidores > 0 ? round(($p->seguidores_actuales / $totalSeguidores) * 100, 1) : 0;
+        $pastelRedes = $perfiles->map(function ($p) use ($totalSeguidoresBruto) {
+            $pct = $totalSeguidoresBruto > 0 ? round(($p->seguidores_actuales / $totalSeguidoresBruto) * 100, 1) : 0;
 
             return [
                 'label' => ucfirst($p->plataforma),
@@ -420,7 +447,7 @@ class TerritorioController extends Controller
             'horarios_prime' => '12:30 a 14:30 hs (Almuerzo) & 19:30 a 22:30 hs (Prime Time Nocturno)',
         ];
 
-        // Cruce por Red Social y Cobertura Etaria
+        // Cruce por Red Social y Balance Estratégico
         $redesImpacto = $perfiles->map(function ($p) use ($padronElectoral, $publicaciones) {
             $postsRed = $publicaciones->where('perfil_social_id', $p->id);
             $totalIntRed = $postsRed->sum(fn ($post) => $post->total_likes + $post->total_comentarios + $post->total_compartidos + $post->total_guardados);
@@ -435,6 +462,21 @@ class TerritorioController extends Controller
                 'youtube' => 'Transversal (Debates, Entrevistas y Formatos Largos)',
                 default => 'Población General',
             };
+
+            $estrategiaRol = match ($p->plataforma) {
+                'tiktok' => 'Canal de Choque & Primer Voto: Viralizar contenido corto y dinámico.',
+                'instagram' => 'Canal de Propuesta & Cercanía: Storytelling barrial y recorridas.',
+                'facebook' => 'Canal de Anclaje Vecinal: Noticias de gestión, obras y streaming.',
+                'youtube' => 'Canal de Profundidad: Entrevistas extensas y debates programáticos.',
+                default => 'Canal de Difusión Institucional',
+            };
+
+            $estadoNivel = 'critico';
+            if ($coberturaPct >= 30) {
+                $estadoNivel = 'ganadora';
+            } elseif ($coberturaPct >= 10) {
+                $estadoNivel = 'regular';
+            }
 
             $diagnostico = match ($p->plataforma) {
                 'tiktok' => $coberturaPct >= 10 ? '🟢 Penetración óptima en jóvenes' : '🟡 Potencial para captar primer voto',
@@ -455,7 +497,51 @@ class TerritorioController extends Controller
                 'total_interacciones' => $totalIntRed,
                 'pauta_invertida' => $pautaRed,
                 'rango_objetivo' => $rangoObjetivo,
+                'estrategia_rol' => $estrategiaRol,
+                'estado_nivel' => $estadoNivel,
                 'diagnostico' => $diagnostico,
+            ];
+        });
+
+        // Alerta de Balance de Redes (si una red está en verde y otra en rojo)
+        $redGanadora = $redesImpacto->firstWhere('estado_nivel', 'ganadora');
+        $redCritica = $redesImpacto->firstWhere('estado_nivel', 'critico');
+        $alertaBalanceRedes = null;
+
+        if ($redGanadora && $redCritica) {
+            $alertaBalanceRedes = [
+                'mensaje' => "Tu canal de {$redGanadora['plataforma']} tiene excelente tracción ({$redGanadora['cobertura_padron_pct']}% del padrón), mientras que {$redCritica['plataforma']} requiere refuerzo.",
+                'accion' => "Redirigir el 40% del presupuesto de pauta de {$redGanadora['plataforma']} hacia {$redCritica['plataforma']} para cerrar la brecha en votantes mayores.",
+            ];
+        }
+
+        // Cruce Demográfico de Voto Potencial Digital por Franja Etaria
+        $cruceFranjas = collect($piramide['grupos_etarios'] ?? [])->map(function ($grupo) use ($totalSeguidores) {
+            $electoresFranja = (int) $grupo['electores'];
+            $pctFranjaPadron = (float) $grupo['porcentaje'];
+
+            // Estimación de seguidores en esta franja
+            $factorPenetracion = match ($grupo['rango']) {
+                '16-17', '18-29' => 0.45,
+                '30-49' => 0.35,
+                '50-69' => 0.15,
+                default => 0.05,
+            };
+
+            $seguidoresEstimadosFranja = (int) round($totalSeguidores * $factorPenetracion);
+            $coberturaFranjaPct = $electoresFranja > 0 ? round(($seguidoresEstimadosFranja / $electoresFranja) * 100, 1) : 0;
+
+            return [
+                'id' => $grupo['id'],
+                'rango' => $grupo['rango'],
+                'categoria' => $grupo['categoria'],
+                'color_hex' => $grupo['color_hex'],
+                'electores_padron' => $electoresFranja,
+                'pct_padron' => $pctFranjaPadron,
+                'seguidores_estimados' => $seguidoresEstimadosFranja,
+                'cobertura_franja_pct' => $coberturaFranjaPct,
+                'red_principal' => $grupo['red_principal'],
+                'estado' => $coberturaFranjaPct >= 20 ? 'verde' : ($coberturaFranjaPct >= 8 ? 'amarillo' : 'rojo'),
             ];
         });
 
@@ -543,11 +629,15 @@ class TerritorioController extends Controller
                 'poblacion_total' => (int) $d->poblacion_total,
             ]),
             'piramide' => $piramide,
+            'cruceFranjas' => $cruceFranjas,
+            'alertaBalanceRedes' => $alertaBalanceRedes,
             'stats' => [
                 'padron_electoral' => $padronElectoral,
                 'poblacion_total' => $poblacionTotal,
                 'meta_votos' => $metaVotos,
+                'total_seguidores_bruto' => $totalSeguidoresBruto,
                 'total_seguidores_comunidad' => $totalSeguidores,
+                'tasa_solapamiento_pct' => 30,
                 'penetracion_padron_pct' => $penetracionPadronPct,
                 'cobertura_meta_pct' => $coberturaMetaPct,
                 'total_publicaciones' => $totalPosts,

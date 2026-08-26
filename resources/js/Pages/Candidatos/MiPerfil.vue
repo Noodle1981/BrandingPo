@@ -3,7 +3,6 @@ import { ref, computed, watch } from 'vue';
 import { Head, useForm, usePage, Link, router } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import Badge from '../../Components/Badge.vue';
-import SocialCard from '../../Components/SocialCard.vue';
 import MediaEmbed from '../../Components/MediaEmbed.vue';
 import {
   Sparkles,
@@ -563,101 +562,7 @@ const currentRedStats = computed(() => {
   };
 });
 
-// --- Filtros Interactivos de Publicaciones (Meses, Pauta, Ejes, Búsqueda) ---
-const filterMonth = ref('');
-const filterTipoPauta = ref('');
-const filterEjeTematico = ref('');
-const filterSearch = ref('');
 
-const availableMonths = computed(() => {
-  const monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-  const monthsMap = new Map();
-
-  currentRedPublicaciones.value.forEach(p => {
-    const raw = p.fecha_publicacion_raw || p.fecha_publicacion;
-    if (!raw) return;
-    try {
-      // Soportar formato DD/MM/YYYY o ISO YYYY-MM-DD
-      let d;
-      if (typeof raw === 'string' && raw.includes('/')) {
-        const parts = raw.split(' ')[0].split('/');
-        d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-      } else {
-        d = new Date(raw);
-      }
-      if (isNaN(d.getTime())) return;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (!monthsMap.has(key)) {
-        monthsMap.set(key, `${monthNames[d.getMonth()]} ${d.getFullYear()}`);
-      }
-    } catch (e) {}
-  });
-
-  return Array.from(monthsMap.entries()).map(([value, label]) => ({ value, label }));
-});
-
-const isAnyFilterActive = computed(() => {
-  return filterMonth.value !== '' || filterTipoPauta.value !== '' || filterEjeTematico.value !== '' || filterSearch.value.trim() !== '';
-});
-
-const clearFilters = () => {
-  filterMonth.value = '';
-  filterTipoPauta.value = '';
-  filterEjeTematico.value = '';
-  filterSearch.value = '';
-};
-
-const currentRedPublicacionesFiltered = computed(() => {
-  return currentRedPublicaciones.value.filter(p => {
-    // 1. Filtro por Mes
-    if (filterMonth.value) {
-      const raw = p.fecha_publicacion_raw || p.fecha_publicacion;
-      if (!raw) return false;
-      try {
-        let d;
-        if (typeof raw === 'string' && raw.includes('/')) {
-          const parts = raw.split(' ')[0].split('/');
-          d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-        } else {
-          d = new Date(raw);
-        }
-        if (isNaN(d.getTime())) return false;
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (key !== filterMonth.value) return false;
-      } catch (e) {
-        return false;
-      }
-    }
-
-    // 2. Filtro por Tipo de Pauta
-    if (filterTipoPauta.value) {
-      if (filterTipoPauta.value === 'organico' && !(p.tipo_pauta === 'organico' || p.tipo_pauta === 'organico_impulsado')) return false;
-      else if (filterTipoPauta.value === 'organico_puro' && p.tipo_pauta !== 'organico') return false;
-      else if (filterTipoPauta.value === 'organico_impulsado' && p.tipo_pauta !== 'organico_impulsado') return false;
-      else if (filterTipoPauta.value === 'pauta_paga' && !(p.tipo_pauta === 'pauta_paga' || p.tipo_pauta === 'anuncio_directo')) return false;
-      else if (filterTipoPauta.value === 'colaboracion_pagada' && p.tipo_pauta !== 'colaboracion_pagada') return false;
-      else if (!['organico', 'pauta_paga'].includes(filterTipoPauta.value) && p.tipo_pauta !== filterTipoPauta.value) return false;
-    }
-
-    // 3. Filtro por Eje Temático
-    if (filterEjeTematico.value) {
-      const ejeId = p.eje_tematico_id || p.eje_tematico?.id;
-      if (String(ejeId) !== String(filterEjeTematico.value)) return false;
-    }
-
-    // 4. Filtro por búsqueda de texto
-    if (filterSearch.value.trim()) {
-      const q = filterSearch.value.toLowerCase().trim();
-      const text = (p.contenido_resumen || '').toLowerCase();
-      if (!text.includes(q)) return false;
-    }
-
-    return true;
-  });
-});
 
 // --- Sincronización en Vivo de Publicaciones (Ventana Móvil 15 Días) ---
 const isSyncModalOpen = ref(false);
@@ -1391,7 +1296,7 @@ const refrescarCanal = () => {
         </div>
       </div>
 
-      <!-- 4. ENTRADAS & MURO DE PUBLICACIONES DEL CANAL ACTIVO (Instagram, Facebook, TikTok, etc.) -->
+      <!-- 4. RESUMEN DE RENDIMIENTO & ACCESO AL MURO SOCIAL DE PUBLICACIONES -->
       <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
         <!-- Cabecera de la Sección de Publicaciones -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
@@ -1420,20 +1325,20 @@ const refrescarCanal = () => {
                 </svg>
               </div>
               <h3 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-slate-100">
-                Entradas & Publicaciones en {{ currentRed.nombre }}
+                Rendimiento de Publicaciones en {{ currentRed.nombre }}
               </h3>
               <span class="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
-                {{ currentRedPublicaciones.length }} {{ currentRedPublicaciones.length === 1 ? 'post' : 'posts' }}
+                {{ currentRedPublicaciones.length }} {{ currentRedPublicaciones.length === 1 ? 'post auditado' : 'posts auditados' }}
               </span>
             </div>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Monitoreo de reels, videos, likes, mensajes/comentarios, pauta y termómetro de humor social.
+              Métricas consolidadas de engagement, alcance y humor social de las publicaciones en este canal.
             </p>
           </div>
 
           <div class="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
             <button
-              v-if="canWrite && currentRed.perfil_id"
+              v-if="canWrite && currentRed.perfil_id && postsIn15DaysCount > 0"
               type="button"
               @click="sincronizarPublicacionesRecientes"
               :disabled="isSyncingRecientes"
@@ -1442,7 +1347,7 @@ const refrescarCanal = () => {
             >
               <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isSyncingRecientes }" />
               <span>{{ isSyncingRecientes ? 'Sincronizando 15d...' : 'Sincronizar (15 Días)' }}</span>
-              <span v-if="postsIn15DaysCount > 0" class="px-1.5 py-0.2 rounded-full bg-cyan-500 text-slate-950 text-[10px] font-mono font-black">
+              <span class="px-1.5 py-0.2 rounded-full bg-cyan-500 text-slate-950 text-[10px] font-mono font-black">
                 {{ postsIn15DaysCount }}
               </span>
             </button>
@@ -1450,11 +1355,11 @@ const refrescarCanal = () => {
             <Link
               v-if="canWrite"
               :href="`/feed?filtro=propio&plataforma=${currentRed.key}`"
-              class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/20 transition-all hover:scale-102 cursor-pointer"
-              :title="`Abrir muro de publicaciones y cargar contenido en ${currentRed.nombre}`"
+              class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/20 transition-all hover:scale-102 cursor-pointer"
+              :title="`Abrir muro de publicaciones y feed completo de ${currentRed.nombre}`"
             >
               <Radio class="w-4 h-4" />
-              <span>Ver en Muro Social & Cargar Post</span>
+              <span>Ver en Feed / Muro Social</span>
             </Link>
           </div>
         </div>
@@ -1516,180 +1421,7 @@ const refrescarCanal = () => {
           </div>
         </div>
 
-        <!-- Barra de Filtros Avanzados (Meses, Pauta, Ejes Temáticos y Búsqueda) -->
-        <div v-if="currentRedPublicaciones.length > 0" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <div class="flex items-center gap-2">
-              <Filter class="w-4 h-4 text-cyan-500" />
-              <span class="text-xs font-bold font-mono text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                Filtros de Publicaciones
-              </span>
-              <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
-                Mostrando {{ currentRedPublicacionesFiltered.length }} de {{ currentRedPublicaciones.length }}
-              </span>
-            </div>
 
-            <button
-              v-if="isAnyFilterActive"
-              type="button"
-              @click="clearFilters"
-              class="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer"
-            >
-              <RotateCcw class="w-3.5 h-3.5" />
-              <span>Limpiar Filtros</span>
-            </button>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <!-- 1. Filtro por Mes -->
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
-                <Calendar class="w-3.5 h-3.5 text-cyan-500" />
-                <span>Mes / Período</span>
-              </label>
-              <select
-                v-model="filterMonth"
-                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
-              >
-                <option value="">📅 Todos los Meses</option>
-                <option v-for="m in availableMonths" :key="m.value" :value="m.value">
-                  {{ m.label }}
-                </option>
-              </select>
-            </div>
-
-            <!-- 2. Filtro por Tipo de Pauta -->
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
-                <DollarSign class="w-3.5 h-3.5 text-cyan-500" />
-                <span>Difusión / Pauta</span>
-              </label>
-              <select
-                v-model="filterTipoPauta"
-                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
-              >
-                <option value="">📢 Todas las Estrategias</option>
-                <option value="organico">🌱 Orgánica (Pura + Impulsada)</option>
-                <option value="organico_puro">🌱 Solo Orgánica Pura</option>
-                <option value="organico_impulsado">🚀 Post Impulsado (Boosted)</option>
-                <option value="pauta_paga">🎯 Dark Post / Meta Ads</option>
-                <option value="colaboracion_pagada">🌟 Colaboración Pagada</option>
-              </select>
-            </div>
-
-            <!-- 3. Filtro por Eje Temático -->
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
-                <Target class="w-3.5 h-3.5 text-cyan-500" />
-                <span>Eje Temático</span>
-              </label>
-              <select
-                v-model="filterEjeTematico"
-                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
-              >
-                <option value="">🎯 Todos los Ejes Temáticos</option>
-                <option v-for="eje in ejes" :key="eje.id" :value="eje.id">
-                  {{ eje.nombre }}
-                </option>
-              </select>
-            </div>
-
-            <!-- 4. Buscador por texto -->
-            <div>
-              <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
-                <Search class="w-3.5 h-3.5 text-cyan-500" />
-                <span>Buscar en Texto</span>
-              </label>
-              <div class="relative">
-                <input
-                  v-model="filterSearch"
-                  type="text"
-                  placeholder="Palabra clave o hashtag..."
-                  class="w-full pl-8 pr-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
-                />
-                <Search class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Listado de Publicaciones Filtradas (Social Cards) -->
-        <div v-if="currentRedPublicacionesFiltered.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <SocialCard
-            v-for="post in currentRedPublicacionesFiltered"
-            :key="post.id"
-            :post="post"
-            :can-write="canWrite"
-            :ejes="ejes"
-          />
-        </div>
-
-        <!-- Estado Sin Resultados por Filtros Activos -->
-        <div
-          v-else-if="currentRedPublicaciones.length > 0"
-          class="p-10 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-3"
-        >
-          <Filter class="w-10 h-10 text-slate-400 opacity-50" />
-          <h4 class="font-bold text-base text-slate-800 dark:text-slate-200">
-            No se encontraron publicaciones con los filtros aplicados
-          </h4>
-          <p class="text-xs text-slate-500 max-w-md">
-            No hay publicaciones en {{ currentRed.nombre }} que coincidan con los criterios de mes, pauta o temática elegidos.
-          </p>
-          <button
-            type="button"
-            @click="clearFilters"
-            class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs shadow-sm hover:bg-cyan-400 transition-all cursor-pointer"
-          >
-            Restablecer Todos los Filtros
-          </button>
-        </div>
-
-        <!-- Estado Vacío (Sin Publicaciones en esta red) -->
-        <div
-          v-else
-          class="p-10 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-4"
-        >
-          <div class="flex items-center justify-center w-14 h-14 rounded-2xl" :class="getSocialMeta(currentRed.key).bgLight">
-            <svg v-if="currentRed.key === 'instagram'" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ color: getSocialMeta(currentRed.key).color }">
-              <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
-              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-              <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
-            </svg>
-            <svg v-else-if="currentRed.key === 'facebook'" class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            <svg v-else-if="currentRed.key === 'tiktok'" class="w-7 h-7 text-cyan-500 dark:text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
-            </svg>
-            <svg v-else-if="currentRed.key === 'x_twitter'" class="w-7 h-7 text-slate-900 dark:text-slate-100" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-            </svg>
-            <svg v-else-if="currentRed.key === 'youtube'" class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-            </svg>
-            <svg v-else-if="currentRed.key === 'linkedin'" class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor" :style="{ color: getSocialMeta(currentRed.key).color }">
-              <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-            </svg>
-          </div>
-          <div class="max-w-md space-y-1">
-            <h4 class="font-bold text-base text-slate-900 dark:text-slate-100">
-              Sin publicaciones registradas en {{ currentRed.nombre }}
-            </h4>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-              Carga enlaces a publicaciones, reels o videos de {{ currentRed.nombre }} para monitorear likes, comentarios, humor social y pauta publicitaria.
-            </p>
-          </div>
-          <button
-            v-if="canWrite"
-            type="button"
-            @click="openCreatePostModal"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md transition-all hover:scale-102 cursor-pointer"
-          >
-            <Plus class="w-4 h-4" />
-            <span>Cargar Primera Publicación en {{ currentRed.nombre }}</span>
-          </button>
-        </div>
       </div>
     </div>
 

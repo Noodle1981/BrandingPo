@@ -47,6 +47,14 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  cruceFranjas: {
+    type: Array,
+    default: () => [],
+  },
+  alertaBalanceRedes: {
+    type: Object,
+    default: null,
+  },
   stats: {
     type: Object,
     default: () => ({}),
@@ -211,6 +219,26 @@ const getDonutSlices = (items) => {
           </select>
         </div>
       </div>
+      
+      <!-- ALERTA DE BALANCE ESTRATÉGICO MULTI-RED & REDISTRIBUCIÓN DE PAUTA -->
+      <div
+        v-if="alertaBalanceRedes"
+        class="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-xs leading-relaxed flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm text-amber-900 dark:text-amber-200"
+      >
+        <div class="flex items-start gap-3">
+          <div class="p-2 rounded-xl bg-amber-500/20 text-amber-500 shrink-0 mt-0.5">
+            <Sparkles class="w-5 h-5" />
+          </div>
+          <div class="space-y-1">
+            <div class="font-extrabold text-sm">
+              ⚖️ Balance Multi-Red: {{ alertaBalanceRedes.mensaje }}
+            </div>
+            <p class="text-slate-600 dark:text-slate-300">
+              🎯 <strong>Recomendación Táctica:</strong> {{ alertaBalanceRedes.accion }}
+            </p>
+          </div>
+        </div>
+      </div>
 
       <!-- SECCIÓN 1: Tarjetas KPI de Impacto & Penetración Electoral -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -233,10 +261,10 @@ const getDonutSlices = (items) => {
           </div>
         </div>
 
-        <!-- 2. Penetración Digital Directa en el Padrón -->
+        <!-- 2. Penetración Digital Directa en el Padrón (Desduplicada) -->
         <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">Penetración Digital</span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">Penetración Única</span>
             <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
               <TrendingUp class="w-4 h-4" />
             </div>
@@ -245,17 +273,17 @@ const getDonutSlices = (items) => {
             <span class="text-2xl font-black font-mono text-emerald-500">
               {{ stats.penetracion_padron_pct }}%
             </span>
-            <span class="text-xs font-mono text-slate-400">
-              del padrón
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-500">
+              Desduplicado (-30%)
             </span>
           </div>
           <div class="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 font-mono">
-            <span>Seguidores Totales:</span>
+            <span>Electores Únicos:</span>
             <span class="font-bold text-slate-700 dark:text-slate-300">{{ formatNumber(stats.total_seguidores_comunidad) }}</span>
           </div>
         </div>
 
-        <!-- 3. Rendimiento Promedio por Post (Sin Inflación Acumulada) -->
+        <!-- 3. Rendimiento Promedio por Post -->
         <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">⚡ Promedio / Post</span>
@@ -316,7 +344,7 @@ const getDonutSlices = (items) => {
               </span>
             </div>
             <p class="text-[11px] text-slate-400 mt-1">
-              Porción del padrón electoral alcanzada por seguidores.
+              Porción del padrón electoral alcanzada por seguidores únicos.
             </p>
           </div>
 
@@ -342,7 +370,7 @@ const getDonutSlices = (items) => {
               <span class="text-xl font-black font-mono text-slate-900 dark:text-slate-100">
                 {{ stats.penetracion_padron_pct }}%
               </span>
-              <span class="text-[9px] font-mono text-slate-400 uppercase">del padrón</span>
+              <span class="text-[10px] font-mono text-slate-400 uppercase">del padrón</span>
             </div>
           </div>
 
@@ -351,30 +379,34 @@ const getDonutSlices = (items) => {
             <div class="flex items-center justify-between">
               <span class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
                 <span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
-                <span>Comunidad en Redes:</span>
+                <span>Comunidad Única:</span>
               </span>
-              <span class="font-bold text-slate-900 dark:text-slate-100">{{ formatNumber(stats.total_seguidores_comunidad) }} ({{ stats.penetracion_padron_pct }}%)</span>
+              <span class="font-bold text-slate-900 dark:text-slate-100">
+                {{ formatNumber(stats.total_seguidores_comunidad) }} electores
+              </span>
             </div>
             <div class="flex items-center justify-between">
               <span class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
                 <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-                <span>Padrón No Alcanzado:</span>
+                <span>Padrón Restante:</span>
               </span>
-              <span class="font-bold text-slate-500">{{ formatNumber(Math.max(0, stats.padron_electoral - stats.total_seguidores_comunidad)) }}</span>
+              <span class="font-bold text-slate-500">
+                {{ formatNumber(Math.max(0, stats.padron_electoral - stats.total_seguidores_comunidad)) }}
+              </span>
             </div>
           </div>
         </div>
 
-        <!-- Pastel 2: Distribución de la Comunidad por Red Social -->
+        <!-- Pastel 2: Distribución por Red Social -->
         <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-4">
           <div>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Layers class="w-4 h-4 text-purple-500" />
-                <span>Cuota por Red Social</span>
+                <Layers class="w-4 h-4 text-cyan-500" />
+                <span>Distribución por Canal</span>
               </h3>
-              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-500">
-                Mix de Canales
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-500">
+                {{ pasteles?.redes?.length || 0 }} Redes
               </span>
             </div>
             <p class="text-[11px] text-slate-400 mt-1">
@@ -429,7 +461,7 @@ const getDonutSlices = (items) => {
           </div>
         </div>
 
-        <!-- Pastel 3: Núcleo Duro (Militancia) vs Expansión por Pauta vs Silencioso -->
+        <!-- Pastel 3: Núcleo Duro vs Expansión por Pauta vs Silencioso -->
         <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-4">
           <div>
             <div class="flex items-center justify-between">
@@ -494,7 +526,67 @@ const getDonutSlices = (items) => {
 
       </div>
 
-      <!-- SECCIÓN 3: ⏳ INTELIGENCIA DE TIEMPO & RITMO DE CAMPAÑA HACIA LA ELECCIÓN -->
+      <!-- SECCIÓN 3: 👥 CRUCE DEMOGRÁFICO DE VOTO POTENCIAL POR FRANJA ETARIA -->
+      <div v-if="cruceFranjas.length > 0" class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Users class="w-5 h-5 text-purple-400" />
+              <span>Voto Potencial Digital por Franja Etaria en el Padrón</span>
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Cruce entre la pirámide de electores de {{ territorioActivo.nombre }} y la comunidad digital alcanzada.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
+          <div
+            v-for="franja in cruceFranjas"
+            :key="franja.id"
+            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border transition-all space-y-3"
+            :class="{
+              'border-emerald-500/40 shadow-xs shadow-emerald-500/5': franja.estado === 'verde',
+              'border-amber-500/40 shadow-xs shadow-amber-500/5': franja.estado === 'amarillo',
+              'border-rose-500/40 shadow-xs shadow-rose-500/5': franja.estado === 'rojo',
+            }"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-slate-900 dark:text-slate-100">
+                {{ franja.rango }} años
+              </span>
+              <span
+                class="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                :class="{
+                  'bg-emerald-500/15 text-emerald-500': franja.estado === 'verde',
+                  'bg-amber-500/15 text-amber-500': franja.estado === 'amarillo',
+                  'bg-rose-500/15 text-rose-500': franja.estado === 'rojo',
+                }"
+              >
+                {{ franja.cobertura_franja_pct }}% Cobertura
+              </span>
+            </div>
+
+            <div>
+              <span class="text-lg font-black block text-cyan-500">
+                {{ formatNumber(franja.seguidores_estimados) }} alcanzados
+              </span>
+              <span class="text-[11px] text-slate-400 block">
+                de {{ formatNumber(franja.electores_padron) }} electores en padrón
+              </span>
+            </div>
+
+            <div class="space-y-1 pt-1 border-t border-slate-200 dark:border-slate-800/80 text-[11px] font-sans">
+              <div class="flex justify-between font-mono text-[10px] text-slate-400">
+                <span>Canal Clave:</span>
+                <span class="font-bold text-slate-800 dark:text-slate-200">{{ franja.red_principal }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 4: ⏳ INTELIGENCIA DE TIEMPO & RITMO DE CAMPAÑA HACIA LA ELECCIÓN -->
       <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
         <div class="flex items-center justify-between flex-wrap gap-3">
           <div class="flex items-center gap-3">
@@ -566,16 +658,16 @@ const getDonutSlices = (items) => {
         </div>
       </div>
 
-      <!-- SECCIÓN 4: Cruce Demográfico por Red Social y Cobertura Etaria -->
+      <!-- SECCIÓN 5: Cruce Demográfico por Red Social y Balance Estratégico -->
       <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h3 class="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Layers class="w-5 h-5 text-cyan-500" />
-              <span>Cruce de Redes Sociales vs. Segmentos Etarios del Padrón</span>
+              <span>Balance Estratégico de Redes vs. Segmentos del Padrón</span>
             </h3>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Evaluación de cobertura en el territorio según los grupos demográficos donde tiene mayor peso cada plataforma.
+              Evaluación de cobertura en el territorio y rol táctico sugerido para cada canal.
             </p>
           </div>
         </div>
@@ -585,6 +677,11 @@ const getDonutSlices = (items) => {
             v-for="red in redesImpacto"
             :key="red.id"
             class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3.5 flex flex-col justify-between"
+            :class="{
+              'border-emerald-500/40 shadow-xs shadow-emerald-500/5': red.estado_nivel === 'ganadora',
+              'border-amber-500/40 shadow-xs shadow-amber-500/5': red.estado_nivel === 'regular',
+              'border-rose-500/40 shadow-xs shadow-rose-500/5': red.estado_nivel === 'critico',
+            }"
           >
             <div class="space-y-2.5">
               <div class="flex items-center justify-between">
@@ -608,11 +705,11 @@ const getDonutSlices = (items) => {
                 </div>
               </div>
 
-              <!-- Rango etario target -->
+              <!-- Rol táctico y audiencia target -->
               <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
-                <span class="text-[10px] uppercase font-bold text-slate-400 font-mono block">🎯 Audiencia Objetivo en Territorio:</span>
+                <span class="text-[10px] uppercase font-bold text-slate-400 font-mono block">🎯 Rol Estratégico:</span>
                 <p class="text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
-                  {{ red.rango_objetivo }}
+                  {{ red.estrategia_rol || red.rango_objetivo }}
                 </p>
               </div>
 

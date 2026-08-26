@@ -126,26 +126,34 @@ class PerfilSocial extends Model
         $deltaPostsNeto = $publicaciones - (int) $this->publicaciones_punto_cero;
 
         // Crear o actualizar la medición de hoy
-        $metrica = PerfilSocialMetrica::updateOrCreate(
-            [
+        $metricaData = [
+            'seguidores' => $seguidores,
+            'seguidos' => $seguidos,
+            'publicaciones_totales' => $publicaciones,
+            'me_gusta_totales' => $meGusta,
+            'visualizaciones_totales' => $vistas,
+            'crecimiento_seguidores_dia' => $deltaSeguidoresDia,
+            'crecimiento_seguidos_dia' => $deltaSeguidosDia,
+            'crecimiento_posts_dia' => $deltaPostsDia,
+            'crecimiento_seguidores_neto' => $deltaSeguidoresNeto,
+            'crecimiento_posts_neto' => $deltaPostsNeto,
+            'fuente' => $fuente,
+            'raw_metadata' => $data['raw_metadata'] ?? null,
+        ];
+
+        $metrica = PerfilSocialMetrica::where('perfil_social_id', $this->id)
+            ->whereDate('fecha', $hoy)
+            ->first();
+
+        if ($metrica) {
+            $metrica->update($metricaData);
+        } else {
+            $metrica = PerfilSocialMetrica::create([
                 'perfil_social_id' => $this->id,
                 'fecha' => $hoy,
-            ],
-            [
-                'seguidores' => $seguidores,
-                'seguidos' => $seguidos,
-                'publicaciones_totales' => $publicaciones,
-                'me_gusta_totales' => $meGusta,
-                'visualizaciones_totales' => $vistas,
-                'crecimiento_seguidores_dia' => $deltaSeguidoresDia,
-                'crecimiento_seguidos_dia' => $deltaSeguidosDia,
-                'crecimiento_posts_dia' => $deltaPostsDia,
-                'crecimiento_seguidores_neto' => $deltaSeguidoresNeto,
-                'crecimiento_posts_neto' => $deltaPostsNeto,
-                'fuente' => $fuente,
-                'raw_metadata' => $data['raw_metadata'] ?? null,
-            ]
-        );
+                ...$metricaData,
+            ]);
+        }
 
         // Actualizar datos actuales del perfil social
         $updateFields = [

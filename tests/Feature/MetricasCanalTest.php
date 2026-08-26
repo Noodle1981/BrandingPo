@@ -46,8 +46,16 @@ class MetricasCanalTest extends TestCase
             ->has('candidato')
             ->has('perfilSocial')
             ->has('stats')
+            ->has('benchmarks')
+            ->has('frecuenciaPublicacion')
+            ->has('organicoVsPauta')
+            ->has('rendimientoPorFormato')
+            ->has('consistenciaMensual')
+            ->has('promedioVistasInfo')
+            ->has('semaforoObjetivos')
             ->has('historicoMediciones')
             ->has('topPublicaciones')
+            ->has('distribucionEjes')
         );
     }
 }

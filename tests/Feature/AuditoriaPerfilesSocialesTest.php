@@ -33,6 +33,7 @@ class AuditoriaPerfilesSocialesTest extends TestCase
             'publicaciones_totales' => 50,
             'publicaciones_punto_cero' => 50,
         ]);
+        $perfil->metricas()->delete();
 
         // First audit (e.g. +25 followers)
         $metrica = $perfil->registrarMedicion([
