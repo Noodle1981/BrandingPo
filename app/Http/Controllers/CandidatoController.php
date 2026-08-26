@@ -1467,7 +1467,7 @@ class CandidatoController extends Controller
                     $requierePauta = true;
                     $pautaTipo = 'urgente';
                     $pautaBadge = '🚨 Requiere Pauta Urgente';
-                    $diagnosticoPauta = "Burbuja orgánica: solo alcanzás al {$coberturaPadronFranjaPct}% del padrón de {$franja['rango']} años ({$seguidoresEnFranja} de {$electoresTotalesFranja} electores). Es obligatorio inyectar pauta para impactar a los {$electoresFaltantes} jóvenes que no te siguen.";
+                    $diagnosticoPauta = "Burbuja orgánica: solo alcanzás al {$coberturaPadronFranjaPct}% del padrón de {$franja['rango']} años ({$seguidoresEnFranja} de {$electoresTotalesFranja} electores). Es obligatorio inyectar pauta para impactar a los {$electoresFaltantes} electores que no te siguen.";
                 } elseif ($coberturaPadronFranjaPct < 30) {
                     $requierePauta = true;
                     $pautaTipo = 'moderada';
