@@ -1152,4 +1152,104 @@ class SocialProfileScraperService
 
         return (int) filter_var($clean, FILTER_SANITIZE_NUMBER_INT);
     }
+
+    /**
+     * Canonicalizar la URL de una publicación para garantizar unicidad absoluta en el sistema.
+     */
+    public static function canonicalizePostUrl(?string $url): ?string
+    {
+        if (empty($url)) {
+            return null;
+        }
+
+        $url = trim($url);
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+            return $url;
+        }
+
+        $parsed = parse_url($url);
+        if (! $parsed || empty($parsed['host'])) {
+            return $url;
+        }
+
+        $host = strtolower($parsed['host']);
+        $host = preg_replace('/^www\./', '', $host);
+        $path = $parsed['path'] ?? '/';
+        $query = $parsed['query'] ?? '';
+
+        // Normalizar dominios comunes
+        if (in_array($host, ['twitter.com', 'mobile.twitter.com', 'x.com'])) {
+            $host = 'x.com';
+        } elseif (in_array($host, ['threads.com', 'threads.net', 'www.threads.net', 'm.threads.net'])) {
+            $host = 'threads.net';
+        } elseif (in_array($host, ['instagr.am', 'instagram.com', 'm.instagram.com'])) {
+            $host = 'instagram.com';
+        } elseif (in_array($host, ['facebook.com', 'm.facebook.com', 'fb.watch', 'web.facebook.com', 'fb.com'])) {
+            $host = 'facebook.com';
+        } elseif (in_array($host, ['youtu.be', 'youtube.com', 'm.youtube.com'])) {
+            $host = 'youtube.com';
+        } elseif (in_array($host, ['tiktok.com', 'm.tiktok.com', 'vm.tiktok.com'])) {
+            $host = 'tiktok.com';
+        }
+
+        // Limpieza de tracking params en query string
+        $queryParamsToKeep = [];
+        if (! empty($query)) {
+            parse_str($query, $params);
+            $trackingKeys = [
+                'igsh', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+                'ref', 'ref_src', 'ref_url', 'fbclid', 'gclid', 's', 't', 'mibextid', 'rdid',
+                'is_from_webapp', 'sender_device', 'share_id', 'feature', 'app', 'locale',
+                'twclid', 'si', '_r', '_d', 'checksum', 'source_ve_path', 'embed_source'
+            ];
+
+            foreach ($params as $k => $v) {
+                if (! in_array(strtolower($k), $trackingKeys)) {
+                    $queryParamsToKeep[$k] = $v;
+                }
+            }
+        }
+
+        // Normalización específica por red social
+        if ($host === 'youtube.com' && preg_match('#^/([a-zA-Z0-9_\-]{11})#', $path, $ytMatch)) {
+            $path = '/watch';
+            $queryParamsToKeep['v'] = $ytMatch[1];
+        } elseif ($host === 'instagram.com') {
+            if (preg_match('#/(p|reel|tv)/([a-zA-Z0-9_\-]+)#i', $path, $igMatch)) {
+                $path = '/'.strtolower($igMatch[1]).'/'.$igMatch[2];
+                $queryParamsToKeep = [];
+            }
+        } elseif ($host === 'threads.net') {
+            if (preg_match('#/(@[a-zA-Z0-9_\.\-]+)/post/([a-zA-Z0-9_\-]+)#i', $path, $thMatch)) {
+                $path = '/'.$thMatch[1].'/post/'.$thMatch[2];
+                $queryParamsToKeep = [];
+            } elseif (preg_match('#/share/([a-zA-Z0-9_\-]+)#i', $path, $thMatch)) {
+                $path = '/share/'.$thMatch[1];
+                $queryParamsToKeep = [];
+            }
+        } elseif ($host === 'x.com') {
+            if (preg_match('#/([a-zA-Z0-9_]+)/status/([0-9]+)#i', $path, $xMatch)) {
+                $path = '/'.$xMatch[1].'/status/'.$xMatch[2];
+                $queryParamsToKeep = [];
+            }
+        } elseif ($host === 'tiktok.com') {
+            if (preg_match('#/(@[a-zA-Z0-9_\.\-]+)/video/([0-9]+)#i', $path, $ttMatch)) {
+                $path = '/'.$ttMatch[1].'/video/'.$ttMatch[2];
+                $queryParamsToKeep = [];
+            }
+        }
+
+        $cleanPath = rtrim($path, '/');
+        if (empty($cleanPath)) {
+            $cleanPath = '/';
+        }
+
+        $canonical = 'https://'.$host.$cleanPath;
+        if (! empty($queryParamsToKeep)) {
+            ksort($queryParamsToKeep);
+            $canonical .= '?'.http_build_query($queryParamsToKeep);
+        }
+
+        return $canonical;
+    }
 }

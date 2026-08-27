@@ -25,12 +25,29 @@ class PublicacionController extends Controller
     {
         $inputUrl = $request->input('url') ?? $request->input('url_post') ?? '';
         $plataforma = $request->input('plataforma');
+        $workspace = WorkspaceHelper::activo($request);
 
         if (empty($inputUrl)) {
             return response()->json([
                 'success' => false,
                 'error' => 'Ingresa una URL de publicación válida.',
             ], 422);
+        }
+
+        // Verificar si la publicación ya existe en el workspace
+        $canonicalUrl = SocialProfileScraperService::canonicalizePostUrl($inputUrl) ?? $inputUrl;
+        $duplicado = Publicacion::buscarDuplicado($workspace->id, $canonicalUrl);
+
+        if ($duplicado) {
+            return response()->json([
+                'success' => false,
+                'ya_registrada' => true,
+                'publicacion_id' => $duplicado->id,
+                'fecha_publicacion' => $duplicado->fecha_publicacion?->format('d/m/Y H:i'),
+                'autor' => $duplicado->candidato?->nombre_completo,
+                'plataforma' => $duplicado->perfilSocial?->plataforma,
+                'mensaje' => '⚠️ Esta publicación ya se encuentra registrada en el sistema (ID #'.$duplicado->id.'). No se pueden duplicar contenidos.',
+            ]);
         }
 
         $data = $scraper->scrapePost($inputUrl, $plataforma);
@@ -406,6 +423,27 @@ class PublicacionController extends Controller
             $ejeId = $eje->id;
         }
 
+        // Canonicalizar URL para unicidad consistente
+        $canonicalUrl = ! empty($validated['url_post'])
+            ? SocialProfileScraperService::canonicalizePostUrl($validated['url_post'])
+            : null;
+
+        // VERIFICAR UNICIDAD: Evitar publicaciones duplicadas en el workspace
+        $duplicado = Publicacion::buscarDuplicado(
+            $workspace->id,
+            $canonicalUrl ?? $validated['url_post'] ?? null,
+            (int) $validated['candidato_id'],
+            (int) $perfilSocialId,
+            $validated['fecha_publicacion'],
+            $validated['contenido_resumen']
+        );
+
+        if ($duplicado) {
+            return redirect()->back()->withInput()->withErrors([
+                'url_post' => '⚠️ Esta publicación ya se encuentra registrada en el sistema (ID #'.$duplicado->id.'). Las publicaciones deben ser únicas.',
+            ]);
+        }
+
         $vistasOrg = (int) ($validated['vistas_organicas'] ?? 0);
         $vistasPag = (int) ($validated['vistas_pagadas'] ?? 0);
         $totalVistas = $vistasOrg + $vistasPag;
@@ -430,7 +468,7 @@ class PublicacionController extends Controller
             'tipo_formato' => $validated['tipo_formato'],
             'tipo_pauta' => $validated['tipo_pauta'],
             'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
-            'url_post' => $validated['url_post'] ?? null,
+            'url_post' => $canonicalUrl ?? $validated['url_post'] ?? null,
             'media_url' => $validated['media_url'] ?? null,
             'vistas_organicas' => $vistasOrg,
             'vistas_pagadas' => $vistasPag,
@@ -467,6 +505,8 @@ class PublicacionController extends Controller
      */
     public function update(Request $request, Publicacion $publicacion): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
             'contenido_resumen' => ['required', 'string'],
             'fecha_publicacion' => ['nullable', 'date'],
@@ -492,6 +532,29 @@ class PublicacionController extends Controller
             'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
         ]);
 
+        // Canonicalizar URL y validar unicidad
+        $canonicalUrl = ! empty($validated['url_post'])
+            ? SocialProfileScraperService::canonicalizePostUrl($validated['url_post'])
+            : null;
+
+        if (! empty($canonicalUrl)) {
+            $duplicado = Publicacion::buscarDuplicado(
+                $workspace->id,
+                $canonicalUrl,
+                $publicacion->candidato_id,
+                $publicacion->perfil_social_id,
+                $validated['fecha_publicacion'] ?? null,
+                $validated['contenido_resumen'],
+                $publicacion->id
+            );
+
+            if ($duplicado) {
+                return redirect()->back()->withInput()->withErrors([
+                    'url_post' => '⚠️ Ya existe otra publicación registrada con esta misma URL (ID #'.$duplicado->id.').',
+                ]);
+            }
+        }
+
         $plataformaResolvida = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
         $aiEmocional = $this->calcularInteligenciaEmocional(
             $validated,
@@ -501,7 +564,7 @@ class PublicacionController extends Controller
 
         $updateData = [
             'contenido_resumen' => $validated['contenido_resumen'],
-            'url_post' => $validated['url_post'] ?? null,
+            'url_post' => $canonicalUrl ?? $validated['url_post'] ?? null,
             'media_url' => $validated['media_url'] ?? null,
             'tipo_formato' => $validated['tipo_formato'],
             'tipo_pauta' => $validated['tipo_pauta'],

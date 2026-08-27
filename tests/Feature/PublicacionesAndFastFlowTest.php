@@ -118,7 +118,7 @@ class PublicacionesAndFastFlowTest extends TestCase
 
         $response->assertRedirect();
 
-        $publicacion = \App\Models\Publicacion::where('url_post', 'https://www.instagram.com/p/DcQjMFlTt7q/?utm_source=ig_web_copy_link')->first();
+        $publicacion = \App\Models\Publicacion::where('url_post', 'LIKE', '%DcQjMFlTt7q%')->first();
         $this->assertNotNull($publicacion);
         $this->assertEquals(17, $publicacion->total_likes);
         $this->assertEquals(4, $publicacion->total_comentarios);
@@ -128,5 +128,98 @@ class PublicacionesAndFastFlowTest extends TestCase
         $this->assertEquals(17, $publicacion->reacciones_detalladas['me_gusta']);
         $this->assertEquals(0, $publicacion->reacciones_detalladas['me_enoja']);
         $this->assertEquals(100.0, $publicacion->aprobacion_neta_pct);
+    }
+
+    public function test_cannot_store_duplicate_publication_by_url(): void
+    {
+        $consultor = User::where('role', 'consultor')->first();
+        $candidato = Candidato::where('es_propio', true)->first();
+
+        // Primer guardado
+        $this->actingAs($consultor)->post('/publicaciones', [
+            'candidato_id' => $candidato->id,
+            'plataforma' => 'instagram',
+            'url_post' => 'https://www.instagram.com/p/TEST_DUP_123/?igsh=ABC==',
+            'tipo_formato' => 'Reel',
+            'tipo_pauta' => 'organico',
+            'contenido_resumen' => 'Post único de prueba.',
+            'fecha_publicacion' => now()->toDateTimeString(),
+        ]);
+
+        $this->assertEquals(1, \App\Models\Publicacion::where('url_post', 'LIKE', '%TEST_DUP_123%')->count());
+
+        // Intento de subir la misma publicación con ligeras variaciones en la URL
+        $responseDuplicate = $this->actingAs($consultor)->post('/publicaciones', [
+            'candidato_id' => $candidato->id,
+            'plataforma' => 'instagram',
+            'url_post' => 'https://instagram.com/p/TEST_DUP_123/',
+            'tipo_formato' => 'Reel',
+            'tipo_pauta' => 'organico',
+            'contenido_resumen' => 'Intento duplicado.',
+            'fecha_publicacion' => now()->toDateTimeString(),
+        ]);
+
+        $responseDuplicate->assertSessionHasErrors(['url_post']);
+        // Sigue habiendo solo 1 registro
+        $this->assertEquals(1, \App\Models\Publicacion::where('url_post', 'LIKE', '%TEST_DUP_123%')->count());
+    }
+
+    public function test_cannot_store_duplicate_publication_by_content_and_date(): void
+    {
+        $consultor = User::where('role', 'consultor')->first();
+        $candidato = Candidato::where('es_propio', true)->first();
+        $perfil = $candidato->perfilesSociales->first();
+        $fecha = now()->toDateTimeString();
+
+        // Primer guardado manual
+        $this->actingAs($consultor)->post('/publicaciones', [
+            'candidato_id' => $candidato->id,
+            'perfil_social_id' => $perfil->id,
+            'tipo_formato' => 'Post',
+            'tipo_pauta' => 'organico',
+            'contenido_resumen' => 'Mensaje de campaña idéntico sin URL.',
+            'fecha_publicacion' => $fecha,
+        ]);
+
+        // Intento de guardar exactamente el mismo contenido para el mismo candidato y fecha
+        $responseDuplicate = $this->actingAs($consultor)->post('/publicaciones', [
+            'candidato_id' => $candidato->id,
+            'perfil_social_id' => $perfil->id,
+            'tipo_formato' => 'Post',
+            'tipo_pauta' => 'organico',
+            'contenido_resumen' => 'Mensaje de campaña idéntico sin URL.',
+            'fecha_publicacion' => $fecha,
+        ]);
+
+        $responseDuplicate->assertSessionHasErrors(['url_post']);
+        $this->assertEquals(1, \App\Models\Publicacion::where('contenido_resumen', 'Mensaje de campaña idéntico sin URL.')->count());
+    }
+
+    public function test_scrape_post_detects_already_registered_publication(): void
+    {
+        $consultor = User::where('role', 'consultor')->first();
+        $candidato = Candidato::where('es_propio', true)->first();
+
+        // Guardar post
+        $this->actingAs($consultor)->post('/publicaciones', [
+            'candidato_id' => $candidato->id,
+            'plataforma' => 'x_twitter',
+            'url_post' => 'https://x.com/candidato/status/9876543210',
+            'tipo_formato' => 'Tweet',
+            'tipo_pauta' => 'organico',
+            'contenido_resumen' => 'Tweet ya existente.',
+            'fecha_publicacion' => now()->toDateTimeString(),
+        ]);
+
+        // Probar endpoint de scrape
+        $response = $this->actingAs($consultor)->postJson('/publicaciones/scrape-post', [
+            'url_post' => 'https://twitter.com/candidato/status/9876543210?s=20',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => false,
+            'ya_registrada' => true,
+        ]);
     }
 }

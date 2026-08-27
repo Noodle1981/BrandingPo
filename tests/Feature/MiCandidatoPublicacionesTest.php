@@ -61,7 +61,7 @@ class MiCandidatoPublicacionesTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseHas('publicaciones', [
             'candidato_id' => $candidato->id,
-            'url_post' => 'https://www.instagram.com/reel/DaVanf_zIei/?utm_source=ig_web_copy_link&igsi=MzRlODBiNWFlZA==',
+            'url_post' => 'https://instagram.com/reel/DaVanf_zIei',
             'tipo_formato' => 'Reel',
             'tipo_pauta' => 'pauta_paga',
             'total_likes' => 81,

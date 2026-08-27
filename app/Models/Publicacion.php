@@ -178,4 +178,81 @@ class Publicacion extends Model
 
         return $query;
     }
+
+    /**
+     * Buscar si existe una publicación duplicada por URL canonicalizada o por huella digital de contenido/fecha.
+     */
+    public static function buscarDuplicado(
+        int $workspaceId,
+        ?string $url = null,
+        ?int $candidatoId = null,
+        ?int $perfilSocialId = null,
+        ?string $fecha = null,
+        ?string $contenido = null,
+        ?int $ignoreId = null
+    ): ?self {
+        $baseQuery = static::where('workspace_id', $workspaceId);
+        if ($ignoreId) {
+            $baseQuery->where('id', '!=', $ignoreId);
+        }
+
+        // 1. Verificación por URL (si fue provista)
+        if (! empty($url)) {
+            $canonical = \App\Services\SocialProfileScraperService::canonicalizePostUrl($url) ?? $url;
+            $rawClean = rtrim(trim($url), '/');
+            $canonicalClean = rtrim($canonical, '/');
+
+            // Buscar coincidencia exacta o por versión canonicalizada
+            $encontradoPorUrl = (clone $baseQuery)->where(function ($q) use ($url, $canonical, $rawClean, $canonicalClean) {
+                $q->where('url_post', $url)
+                  ->orWhere('url_post', $canonical)
+                  ->orWhere('url_post', $rawClean)
+                  ->orWhere('url_post', $canonicalClean)
+                  ->orWhere('url_post', $canonicalClean.'/')
+                  ->orWhere('url_post', $rawClean.'/');
+            })->first();
+
+            if ($encontradoPorUrl) {
+                return $encontradoPorUrl;
+            }
+
+            // Búsqueda inteligente por identificador único (Shortcode IG / Status ID X / Video ID TT)
+            $parsedPath = parse_url($canonical, PHP_URL_PATH);
+            if (! empty($parsedPath)) {
+                $segments = array_values(array_filter(explode('/', $parsedPath)));
+                $ultimoSegmento = end($segments);
+                if ($ultimoSegmento && strlen($ultimoSegmento) >= 5 && ! in_array($ultimoSegmento, ['watch', 'post', 'video', 'share', 'reel', 'p'])) {
+                    $encontradoPorSegmento = (clone $baseQuery)
+                        ->whereNotNull('url_post')
+                        ->where('url_post', 'LIKE', '%'.$ultimoSegmento.'%')
+                        ->first();
+
+                    if ($encontradoPorSegmento) {
+                        return $encontradoPorSegmento;
+                    }
+                }
+            }
+        }
+
+        // 2. Verificación por huella de contenido y fecha (para posts manuales o idénticos)
+        if ($candidatoId && $perfilSocialId && ! empty($contenido)) {
+            $contenidoLimpio = trim($contenido);
+            $queryContenido = (clone $baseQuery)
+                ->where('candidato_id', $candidatoId)
+                ->where('perfil_social_id', $perfilSocialId)
+                ->where('contenido_resumen', $contenidoLimpio);
+
+            if (! empty($fecha)) {
+                $fechaDia = date('Y-m-d', strtotime($fecha));
+                $queryContenido->whereDate('fecha_publicacion', $fechaDia);
+            }
+
+            $encontradoPorContenido = $queryContenido->first();
+            if ($encontradoPorContenido) {
+                return $encontradoPorContenido;
+            }
+        }
+
+        return null;
+    }
 }
