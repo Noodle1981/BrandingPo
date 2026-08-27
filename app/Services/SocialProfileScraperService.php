@@ -45,6 +45,8 @@ class SocialProfileScraperService
                     return $this->scrapeYouTube($url, $result);
                 case 'x_twitter':
                     return $this->scrapeXTwitter($url, $result);
+                case 'threads':
+                    return $this->scrapeThreads($url, $result);
                 case 'linkedin':
                     return $this->scrapeLinkedIn($url, $result);
                 default:
@@ -459,6 +461,52 @@ class SocialProfileScraperService
     }
 
     /**
+     * Extractor para Threads (@threads.net).
+     */
+    protected function scrapeThreads(string $url, array $result): array
+    {
+        preg_match('/(?:threads\.net|threads\.com)\/@([a-zA-Z0-9_\.]+)/i', $url, $handleMatch);
+        if (! empty($handleMatch[1])) {
+            $result['handle_usuario'] = '@'.$handleMatch[1];
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => 'Twitterbot/1.0',
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
+            ])->timeout(8)->get($url);
+
+            $html = $response->body();
+
+            if (preg_match('/<meta[^>]+(?:property="og:image"|name="twitter:image")[^>]+content="([^"]+)"/i', $html, $imgMatch)) {
+                $avatar = html_entity_decode($imgMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if (! str_contains($avatar, 'rsrc.php')) {
+                    $result['foto_perfil_url'] = $avatar;
+                }
+            }
+
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:seguidores|followers)/i', $html, $segMatch)) {
+                $result['seguidores'] = $this->parseFormattedNumber($segMatch[1]);
+            }
+        } catch (\Throwable $e) {
+            // Silencioso
+        }
+
+        $result['success'] = ! empty($result['handle_usuario']) || ! empty($result['foto_perfil_url']) || ! is_null($result['seguidores']);
+        $mensajeParts = [];
+        if (! is_null($result['seguidores'])) {
+            $mensajeParts[] = number_format($result['seguidores'], 0, ',', '.').' seguidores';
+        }
+
+        $result['mensaje'] = $result['success']
+            ? '¡Datos de Threads extraídos ('.(implode(', ', $mensajeParts) ?: $result['handle_usuario']).')!'
+            : 'Threads protegió la lectura. Puedes completar los números manualmente.';
+
+        return $result;
+    }
+
+    /**
      * Extractor para LinkedIn.
      */
     protected function scrapeLinkedIn(string $url, array $result): array
@@ -625,6 +673,10 @@ class SocialProfileScraperService
             $result['plataforma'] = 'x_twitter';
 
             return $this->scrapeTwitterPost($cleanUrl, $result);
+        } elseif (str_contains($cleanUrl, 'threads.net') || str_contains($cleanUrl, 'threads.com')) {
+            $result['plataforma'] = 'threads';
+
+            return $this->scrapeThreadsPost($cleanUrl, $result);
         } elseif (str_contains($cleanUrl, 'youtube.com') || str_contains($cleanUrl, 'youtu.be')) {
             $result['plataforma'] = 'youtube';
 
@@ -636,6 +688,77 @@ class SocialProfileScraperService
         }
 
         return $this->scrapeGenericPost($cleanUrl, $result);
+    }
+
+    /**
+     * Scraping especializado de una publicación o hilo de Threads.
+     */
+    protected function scrapeThreadsPost(string $url, array $result): array
+    {
+        $result['plataforma'] = 'threads';
+        $result['tipo_formato'] = 'Post';
+
+        try {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_ENCODING, '');
+            $html = curl_exec($ch);
+            $effectiveUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+            curl_close($ch);
+
+            if (! empty($effectiveUrl)) {
+                $cleanEffective = preg_replace('/\?(?:xmt|utm_source|igsh|igsi)=[^&]*&?/i', '', $effectiveUrl);
+                $cleanEffective = rtrim($cleanEffective, '?&');
+                $result['url_post'] = $cleanEffective;
+
+                if (preg_match('/(?:threads\.net|threads\.com)\/@([a-zA-Z0-9_\.]+)/i', $cleanEffective, $hm)) {
+                    $result['handle_autor'] = '@'.$hm[1];
+                }
+            }
+
+            if (preg_match('/<meta[^>]+property="og:description"[^>]+content="([^"]*)"/i', $html, $mDesc)
+                || preg_match('/<meta[^>]+name="description"[^>]+content="([^"]*)"/i', $html, $mDesc)) {
+                $desc = html_entity_decode($mDesc[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if (! str_contains($desc, 'Únete a Threads') && ! str_contains($desc, 'Join Threads')) {
+                    $result['contenido_resumen'] = trim($desc);
+                }
+            }
+
+            if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]*)"/i', $html, $mImg)) {
+                $img = html_entity_decode($mImg[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if (! str_contains($img, 'rsrc.php')) {
+                    $result['media_url'] = $img;
+                }
+            }
+
+            if (preg_match('/<meta[^>]+property="og:title"[^>]+content="([^"]*)"/i', $html, $mTitle)) {
+                $title = html_entity_decode($mTitle[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if (empty($result['handle_autor']) && preg_match('/\(@([a-zA-Z0-9_\.]+)\)/i', $title, $tm)) {
+                    $result['handle_autor'] = '@'.$tm[1];
+                }
+            }
+
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:likes|Me gusta)/i', $html, $lm)) {
+                $result['total_likes'] = $this->parseFormattedNumber($lm[1]);
+            }
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:replies|respuestas|comentarios)/i', $html, $rm)) {
+                $result['total_comentarios'] = $this->parseFormattedNumber($rm[1]);
+            }
+        } catch (\Throwable $e) {
+            // Silencioso
+        }
+
+        $result['success'] = ! empty($result['handle_autor']) || ! empty($result['contenido_resumen']) || ! empty($result['media_url']);
+        $result['mensaje'] = $result['success']
+            ? '¡Publicación de Threads extraída exitosamente!'
+            : 'Threads protegió la lectura. Puedes completar los datos manualmente.';
+
+        return $result;
     }
 
     /**

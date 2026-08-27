@@ -112,4 +112,31 @@ class MetricasCanalTest extends TestCase
             ->where('perfilSocial.plataforma', 'tiktok')
         );
     }
+
+    public function test_visualizador_puede_ver_dashboard_de_metricas_para_threads(): void
+    {
+        $user = User::where('role', 'visualizador')->first() ?? User::where('role', 'consultor')->first();
+        $candidato = Candidato::where('es_propio', true)->first();
+
+        $perfilThreads = $candidato->perfilesSociales()->updateOrCreate(
+            ['plataforma' => 'threads'],
+            [
+                'handle_usuario' => '@federico.sisterna',
+                'seguidores_actuales' => 2400,
+                'seguidores_punto_cero' => 2000,
+                'publicaciones_totales' => 15,
+                'publicaciones_punto_cero' => 10,
+                'esta_activo' => true,
+            ]
+        );
+
+        $response = $this->actingAs($user)
+            ->get(route('perfiles-sociales.metricas', $perfilThreads));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Candidatos/MetricasCanal')
+            ->where('perfilSocial.plataforma', 'threads')
+        );
+    }
 }

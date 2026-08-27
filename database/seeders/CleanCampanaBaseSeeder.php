@@ -276,7 +276,7 @@ class CleanCampanaBaseSeeder extends Seeder
         );
 
         // Inicializar canales de redes en blanco (inactivos)
-        $plataformas = ['instagram', 'facebook', 'tiktok', 'x_twitter', 'youtube', 'linkedin'];
+        $plataformas = ['instagram', 'facebook', 'threads', 'tiktok', 'x_twitter', 'youtube', 'linkedin'];
         foreach ($plataformas as $plat) {
             PerfilSocial::updateOrCreate(
                 ['candidato_id' => $propio->id, 'plataforma' => $plat],

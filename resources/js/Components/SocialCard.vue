@@ -53,6 +53,7 @@ const isEditing = ref(false);
 const platform = computed(() => (props.post.plataforma || props.post.perfil_social?.plataforma || 'instagram').toLowerCase());
 const isInstagram = computed(() => platform.value === 'instagram');
 const isFacebook = computed(() => platform.value === 'facebook');
+const isThreads = computed(() => platform.value === 'threads');
 const isTikTok = computed(() => platform.value === 'tiktok');
 const isTwitter = computed(() => platform.value === 'x_twitter' || platform.value === 'twitter');
 const isYouTube = computed(() => platform.value === 'youtube');
@@ -437,8 +438,8 @@ const tiposPauta = [
           </span>
         </div>
 
-        <!-- TIKTOK o X (TWITTER): Me Gusta ❤️ -->
-        <div v-else-if="isTikTok || isTwitter" class="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-[11px] shadow-2xs">
+        <!-- TIKTOK, X (TWITTER) o THREADS: Me Gusta ❤️ -->
+        <div v-else-if="isTikTok || isTwitter || isThreads" class="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-[11px] shadow-2xs">
           <span class="inline-flex items-center gap-1.5 font-bold text-rose-500">
             <Heart class="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
             <span class="text-slate-800 dark:text-slate-200">{{ formatNumber(post.total_likes || 0) }}</span>
@@ -516,14 +517,14 @@ const tiposPauta = [
         </button>
 
         <!-- Republicaciones / Reposts (Separado) -->
-        <div v-if="isInstagram || isTwitter || post.total_republicados > 0" class="flex items-center gap-1" title="Republicaciones (Reposts / Retweets)">
+        <div v-if="isInstagram || isTwitter || isThreads || post.total_republicados > 0" class="flex items-center gap-1" title="Republicaciones (Reposts / Retweets)">
           <Repeat class="w-4 h-4 text-emerald-500" />
           <span class="font-mono font-medium">{{ formatNumber(post.total_republicados || 0) }}</span>
         </div>
 
         <!-- Compartidos / Envíos (Separado) -->
-        <div class="flex items-center gap-1" :title="isInstagram ? 'Compartidos / Envíos' : 'Compartidos / Shares'">
-          <Send v-if="isInstagram" class="w-3.5 h-3.5 text-indigo-500" />
+        <div class="flex items-center gap-1" :title="isInstagram || isThreads ? 'Compartidos / Envíos' : 'Compartidos / Shares'">
+          <Send v-if="isInstagram || isThreads" class="w-3.5 h-3.5 text-indigo-500" />
           <Share2 v-else class="w-4 h-4 text-indigo-500" />
           <span class="font-mono font-medium">{{ formatNumber(post.total_compartidos || 0) }}</span>
         </div>
@@ -903,14 +904,14 @@ const tiposPauta = [
             </div>
           </div>
 
-          <!-- 6d. PANEL PARA X / TWITTER (❤️ Likes, 💬 Respuestas, 🔁 Reposts, ↗️ Compartidos, 🔖 Guardados, 👁️ Impresiones) -->
-          <div v-else-if="isTwitter" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-3">
+          <!-- 6d. PANEL PARA X / TWITTER Y THREADS (❤️ Likes, 💬 Respuestas, 🔁 Reposts, ↗️ Compartidos, 🔖 Guardados, 👁️ Impresiones) -->
+          <div v-else-if="isTwitter || isThreads" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-3">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <span class="font-black text-sm text-slate-100 font-mono">𝕏</span>
-                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas Nativas de X (Twitter)</span>
+                <span class="font-black text-sm text-slate-100 font-mono">{{ isThreads ? '@' : '𝕏' }}</span>
+                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">{{ isThreads ? 'Métricas Nativas de Threads' : 'Métricas Nativas de X (Twitter)' }}</span>
               </div>
-              <span class="text-[11px] font-mono text-cyan-400 font-bold">Timeline Político</span>
+              <span class="text-[11px] font-mono text-cyan-400 font-bold">{{ isThreads ? 'Feed de Conversación' : 'Timeline Político' }}</span>
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">

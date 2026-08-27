@@ -23,8 +23,8 @@ const props = defineProps({
 const isSocial = computed(() => {
   const val = (props.value || '').toLowerCase();
   const v = props.variant.toLowerCase();
-  return ['facebook', 'instagram', 'x_twitter', 'twitter', 'x', 'tiktok', 'youtube', 'linkedin'].includes(v) ||
-         ['facebook', 'instagram', 'x_twitter', 'twitter', 'x', 'tiktok', 'youtube', 'linkedin'].includes(val);
+  return ['facebook', 'instagram', 'threads', 'x_twitter', 'twitter', 'x', 'tiktok', 'youtube', 'linkedin'].includes(v) ||
+         ['facebook', 'instagram', 'threads', 'x_twitter', 'twitter', 'x', 'tiktok', 'youtube', 'linkedin'].includes(val);
 });
 
 const socialKey = computed(() => {
@@ -32,6 +32,7 @@ const socialKey = computed(() => {
   const v = props.variant.toLowerCase();
   if (v.includes('insta') || val.includes('insta')) return 'instagram';
   if (v.includes('face') || val.includes('face')) return 'facebook';
+  if (v.includes('thread') || val.includes('thread')) return 'threads';
   if (v.includes('tik') || val.includes('tik')) return 'tiktok';
   if (v.includes('you') || val.includes('you') || v.includes('yt')) return 'youtube';
   if (v.includes('x_') || v.includes('twit') || val.includes('x_') || val.includes('twit') || v === 'x' || val === 'x') return 'x_twitter';
@@ -49,6 +50,9 @@ const badgeStyles = computed(() => {
   }
   if (socialKey.value === 'instagram') {
     return 'bg-[#E4405F]/15 text-[#E4405F] border-[#E4405F]/30 dark:bg-[#E4405F]/20 dark:text-[#ff6b87] dark:border-[#E4405F]/40';
+  }
+  if (socialKey.value === 'threads') {
+    return 'bg-slate-900/10 text-slate-900 border-slate-400 dark:bg-white/10 dark:text-slate-100 dark:border-slate-600';
   }
   if (socialKey.value === 'x_twitter') {
     return 'bg-slate-900/10 text-slate-900 border-slate-400 dark:bg-white/10 dark:text-slate-100 dark:border-slate-600';
@@ -182,6 +186,10 @@ const labelText = computed(() => {
       <!-- Facebook -->
       <svg v-else-if="socialKey === 'facebook'" :class="iconSizeClass" viewBox="0 0 24 24" fill="currentColor">
         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+      </svg>
+      <!-- Threads -->
+      <svg v-else-if="socialKey === 'threads'" :class="iconSizeClass" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12.186 24C5.454 24 0 18.675 0 12.103 0 5.53 5.454.205 12.186.205c6.733 0 12.186 5.325 12.186 11.898 0 6.572-5.453 11.897-12.186 11.897zm-.055-2.285c5.385 0 9.771-4.27 9.771-9.512 0-5.243-4.386-9.513-9.77-9.513-5.385 0-9.772 4.27-9.772 9.513 0 5.242 4.387 9.512 9.772 9.512zm4.786-9.284c-.035 3.328-1.929 5.353-4.897 5.353-2.735 0-4.636-1.748-4.636-4.52 0-3.053 2.193-4.654 4.887-4.654 1.344 0 2.507.411 3.25 1.134l-1.378 1.458c-.469-.475-1.12-.72-1.85-.72-1.458 0-2.457.946-2.457 2.659 0 1.624 1.054 2.573 2.395 2.573 1.584 0 2.373-.974 2.45-2.283H12.15V9.458h4.722v2.973z"/>
       </svg>
       <!-- TikTok -->
       <svg v-else-if="socialKey === 'tiktok'" :class="iconSizeClass" viewBox="0 0 24 24" fill="currentColor">

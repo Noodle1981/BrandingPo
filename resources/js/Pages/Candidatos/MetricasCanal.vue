@@ -163,6 +163,8 @@ const getSocialMeta = (key) => {
       return { color: '#E4405F', bgLight: 'bg-[#E4405F]/15', name: 'Instagram', badge: 'bg-[#E4405F]/10 text-[#E4405F]' };
     case 'facebook':
       return { color: '#1877F2', bgLight: 'bg-[#1877F2]/15', name: 'Facebook', badge: 'bg-[#1877F2]/10 text-[#1877F2]' };
+    case 'threads':
+      return { color: '#000000', bgLight: 'bg-slate-900/15', name: 'Threads', badge: 'bg-slate-500/10 text-slate-700 dark:text-slate-300' };
     case 'tiktok':
       return { color: '#00F2FE', bgLight: 'bg-cyan-500/15', name: 'TikTok', badge: 'bg-cyan-500/10 text-cyan-500' };
     case 'youtube':

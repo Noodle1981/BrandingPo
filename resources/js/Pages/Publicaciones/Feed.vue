@@ -72,6 +72,7 @@ const searchQuery = ref(props.filtros.search || '');
 const plataformas = [
   { key: 'facebook', label: 'Facebook', color: '#1877F2' },
   { key: 'instagram', label: 'Instagram', color: '#E4405F' },
+  { key: 'threads', label: 'Threads', color: '#000000' },
   { key: 'tiktok', label: 'TikTok', color: '#00F2FE' },
   { key: 'youtube', label: 'YouTube', color: '#FF0000' },
   { key: 'x_twitter', label: 'X (Twitter)', color: '#64748b' },
@@ -133,6 +134,7 @@ const createForm = useForm({
   plataforma: 'instagram',
   eje_tematico_id: '',
   url_post: '',
+  media_url: '',
   tipo_formato: 'Reel',
   tipo_pauta: 'organico',
   monto_invertido_pauta: 0,
@@ -281,7 +283,14 @@ const autocompletarScrape = async () => {
       if (data.data.contenido_resumen) createForm.contenido_resumen = data.data.contenido_resumen;
       if (data.data.fecha_publicacion) createForm.fecha_publicacion = data.data.fecha_publicacion.slice(0, 16);
       if (data.data.url_post) createForm.url_post = data.data.url_post;
-      if (data.data.plataforma) createForm.plataforma = data.data.plataforma;
+      if (data.data.media_url) createForm.media_url = data.data.media_url;
+      if (data.data.plataforma) {
+        createForm.plataforma = data.data.plataforma;
+        const matchingPerfil = perfilesCandidatoSeleccionado.value.find(p => p.plataforma.toLowerCase() === data.data.plataforma.toLowerCase());
+        if (matchingPerfil) {
+          createForm.perfil_social_id = matchingPerfil.id;
+        }
+      }
 
       const lk = data.data.total_likes || 0;
       if (createForm.plataforma === 'facebook') {
@@ -303,7 +312,7 @@ const autocompletarScrape = async () => {
         createForm.reacciones_detalladas.angry = 0;
       }
 
-      scrapeSuccessMsg.value = '✅ ¡Datos y métricas extraídos exitosamente!';
+      scrapeSuccessMsg.value = '✅ ¡Datos, texto e imagen extraídos exitosamente!';
     } else {
       scrapeErrorMsg.value = data.error || data.mensaje || 'No se pudieron extraer los datos automáticamente. Puedes completarlos a mano.';
     }
@@ -329,12 +338,10 @@ const netApproval = computed(() => {
   if (createForm.plataforma !== 'facebook') {
     return 100;
   }
-  const pos = (Number(createForm.reacciones_detalladas.like) || 0) +
-              (Number(createForm.reacciones_detalladas.love) || 0) +
-              (Number(createForm.reacciones_detalladas.care) || 0);
-  const neg = (Number(createForm.reacciones_detalladas.sad) || 0) +
-              (Number(createForm.reacciones_detalladas.angry) || 0);
-  const tot = pos + neg + (Number(createForm.reacciones_detalladas.haha) || 0) + (Number(createForm.reacciones_detalladas.wow) || 0);
+  const r = createForm.reacciones_detalladas;
+  const pos = (Number(r.like) || 0) + (Number(r.love) || 0) + (Number(r.care) || 0) + (Number(r.haha) || 0) + (Number(r.wow) || 0);
+  const neg = (Number(r.sad) || 0) + (Number(r.angry) || 0);
+  const tot = pos + neg;
   if (tot === 0) return 100;
   return Math.round(((pos - neg) / tot) * 100);
 });
@@ -358,14 +365,19 @@ const calculatedSocialThermometer = computed(() => {
 });
 
 const submitCreatePost = () => {
-  // Asegurar que me_gusta se envíe adecuadamente
+  // Asegurar que valores numéricos y relacionales se envíen limpios
   const payload = {
     ...createForm.data(),
+    perfil_social_id: createForm.perfil_social_id ? Number(createForm.perfil_social_id) : null,
+    eje_tematico_id: createForm.eje_tematico_id ? Number(createForm.eje_tematico_id) : null,
     total_likes: Number(createForm.total_likes || 0),
     total_comentarios: Number(createForm.total_comentarios || 0),
     total_compartidos: Number(createForm.total_compartidos || 0),
     total_republicados: Number(createForm.total_republicados || 0),
     total_guardados: Number(createForm.total_guardados || 0),
+    vistas_organicas: Number(createForm.vistas_organicas || 0),
+    vistas_pagadas: Number(createForm.vistas_pagadas || 0),
+    monto_invertido_pauta: Number(createForm.monto_invertido_pauta || 0),
     me_gusta: createForm.plataforma === 'facebook' 
       ? Number(createForm.reacciones_detalladas.like || createForm.total_likes || 0)
       : Number(createForm.total_likes || 0),
@@ -672,6 +684,25 @@ const formatCurrency = (amount) => {
               <AlertCircle class="w-3.5 h-3.5" />
               <span>{{ scrapeErrorMsg }}</span>
             </div>
+
+            <!-- Preview miniatura de la imagen extraída o URL manual -->
+            <div v-if="createForm.media_url" class="pt-2 border-t border-cyan-500/20 flex items-center gap-3">
+              <img
+                :src="createForm.media_url"
+                alt="Vista previa de imagen"
+                referrerpolicy="no-referrer"
+                class="w-14 h-14 object-cover rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs"
+              />
+              <div class="flex-1 min-w-0">
+                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">🖼️ Imagen / Portada detectada:</span>
+                <input
+                  v-model="createForm.media_url"
+                  type="url"
+                  placeholder="https://..."
+                  class="w-full mt-1 px-2.5 py-1 text-[11px] font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 truncate"
+                />
+              </div>
+            </div>
           </div>
 
           <!-- Fila 3: Eje Temático, Formato y Fecha -->
@@ -950,22 +981,22 @@ const formatCurrency = (amount) => {
             </div>
           </div>
 
-          <!-- CASO 4: X / TWITTER (❤️ Likes, 💬 Respuestas, 🔁 Reposts/Retweets, ↗️ Compartidos, 🔖 Guardados, 👁️ Impresiones) -->
-          <div v-else-if="createForm.plataforma === 'x_twitter' || createForm.plataforma === 'twitter'" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-3">
+          <!-- CASO 4: X / TWITTER Y THREADS (❤️ Likes, 💬 Respuestas, 🔁 Reposts/Retweets, ↗️ Compartidos, 🔖 Guardados, 👁️ Impresiones) -->
+          <div v-else-if="createForm.plataforma === 'x_twitter' || createForm.plataforma === 'twitter' || createForm.plataforma === 'threads'" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-3">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <span class="font-black text-sm text-slate-100 font-mono">𝕏</span>
-                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas Nativas de X (Twitter)</span>
+                <span class="font-black text-sm text-slate-100 font-mono">{{ createForm.plataforma === 'threads' ? '@' : '𝕏' }}</span>
+                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">{{ createForm.plataforma === 'threads' ? 'Métricas Nativas de Threads' : 'Métricas Nativas de X (Twitter)' }}</span>
               </div>
-              <span class="text-[11px] font-mono text-cyan-400 font-bold">Timeline Político</span>
+              <span class="text-[11px] font-mono text-cyan-400 font-bold">{{ createForm.plataforma === 'threads' ? 'Feed de Conversación' : 'Timeline Político' }}</span>
             </div>
 
-            <!-- Aviso Táctico X -->
+            <!-- Aviso Táctico X / Threads -->
             <div class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 text-xs flex items-start gap-2">
               <AlertCircle class="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
               <div class="leading-snug">
-                <span class="font-bold text-cyan-400">⚠️ Métricas de X:</span>
-                Ingresa o verifica las cantidades de <strong>Me gusta (❤️), Respuestas (💬), Reposts (🔁) y Guardados (🔖)</strong> observadas en el tweet antes de guardar.
+                <span class="font-bold text-cyan-400">⚠️ Métricas de {{ createForm.plataforma === 'threads' ? 'Threads' : 'X' }}:</span>
+                Ingresa o verifica las cantidades de <strong>Me gusta (❤️), Respuestas (💬), Reposts (🔁) y Guardados (🔖)</strong> observadas en la publicación antes de guardar.
               </div>
             </div>
 

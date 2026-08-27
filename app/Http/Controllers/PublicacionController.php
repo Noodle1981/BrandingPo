@@ -274,6 +274,7 @@ class PublicacionController extends Controller
                 'comentario_destacado' => $p->comentario_destacado,
                 'figura_acompanante' => $p->figura_acompanante,
                 'url_post' => $p->url_post,
+                'media_url' => $p->media_url,
                 'media_embed_url' => $p->media_embed_url,
                 'contenido_resumen' => $p->contenido_resumen,
             ];
@@ -323,6 +324,12 @@ class PublicacionController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
+
+        // Limpiar strings vacíos para evitar fallos de validación en campos relacionales opcionales
+        $request->merge([
+            'perfil_social_id' => $request->filled('perfil_social_id') ? $request->input('perfil_social_id') : null,
+            'eje_tematico_id' => $request->filled('eje_tematico_id') ? $request->input('eje_tematico_id') : null,
+        ]);
 
         $validated = $request->validate([
             'candidato_id' => ['required', 'exists:candidatos,id'],

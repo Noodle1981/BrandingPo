@@ -107,6 +107,7 @@ const plataformaName = computed(() => {
   switch (p) {
     case 'facebook': return 'Facebook';
     case 'instagram': return 'Instagram';
+    case 'threads': return 'Threads';
     case 'x_twitter':
     case 'twitter': return 'X / Twitter';
     case 'tiktok': return 'TikTok';

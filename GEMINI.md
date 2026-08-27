@@ -25,7 +25,7 @@ La interfaz de **BrandingPo** combina la potencia analítica de una **Sala de Si
   - **Carmesí / Rojo (`#ef4444`):** Pestañas inactivas, crisis activa, tono crítico, alertas urgentes.
   - **Violeta / Púrpura (`#8b5cf6`):** Oposición, candidatos rivales, simulaciones algorítmicas de pauta.
 - **Identidad Oficial de Plataformas Sociales:**
-  - Facebook (`#1877F2`), Instagram (`#E4405F`), X/Twitter (`#000000` / `#1DA1F2`), TikTok (`#00F2FE` / `#FF004F`), YouTube (`#FF0000`), LinkedIn (`#0A66C2`).
+  - Facebook (`#1877F2`), Instagram (`#E4405F`), Threads (`#000000` / `@threads`), X/Twitter (`#000000` / `#1DA1F2`), TikTok (`#00F2FE` / `#FF004F`), YouTube (`#FF0000`), LinkedIn (`#0A66C2`).
 
 ### B. Módulos Estratégicos & Lógica de Negocio
 - **1. Punto Cero / Punto Alfa:**
@@ -49,9 +49,9 @@ La interfaz de **BrandingPo** combina la potencia analítica de una **Sala de Si
 - **6. Monitoreo de Medios & Prensa (Clipping):**
   - Auditoría de notas periodísticas clasificadas por medio, periodista, candidato mencionado (Propio vs. Oposición) y tono editorial (Favorable / Neutral / Crítico).
 - **7. Jerarquía y Normalización de Métricas de Interacción:**
-  - **Instagram (Estándar Base Normalizado):**
+  - **Instagram & Threads (Estándar Base Normalizado):**
     - ❤️ **Me gusta (Likes / Corazones):** Peso $1\text{ pt}$ (aprobación directa).
-    - 💬 **Comentarios:** Peso $3\text{ pts}$ (involucramiento activo y conversación).
+    - 💬 **Comentarios / Respuestas:** Peso $3\text{ pts}$ (involucramiento activo y conversación).
     - ✈️ **Compartidos / Envíos:** Peso $5\text{ pts}$ (difusión Dark Social / recomendación boca a boca).
     - 🔁 **Republicar / Reposts:** Peso $10\text{ pts}$ (endoso público y megáfono orgánico).
     - 👁️ **Reproducciones / Vistas:** Base de cálculo para el Engagement Rate Efectivo.
