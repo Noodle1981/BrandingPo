@@ -542,8 +542,15 @@ const currentRedStats = computed(() => {
   const totalLikes = posts.reduce((sum, p) => sum + Number(p.total_likes || 0), 0);
   const totalComentarios = posts.reduce((sum, p) => sum + Number(p.total_comentarios || 0), 0);
   const totalCompartidos = posts.reduce((sum, p) => sum + Number(p.total_compartidos || 0), 0);
+  const totalRepublicados = posts.reduce((sum, p) => sum + Number(p.total_republicados || 0), 0);
   const totalGuardados = posts.reduce((sum, p) => sum + Number(p.total_guardados || 0), 0);
-  const totalInteracciones = totalLikes + totalComentarios + totalCompartidos + totalGuardados;
+  
+  // Interacciones Públicas Directas (Sin Guardados)
+  const totalInteracciones = totalLikes + totalComentarios + totalCompartidos + totalRepublicados;
+  
+  // Score de Impacto Ponderado de Campaña (1/3/5/10)
+  const scoreImpactoTotal = (totalLikes * 1) + (totalComentarios * 3) + (totalCompartidos * 5) + (totalRepublicados * 10);
+  
   const totalPauta = posts.reduce((sum, p) => sum + Number(p.monto_invertido_pauta || 0), 0);
   const postsOrganicos = posts.filter(p => p.tipo_pauta === 'organico' || p.tipo_pauta === 'organico_impulsado').length;
   const postsPauta = posts.filter(p => p.tipo_pauta === 'pauta_paga' || p.tipo_pauta === 'anuncio_directo').length;
@@ -554,8 +561,10 @@ const currentRedStats = computed(() => {
     totalLikes,
     totalComentarios,
     totalCompartidos,
+    totalRepublicados,
     totalGuardados,
     totalInteracciones,
+    scoreImpactoTotal,
     totalPauta,
     postsOrganicos,
     postsPauta,
@@ -1367,7 +1376,10 @@ const refrescarCanal = () => {
         <!-- Barra Resumen de Métricas de Publicaciones en esta Red -->
         <div v-if="currentRedPublicaciones.length > 0" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 font-mono text-xs">
           <!-- 🔥 1. Reacciones & Interacciones Totales (Engagement Bruto) -->
-          <div class="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300">
+          <div
+            class="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300"
+            :title="`Score Ponderado de Tracción: ${currentRedStats.scoreImpactoTotal} pts (Likes [x1] + Coment [x3] + Shares [x5] + Reposts [x10])`"
+          >
             <div class="flex items-center justify-between">
               <span class="text-[10px] uppercase text-cyan-600 dark:text-cyan-400 font-extrabold flex items-center gap-1">
                 🔥 Interacciones
@@ -1380,7 +1392,7 @@ const refrescarCanal = () => {
               {{ Number(currentRedStats.totalInteracciones).toLocaleString() }}
             </span>
             <span class="text-[9px] text-slate-500 dark:text-slate-400 font-sans block truncate mt-0.5">
-              Likes + Coment + Shares + Saves
+              Likes + Coment + Reposts + Shares
             </span>
           </div>
 

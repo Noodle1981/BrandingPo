@@ -64,7 +64,8 @@ class PublicacionController extends Controller
         $deltaLikes = max(0, $freshLikes - $oldLikes);
         $deltaComments = max(0, $freshComments - $oldComments);
 
-        $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes);
+        $plataforma = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
+        $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes, $plataforma);
 
         $publicacion->update([
             'total_likes' => $freshLikes,
@@ -130,7 +131,7 @@ class PublicacionController extends Controller
                     $nuevosComentarios += $deltaComments;
 
                     // Recalcular reacciones emocionales con los nuevos likes
-                    $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes);
+                    $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes, $perfilSocial->plataforma);
 
                     $pub->update([
                         'total_likes' => $freshLikes,
@@ -193,7 +194,15 @@ class PublicacionController extends Controller
         }
 
         if ($plataforma) {
-            $query->whereHas('perfilSocial', fn ($q) => $q->where('plataforma', $plataforma));
+            $platforms = match ($plataforma) {
+                'x_twitter', 'twitter' => ['x_twitter', 'twitter'],
+                default => [$plataforma],
+            };
+
+            $query->where(function ($sub) use ($platforms) {
+                $sub->whereHas('perfilSocial', fn ($q) => $q->whereIn('plataforma', $platforms))
+                    ->orWhereIn('plataforma', $platforms);
+            });
         }
 
         if ($tipoPauta) {
@@ -242,7 +251,7 @@ class PublicacionController extends Controller
                     'nombre' => $p->ejeTematico->nombre,
                     'color_badge' => $p->ejeTematico->color_badge,
                 ] : null,
-                'plataforma' => $p->perfilSocial?->plataforma,
+                'plataforma' => $p->plataforma ?? $p->perfilSocial?->plataforma,
                 'fecha_publicacion' => $p->fecha_publicacion?->format('d/m/Y H:i'),
                 'fecha_relativa' => $p->fecha_publicacion?->diffForHumans(),
                 'tipo_formato' => $p->tipo_formato,
@@ -254,7 +263,10 @@ class PublicacionController extends Controller
                 'total_likes' => $p->total_likes,
                 'total_comentarios' => $p->total_comentarios,
                 'total_compartidos' => $p->total_compartidos,
+                'total_republicados' => $p->total_republicados,
                 'total_guardados' => $p->total_guardados,
+                'score_impacto_organico' => $p->score_impacto_organico,
+                'tasa_viralidad_pct' => $p->tasa_viralidad_pct,
                 'reacciones_detalladas' => $p->reacciones_detalladas,
                 'aprobacion_neta_pct' => $p->aprobacion_neta_pct,
                 'termometro_humor_social' => $p->termometro_humor_social,
@@ -337,6 +349,7 @@ class PublicacionController extends Controller
             'me_enoja' => ['nullable', 'integer', 'min:0'],
             'total_comentarios' => ['nullable', 'integer', 'min:0'],
             'total_compartidos' => ['nullable', 'integer', 'min:0'],
+            'total_republicados' => ['nullable', 'integer', 'min:0'],
             'total_guardados' => ['nullable', 'integer', 'min:0'],
             'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
             'comentario_destacado' => ['nullable', 'string'],
@@ -398,7 +411,8 @@ class PublicacionController extends Controller
             ? array_map('trim', explode(',', $validated['figura_acompanante']))
             : [];
 
-        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int) ($validated['total_likes'] ?? 0));
+        $plataformaResolvida = $validated['plataforma'] ?? $perfil?->plataforma ?? 'instagram';
+        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int) ($validated['total_likes'] ?? 0), $plataformaResolvida);
 
         $publicacion = Publicacion::create([
             'workspace_id' => $workspace->id,
@@ -418,6 +432,7 @@ class PublicacionController extends Controller
             'total_likes' => $aiEmocional['total_likes'],
             'total_comentarios' => (int) ($validated['total_comentarios'] ?? 0),
             'total_compartidos' => (int) ($validated['total_compartidos'] ?? 0),
+            'total_republicados' => (int) ($validated['total_republicados'] ?? 0),
             'total_guardados' => (int) ($validated['total_guardados'] ?? 0),
             'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
             'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
@@ -464,12 +479,18 @@ class PublicacionController extends Controller
             'me_enoja' => ['nullable', 'integer', 'min:0'],
             'total_comentarios' => ['nullable', 'integer', 'min:0'],
             'total_compartidos' => ['nullable', 'integer', 'min:0'],
+            'total_republicados' => ['nullable', 'integer', 'min:0'],
             'total_guardados' => ['nullable', 'integer', 'min:0'],
             'eje_tematico_id' => ['nullable', 'exists:eje_tematicos,id'],
             'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
         ]);
 
-        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int) ($validated['total_likes'] ?? $publicacion->total_likes));
+        $plataformaResolvida = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
+        $aiEmocional = $this->calcularInteligenciaEmocional(
+            $validated,
+            (int) ($validated['total_likes'] ?? $publicacion->total_likes),
+            $plataformaResolvida
+        );
 
         $updateData = [
             'contenido_resumen' => $validated['contenido_resumen'],
@@ -483,6 +504,7 @@ class PublicacionController extends Controller
             'total_likes' => $aiEmocional['total_likes'],
             'total_comentarios' => (int) ($validated['total_comentarios'] ?? $publicacion->total_comentarios),
             'total_compartidos' => (int) ($validated['total_compartidos'] ?? $publicacion->total_compartidos),
+            'total_republicados' => (int) ($validated['total_republicados'] ?? $publicacion->total_republicados),
             'total_guardados' => (int) ($validated['total_guardados'] ?? $publicacion->total_guardados),
             'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
             'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
@@ -503,23 +525,55 @@ class PublicacionController extends Controller
     /**
      * Motor de Inteligencia Emocional & Sentimiento Cuantificado.
      */
-    private function calcularInteligenciaEmocional(array $data, int $totalLikesFallback = 0): array
+    private function calcularInteligenciaEmocional(array $data, int $totalLikesFallback = 0, ?string $plataforma = null): array
     {
-        $meGusta = (int) ($data['me_gusta'] ?? 0);
-        $meEncanta = (int) ($data['me_encanta'] ?? 0);
-        $meImporta = (int) ($data['me_importa'] ?? 0);
-        $meDivierte = (int) ($data['me_divierte'] ?? 0);
-        $meAsombra = (int) ($data['me_asombra'] ?? 0);
-        $meEntristece = (int) ($data['me_entristece'] ?? 0);
-        $meEnoja = (int) ($data['me_enoja'] ?? 0);
+        $plat = strtolower($plataforma ?? $data['plataforma'] ?? '');
+
+        // Extraer valores soportando nombres en español y nombres en inglés
+        $meGusta = (int) ($data['me_gusta'] ?? ($data['reacciones_detalladas']['like'] ?? ($data['reacciones_detalladas']['me_gusta'] ?? 0)));
+        $meEncanta = (int) ($data['me_encanta'] ?? ($data['reacciones_detalladas']['love'] ?? ($data['reacciones_detalladas']['me_encanta'] ?? 0)));
+        $meImporta = (int) ($data['me_importa'] ?? ($data['reacciones_detalladas']['care'] ?? ($data['reacciones_detalladas']['me_importa'] ?? 0)));
+        $meDivierte = (int) ($data['me_divierte'] ?? ($data['reacciones_detalladas']['haha'] ?? ($data['reacciones_detalladas']['me_divierte'] ?? 0)));
+        $meAsombra = (int) ($data['me_asombra'] ?? ($data['reacciones_detalladas']['wow'] ?? ($data['reacciones_detalladas']['me_asombra'] ?? 0)));
+        $meEntristece = (int) ($data['me_entristece'] ?? ($data['reacciones_detalladas']['sad'] ?? ($data['reacciones_detalladas']['me_entristece'] ?? 0)));
+        $meEnoja = (int) ($data['me_enoja'] ?? ($data['reacciones_detalladas']['angry'] ?? ($data['reacciones_detalladas']['me_enoja'] ?? 0)));
 
         $totalReacciones = $meGusta + $meEncanta + $meImporta + $meDivierte + $meAsombra + $meEntristece + $meEnoja;
 
+        // Si es Instagram, TikTok, X/Twitter o YouTube: no utilizan reacciones emocionales estilo Facebook
+        if (in_array($plat, ['instagram', 'tiktok', 'x_twitter', 'youtube']) || ($plat !== 'facebook' && $totalReacciones === 0)) {
+            $totalFinalLikes = $totalLikesFallback > 0 ? $totalLikesFallback : ($totalReacciones > 0 ? $totalReacciones : $meGusta);
+            $termometro = (int) ($data['termometro_humor_social'] ?? 5);
+            $sentimiento = $termometro >= 4 ? 'positivo' : ($termometro === 3 ? 'neutro' : 'negativo');
+
+            return [
+                'total_likes' => $totalFinalLikes,
+                'reacciones_detalladas' => [
+                    'me_gusta' => $totalFinalLikes,
+                    'me_encanta' => 0,
+                    'me_importa' => 0,
+                    'me_divierte' => 0,
+                    'me_asombra' => 0,
+                    'me_entristece' => 0,
+                    'me_enoja' => 0,
+                ],
+                'sentimiento_predominante' => $sentimiento,
+                'termometro_humor_social' => $termometro,
+                'insights_internos_propios' => [
+                    'indice_aprobacion_neta' => 100.0,
+                    'ratio_indignacion' => 0.0,
+                    'alerta_crisis' => false,
+                    'total_reacciones_positivas' => $totalFinalLikes,
+                    'total_reacciones_negativas' => 0,
+                    'total_reacciones_humor' => 0,
+                ],
+            ];
+        }
+
+        // Lógica de cálculo para Facebook o redes con desglose granular
         if ($totalReacciones === 0 && $totalLikesFallback > 0) {
             $totalReacciones = $totalLikesFallback;
-            $meGusta = (int) ($totalLikesFallback * 0.7);
-            $meEncanta = (int) ($totalLikesFallback * 0.2);
-            $meEnoja = (int) ($totalLikesFallback * 0.1);
+            $meGusta = $totalLikesFallback;
         }
 
         $positivas = $meGusta + $meEncanta + $meImporta;
@@ -528,11 +582,11 @@ class PublicacionController extends Controller
 
         $indiceAprobacion = $totalReacciones > 0
             ? round((($positivas - $negativas) / $totalReacciones) * 100, 1)
-            : 0;
+            : 100.0;
 
         $ratioIndignacion = $totalReacciones > 0
             ? round(($meEnoja / $totalReacciones) * 100, 1)
-            : 0;
+            : 0.0;
 
         $alertaCrisis = $ratioIndignacion >= 15.0;
 

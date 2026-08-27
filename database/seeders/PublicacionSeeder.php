@@ -334,6 +334,23 @@ class PublicacionSeeder extends Seeder
                 continue;
             }
 
+            $isFb = $data['plataforma'] === 'facebook';
+            $reacciones = $isFb ? [
+                'me_gusta' => (int) ($data['likes'] * 0.65),
+                'me_encanta' => (int) ($data['likes'] * 0.20),
+                'me_divierte' => (int) ($data['likes'] * 0.05),
+                'me_asombra' => (int) ($data['likes'] * 0.05),
+                'me_enoja' => (int) ($data['likes'] * 0.05),
+            ] : [
+                'me_gusta' => $data['likes'],
+                'me_encanta' => 0,
+                'me_importa' => 0,
+                'me_divierte' => 0,
+                'me_asombra' => 0,
+                'me_entristece' => 0,
+                'me_enoja' => 0,
+            ];
+
             $totalVistas = $data['vistas_org'] + $data['vistas_pag'];
 
             Publicacion::create([
@@ -353,17 +370,18 @@ class PublicacionSeeder extends Seeder
                 'total_comentarios' => $data['comentarios'],
                 'total_compartidos' => $data['compartidos'],
                 'total_guardados' => (int) ($data['likes'] * 0.15),
-                'reacciones_detalladas' => [
-                    'me_gusta' => (int) ($data['likes'] * 0.65),
-                    'me_encanta' => (int) ($data['likes'] * 0.20),
-                    'me_divierte' => (int) ($data['likes'] * 0.05),
-                    'me_asombra' => (int) ($data['likes'] * 0.05),
-                    'me_enoja' => (int) ($data['likes'] * 0.05),
-                ],
+                'reacciones_detalladas' => $reacciones,
                 'sentimiento_predominante' => $data['humor'] >= 4 ? 'positivo' : ($data['humor'] === 3 ? 'neutro' : 'negativo'),
                 'figuras_acompanantes' => $data['figuras'],
                 'comentarios_destacados' => $data['comentarios_top'],
                 'termometro_humor_social' => $data['humor'],
+                'insights_internos_propios' => [
+                    'indice_aprobacion_neta' => $isFb ? 80.0 : 100.0,
+                    'ratio_indignacion' => $isFb ? 5.0 : 0.0,
+                    'alerta_crisis' => false,
+                    'total_reacciones_positivas' => $data['likes'],
+                    'total_reacciones_negativas' => 0,
+                ],
             ]);
         }
     }

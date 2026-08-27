@@ -25,7 +25,14 @@ import {
   ShieldAlert,
   Star,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Heart,
+  Repeat,
+  Send,
+  Bookmark,
+  MessageCircle,
+  Share2,
+  Eye
 } from '@lucide/vue';
 
 const props = defineProps({
@@ -135,6 +142,7 @@ const createForm = useForm({
   total_likes: 0,
   total_comentarios: 0,
   total_compartidos: 0,
+  total_republicados: 0,
   total_guardados: 0,
   contenido_resumen: '',
   comentario_destacado: '',
@@ -265,20 +273,35 @@ const autocompletarScrape = async () => {
 
     if (response.ok && data.success) {
       if (data.data.tipo_formato) createForm.tipo_formato = data.data.tipo_formato;
-      if (data.data.total_likes) createForm.total_likes = data.data.total_likes;
-      if (data.data.total_comentarios) createForm.total_comentarios = data.data.total_comentarios;
+      if (data.data.total_likes !== undefined) createForm.total_likes = data.data.total_likes;
+      if (data.data.total_comentarios !== undefined) createForm.total_comentarios = data.data.total_comentarios;
       if (data.data.total_vistas || data.data.vistas_organicas) {
         createForm.vistas_organicas = data.data.total_vistas || data.data.vistas_organicas;
       }
       if (data.data.contenido_resumen) createForm.contenido_resumen = data.data.contenido_resumen;
       if (data.data.fecha_publicacion) createForm.fecha_publicacion = data.data.fecha_publicacion.slice(0, 16);
       if (data.data.url_post) createForm.url_post = data.data.url_post;
+      if (data.data.plataforma) createForm.plataforma = data.data.plataforma;
 
-      // Distribuir likes en reacciones
       const lk = data.data.total_likes || 0;
-      createForm.reacciones_detalladas.like = Math.round(lk * 0.7);
-      createForm.reacciones_detalladas.love = Math.round(lk * 0.25);
-      createForm.reacciones_detalladas.haha = Math.round(lk * 0.05);
+      if (createForm.plataforma === 'facebook') {
+        createForm.reacciones_detalladas.like = lk;
+        createForm.reacciones_detalladas.love = 0;
+        createForm.reacciones_detalladas.care = 0;
+        createForm.reacciones_detalladas.haha = 0;
+        createForm.reacciones_detalladas.wow = 0;
+        createForm.reacciones_detalladas.sad = 0;
+        createForm.reacciones_detalladas.angry = 0;
+      } else {
+        createForm.total_likes = lk;
+        createForm.reacciones_detalladas.like = 0;
+        createForm.reacciones_detalladas.love = 0;
+        createForm.reacciones_detalladas.care = 0;
+        createForm.reacciones_detalladas.haha = 0;
+        createForm.reacciones_detalladas.wow = 0;
+        createForm.reacciones_detalladas.sad = 0;
+        createForm.reacciones_detalladas.angry = 0;
+      }
 
       scrapeSuccessMsg.value = '✅ ¡Datos y métricas extraídos exitosamente!';
     } else {
@@ -291,16 +314,21 @@ const autocompletarScrape = async () => {
   }
 };
 
-// Sincronizar suma de emojis con total_likes
+// Sincronizar suma de emojis con total_likes solo para Facebook
 watch(() => createForm.reacciones_detalladas, (reacs) => {
-  const sum = Object.values(reacs).reduce((acc, val) => acc + (Number(val) || 0), 0);
-  if (sum > 0) {
-    createForm.total_likes = sum;
+  if (createForm.plataforma === 'facebook') {
+    const sum = Object.values(reacs).reduce((acc, val) => acc + (Number(val) || 0), 0);
+    if (sum > 0) {
+      createForm.total_likes = sum;
+    }
   }
 }, { deep: true });
 
 // Cálculo del Índice de Aprobación Neta
 const netApproval = computed(() => {
+  if (createForm.plataforma !== 'facebook') {
+    return 100;
+  }
   const pos = (Number(createForm.reacciones_detalladas.like) || 0) +
               (Number(createForm.reacciones_detalladas.love) || 0) +
               (Number(createForm.reacciones_detalladas.care) || 0);
@@ -313,11 +341,14 @@ const netApproval = computed(() => {
 
 // Termómetro de Humor Social (1 a 5 estrellas)
 const calculatedSocialThermometer = computed(() => {
+  if (createForm.plataforma !== 'facebook') {
+    return 5;
+  }
   const r = createForm.reacciones_detalladas;
   const pos = (Number(r.like) || 0) + (Number(r.love) || 0) + (Number(r.care) || 0);
   const neg = (Number(r.sad) || 0) + (Number(r.angry) || 0) * 2;
   const tot = pos + neg + (Number(r.haha) || 0) + (Number(r.wow) || 0);
-  if (tot === 0) return 4;
+  if (tot === 0) return 5;
   const ratio = (pos - neg) / tot;
   if (ratio > 0.6) return 5;
   if (ratio > 0.2) return 4;
@@ -327,7 +358,26 @@ const calculatedSocialThermometer = computed(() => {
 });
 
 const submitCreatePost = () => {
-  createForm.post('/publicaciones', {
+  // Asegurar que me_gusta se envíe adecuadamente
+  const payload = {
+    ...createForm.data(),
+    total_likes: Number(createForm.total_likes || 0),
+    total_comentarios: Number(createForm.total_comentarios || 0),
+    total_compartidos: Number(createForm.total_compartidos || 0),
+    total_republicados: Number(createForm.total_republicados || 0),
+    total_guardados: Number(createForm.total_guardados || 0),
+    me_gusta: createForm.plataforma === 'facebook' 
+      ? Number(createForm.reacciones_detalladas.like || createForm.total_likes || 0)
+      : Number(createForm.total_likes || 0),
+    me_encanta: Number(createForm.reacciones_detalladas.love || 0),
+    me_importa: Number(createForm.reacciones_detalladas.care || 0),
+    me_divierte: Number(createForm.reacciones_detalladas.haha || 0),
+    me_asombra: Number(createForm.reacciones_detalladas.wow || 0),
+    me_entristece: Number(createForm.reacciones_detalladas.sad || 0),
+    me_enoja: Number(createForm.reacciones_detalladas.angry || 0),
+  };
+
+  createForm.transform(() => payload).post('/publicaciones', {
     preserveScroll: true,
     onSuccess: () => {
       showCreateModal.value = false;
@@ -701,11 +751,93 @@ const formatCurrency = (amount) => {
             ></textarea>
           </div>
 
-          <!-- Fila 6: Cuantificación Emoji por Emoji -->
-          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+          <!-- Fila 6: Métricas e Interacciones Adaptativas por Red Social -->
+          
+          <!-- CASO 1: INSTAGRAM (❤️ Corazones, 💬 Comentarios, 🔁 Republicar, ✈️ Compartidos, 🔖 Guardado Propio) -->
+          <div v-if="createForm.plataforma === 'instagram'" class="p-4 rounded-2xl bg-gradient-to-r from-[#E4405F]/10 via-[#F77737]/5 to-transparent border border-[#E4405F]/20 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-slate-700 dark:text-slate-300">Desglose de Emojis / Reacciones:</span>
+              <div class="flex items-center gap-2">
+                <Heart class="w-4 h-4 text-[#E4405F] fill-[#E4405F]" />
+                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas Públicas de Instagram</span>
+              </div>
+              <span class="text-[11px] font-mono text-[#E4405F] font-bold">Interacciones Nativas</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+              Instagram audita Corazones Me gusta (❤️), Comentarios (💬), Republicaciones (🔁) y Compartidos (✈️).
+            </p>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#E4405F]/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-rose-500 mb-1 flex items-center justify-center gap-1">
+                  <Heart class="w-3 h-3 fill-rose-500" />
+                  <span>Me gusta (❤️)</span>
+                </label>
+                <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-blue-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1 flex items-center justify-center gap-1">
+                  <MessageCircle class="w-3 h-3" />
+                  <span>Comentarios (💬)</span>
+                </label>
+                <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-1 flex items-center justify-center gap-1">
+                  <Repeat class="w-3 h-3" />
+                  <span>Republicar (🔁)</span>
+                </label>
+                <input v-model.number="createForm.total_republicados" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-1 flex items-center justify-center gap-1">
+                  <Send class="w-3 h-3" />
+                  <span>Compartidos (✈️)</span>
+                </label>
+                <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-mono">
+              <!-- Reproducciones / Vistas Orgánicas -->
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center">
+                <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1 flex items-center justify-center gap-1">
+                  <Eye class="w-3 h-3" />
+                  <span>Reproducciones / Vistas</span>
+                </label>
+                <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
+              </div>
+
+              <!-- Item Propio de Auditoría: Guardados -->
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs text-center">
+                <label class="block text-[10px] uppercase font-bold text-amber-500 mb-1 flex items-center justify-center gap-1" title="Métrica privada / seguimiento interno de la campaña">
+                  <Bookmark class="w-3 h-3 fill-amber-500" />
+                  <span>Guardado Propio (Auditoría)</span>
+                </label>
+                <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+          </div>
+
+          <!-- CASO 2: FACEBOOK (MULTI-EMOJI 👍 ❤️ 🥰 😂 😮 😢 😡) -->
+          <div v-else-if="createForm.plataforma === 'facebook'" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Sparkles class="w-4 h-4 text-blue-500" />
+                <span>Desglose de Emojis / Reacciones Facebook</span>
+              </span>
               <span class="font-mono text-cyan-500 font-bold">Aprobación Neta: {{ netApproval }}%</span>
+            </div>
+
+            <!-- Aviso Táctico de Carga -->
+            <div class="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-800 dark:text-blue-200 text-xs flex items-start gap-2">
+              <AlertCircle class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <div class="leading-snug">
+                <span class="font-bold">⚠️ Importante para Facebook:</span>
+                Como Facebook no expone su conteo individual de emojis públicamente, <strong>completa o verifica las cantidades observadas en la publicación antes de guardar</strong> para calcular con exactitud la Aprobación Neta y el Sentimiento.
+              </div>
             </div>
 
             <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center font-mono">
@@ -737,6 +869,204 @@ const formatCurrency = (amount) => {
                 <span class="text-sm">😡</span>
                 <input v-model.number="createForm.reacciones_detalladas.angry" type="number" min="0" class="w-full mt-1 p-1 text-center text-xs rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
               </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 pt-2">
+              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center font-mono">
+                <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1">👁️ Plays / Vistas</label>
+                <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold" />
+              </div>
+              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center font-mono">
+                <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1">💬 Comentarios</label>
+                <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold" />
+              </div>
+              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center font-mono">
+                <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-1">🔄 Shares</label>
+                <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold" />
+              </div>
+            </div>
+          </div>
+
+          <!-- CASO 3: TIKTOK (❤️ Likes, 💬 Comentarios, 🔖 Favoritos/Guardados, 🔄 Compartidos, 👁️ Plays) -->
+          <div v-else-if="createForm.plataforma === 'tiktok'" class="p-4 rounded-2xl bg-gradient-to-r from-[#00F2FE]/10 via-[#FF004F]/5 to-transparent border border-[#00F2FE]/20 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-sm">🎵</span>
+                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas Nativas de TikTok</span>
+              </div>
+              <span class="text-[11px] font-mono text-[#00F2FE] dark:text-[#00F2FE] font-bold">Video Corto</span>
+            </div>
+
+            <!-- Aviso Táctico TikTok -->
+            <div class="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-800 dark:text-cyan-200 text-xs flex items-start gap-2">
+              <AlertCircle class="w-4 h-4 text-cyan-500 shrink-0 mt-0.5" />
+              <div class="leading-snug">
+                <span class="font-bold">⚠️ Métricas de TikTok:</span>
+                Verifica o ingresa las cantidades de <strong>Me gusta (❤️), Comentarios (💬), Favoritos (🔖) y Compartidos (↗️)</strong> observadas en la app antes de guardar.
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#FF004F]/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-[#FF004F] mb-1 flex items-center justify-center gap-1">
+                  <Heart class="w-3 h-3 fill-[#FF004F]" />
+                  <span>Me gusta (❤️)</span>
+                </label>
+                <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-blue-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1 flex items-center justify-center gap-1">
+                  <MessageCircle class="w-3 h-3" />
+                  <span>Comentarios (💬)</span>
+                </label>
+                <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-amber-500 mb-1 flex items-center justify-center gap-1">
+                  <Bookmark class="w-3 h-3 fill-amber-500" />
+                  <span>Favoritos (🔖)</span>
+                </label>
+                <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-600 dark:text-amber-400" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-1 flex items-center justify-center gap-1">
+                  <Send class="w-3 h-3" />
+                  <span>Compartidos (↗️)</span>
+                </label>
+                <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+            </div>
+
+            <!-- Vistas / Plays TikTok -->
+            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#00F2FE]/30 shadow-2xs text-center font-mono">
+              <label class="block text-[10px] uppercase font-bold text-[#00F2FE] mb-1 flex items-center justify-center gap-1">
+                <Eye class="w-3 h-3" />
+                <span>Visualizaciones (Reproducciones / Plays)</span>
+              </label>
+              <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
+            </div>
+          </div>
+
+          <!-- CASO 4: X / TWITTER (❤️ Likes, 💬 Respuestas, 🔁 Reposts/Retweets, ↗️ Compartidos, 🔖 Guardados, 👁️ Impresiones) -->
+          <div v-else-if="createForm.plataforma === 'x_twitter' || createForm.plataforma === 'twitter'" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="font-black text-sm text-slate-100 font-mono">𝕏</span>
+                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas Nativas de X (Twitter)</span>
+              </div>
+              <span class="text-[11px] font-mono text-cyan-400 font-bold">Timeline Político</span>
+            </div>
+
+            <!-- Aviso Táctico X -->
+            <div class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 text-xs flex items-start gap-2">
+              <AlertCircle class="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+              <div class="leading-snug">
+                <span class="font-bold text-cyan-400">⚠️ Métricas de X:</span>
+                Ingresa o verifica las cantidades de <strong>Me gusta (❤️), Respuestas (💬), Reposts (🔁) y Guardados (🔖)</strong> observadas en el tweet antes de guardar.
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-rose-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-rose-500 mb-1 flex items-center justify-center gap-1">
+                  <Heart class="w-3 h-3 fill-rose-500" />
+                  <span>Me gusta (❤️)</span>
+                </label>
+                <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-blue-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1 flex items-center justify-center gap-1">
+                  <MessageCircle class="w-3 h-3" />
+                  <span>Respuestas (💬)</span>
+                </label>
+                <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-1 flex items-center justify-center gap-1">
+                  <Repeat class="w-3 h-3" />
+                  <span>Reposts (🔁)</span>
+                </label>
+                <input v-model.number="createForm.total_republicados" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-amber-500 mb-1 flex items-center justify-center gap-1">
+                  <Bookmark class="w-3 h-3 fill-amber-500" />
+                  <span>Guardados (🔖)</span>
+                </label>
+                <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+
+            <!-- Vistas / Impresiones X -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-mono">
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center font-mono">
+                <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1 flex items-center justify-center gap-1">
+                  <Eye class="w-3 h-3" />
+                  <span>Visualizaciones / Impresiones</span>
+                </label>
+                <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs text-center font-mono">
+                <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-1 flex items-center justify-center gap-1">
+                  <Send class="w-3 h-3" />
+                  <span>Compartidos / DM (↗️)</span>
+                </label>
+                <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+            </div>
+          </div>
+
+          <!-- CASO 5: OTRAS REDES (YOUTUBE, LINKEDIN) -->
+          <div v-else class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-xs text-slate-700 dark:text-slate-300">Métricas Principales ({{ createForm.plataforma.toUpperCase() }}):</span>
+              <span class="font-mono text-cyan-500 font-bold">Interacciones Totales</span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-rose-500 mb-1">
+                  {{ createForm.plataforma === 'youtube' || createForm.plataforma === 'linkedin' ? '👍 Likes' : '❤️ Likes' }}
+                </label>
+                <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1">
+                  💬 Comentarios
+                </label>
+                <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-1">
+                  🔄 Compartidos
+                </label>
+                <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-amber-500 mb-1">
+                  🔖 Guardados
+                </label>
+                <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+              </div>
+            </div>
+
+            <!-- Vistas -->
+            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center font-mono">
+              <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1 flex items-center justify-center gap-1">
+                <Eye class="w-3 h-3" />
+                <span>Reproducciones / Alcance Estimado</span>
+              </label>
+              <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
             </div>
           </div>
 

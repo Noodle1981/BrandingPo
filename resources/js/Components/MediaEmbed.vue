@@ -30,11 +30,17 @@ const youtubeId = computed(() => {
 });
 
 // Detect TikTok Video ID / Embed
-const tiktokUrl = computed(() => {
+const tiktokVideoId = computed(() => {
   const target = props.url || props.mediaUrl;
   if (!target) return null;
-  if (target.includes('tiktok.com')) {
-    return target;
+  const match = target.match(/tiktok\.com\/(?:@[\w.-]+\/video\/|v\/|embed\/v2\/)(\d+)/i)
+    || target.match(/tiktok\.com\/.*?(?:video\/)(\d+)/i);
+  return match ? match[1] : null;
+});
+
+const tiktokEmbedUrl = computed(() => {
+  if (tiktokVideoId.value) {
+    return `https://www.tiktok.com/embed/v2/${tiktokVideoId.value}`;
   }
   return null;
 });
@@ -56,30 +62,42 @@ const instagramEmbedUrl = computed(() => {
   return null;
 });
 
-// Detect Facebook Embed
-const facebookEmbedUrl = computed(() => {
+// Detect Facebook Video / Reel Embed
+const isFacebookReel = computed(() => {
+  const target = (props.url || props.mediaUrl || '').toLowerCase();
+  return target.includes('/reel/') || target.includes('/reels/') || (props.plataforma === 'facebook' && props.formato === 'Reel');
+});
+
+const isFacebookVideo = computed(() => {
+  const target = (props.url || props.mediaUrl || '').toLowerCase();
+  return target.includes('/watch') || target.includes('/videos/') || target.includes('fb.watch') || (props.plataforma === 'facebook' && props.formato === 'Video');
+});
+
+const facebookVideoEmbedUrl = computed(() => {
   const target = props.url || props.mediaUrl;
   if (!target) return null;
   if (target.includes('facebook.com') || target.includes('fb.watch')) {
-    const encoded = encodeURIComponent(target);
-    return `https://www.facebook.com/plugins/post.php?href=${encoded}&show_text=true&width=500`;
+    if (isFacebookReel.value || isFacebookVideo.value) {
+      const encoded = encodeURIComponent(target);
+      return `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&width=500`;
+    }
   }
   return null;
 });
 
-// Detect Direct Image (solo cuando no haya un embed interactivo disponible)
+// Detect Direct Image (solo cuando no haya un embed de video disponible)
 const isDirectImage = computed(() => {
-  if (youtubeId.value || instagramEmbedUrl.value || facebookEmbedUrl.value) {
+  if (youtubeId.value || instagramEmbedUrl.value || tiktokEmbedUrl.value || facebookVideoEmbedUrl.value) {
     return false;
   }
-  const target = props.mediaUrl || props.url;
+  const target = props.mediaUrl;
   if (!target) return false;
-  return /\.(jpeg|jpg|gif|png|webp|svg)($|\?)/i.test(target) || target.includes('images.unsplash.com');
+  return target.startsWith('http://') || target.startsWith('https://') || target.startsWith('/');
 });
 
 const directImageUrl = computed(() => {
   if (isDirectImage.value) {
-    return props.mediaUrl || props.url;
+    return props.mediaUrl;
   }
   return null;
 });
@@ -113,7 +131,7 @@ const plataformaName = computed(() => {
       ></iframe>
     </div>
 
-    <!-- 2. Instagram Interactive Video/Post Embed (Prioridad alta para reproducir el video) -->
+    <!-- 2. Instagram Interactive Video/Post Embed -->
     <div
       v-else-if="instagramEmbedUrl"
       class="relative w-full overflow-hidden flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 rounded-2xl"
@@ -133,16 +151,54 @@ const plataformaName = computed(() => {
       ></iframe>
     </div>
 
-    <!-- 3. Direct Image Preview (Fotos estáticas sin reproductor de video) -->
+    <!-- 3. TikTok Interactive Video Player Embed -->
+    <div
+      v-else-if="tiktokEmbedUrl"
+      class="relative w-full overflow-hidden flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 rounded-2xl"
+    >
+      <iframe
+        :src="tiktokEmbedUrl"
+        class="w-full max-w-[340px] sm:max-w-[380px] rounded-2xl border-0 shadow-sm transition-all"
+        style="height: 620px; min-height: 580px;"
+        frameborder="0"
+        scrolling="no"
+        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+        allowfullscreen
+        allowtransparency="true"
+      ></iframe>
+    </div>
+
+    <!-- 4. Facebook Interactive Video / Reel Player Embed -->
+    <div
+      v-else-if="facebookVideoEmbedUrl"
+      class="relative w-full overflow-hidden flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 rounded-2xl"
+    >
+      <iframe
+        :src="facebookVideoEmbedUrl"
+        class="w-full max-w-[500px] rounded-2xl border-0 shadow-sm transition-all"
+        :style="{
+          height: isFacebookReel ? '620px' : '380px',
+          minHeight: isFacebookReel ? '580px' : '320px'
+        }"
+        frameborder="0"
+        scrolling="no"
+        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+        allowfullscreen
+        allowtransparency="true"
+      ></iframe>
+    </div>
+
+    <!-- 5. Direct Image Preview (Fotos estáticas y miniaturas con bypass CDN) -->
     <div v-else-if="directImageUrl" class="relative group">
       <img
         :src="directImageUrl"
         alt="Foto de la publicación"
-        class="w-full max-h-[440px] object-cover hover:scale-101 transition-transform duration-200"
+        referrerpolicy="no-referrer"
+        class="w-full max-h-[480px] object-cover hover:scale-101 transition-transform duration-200"
       />
     </div>
 
-    <!-- 4. Facebook / General Social Media Link Preview Card -->
+    <!-- 6. Facebook / General Social Media Link Preview Card -->
     <div v-else-if="url || mediaUrl" class="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 flex items-center justify-center shrink-0">
@@ -176,7 +232,7 @@ const plataformaName = computed(() => {
       </a>
     </div>
 
-    <!-- 5. Default Placeholder if no link -->
+    <!-- 7. Default Placeholder if no link -->
     <div v-else class="p-6 text-center">
       <span class="inline-block px-3 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider font-semibold font-mono">
         Formato: {{ formato }}

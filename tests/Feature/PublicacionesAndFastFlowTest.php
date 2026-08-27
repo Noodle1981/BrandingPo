@@ -95,4 +95,38 @@ class PublicacionesAndFastFlowTest extends TestCase
             'contenido_resumen' => 'Intento no autorizado de visualizador',
         ]);
     }
+
+    public function test_instagram_post_preserves_native_metrics_without_simulated_emotions(): void
+    {
+        $consultor = User::where('role', 'consultor')->first();
+        $candidato = Candidato::where('es_propio', true)->first();
+
+        $response = $this->actingAs($consultor)->post('/publicaciones', [
+            'candidato_id' => $candidato->id,
+            'plataforma' => 'instagram',
+            'url_post' => 'https://www.instagram.com/p/DcQjMFlTt7q/?utm_source=ig_web_copy_link',
+            'tipo_formato' => 'Foto',
+            'tipo_pauta' => 'organico',
+            'total_likes' => 17,
+            'total_comentarios' => 4,
+            'total_republicados' => 3,
+            'total_compartidos' => 2,
+            'total_guardados' => 5,
+            'contenido_resumen' => 'Post de prueba en Instagram con 17 corazones.',
+            'fecha_publicacion' => now()->toDateTimeString(),
+        ]);
+
+        $response->assertRedirect();
+
+        $publicacion = \App\Models\Publicacion::where('url_post', 'https://www.instagram.com/p/DcQjMFlTt7q/?utm_source=ig_web_copy_link')->first();
+        $this->assertNotNull($publicacion);
+        $this->assertEquals(17, $publicacion->total_likes);
+        $this->assertEquals(4, $publicacion->total_comentarios);
+        $this->assertEquals(3, $publicacion->total_republicados);
+        $this->assertEquals(2, $publicacion->total_compartidos);
+        $this->assertEquals(5, $publicacion->total_guardados);
+        $this->assertEquals(17, $publicacion->reacciones_detalladas['me_gusta']);
+        $this->assertEquals(0, $publicacion->reacciones_detalladas['me_enoja']);
+        $this->assertEquals(100.0, $publicacion->aprobacion_neta_pct);
+    }
 }

@@ -971,8 +971,10 @@ class CandidatoController extends Controller
         $totalLikes = (int) $publicaciones->sum('total_likes');
         $totalComentarios = (int) $publicaciones->sum('total_comentarios');
         $totalCompartidos = (int) $publicaciones->sum('total_compartidos');
+        $totalRepublicados = (int) $publicaciones->sum('total_republicados');
         $totalGuardados = (int) $publicaciones->sum('total_guardados');
-        $totalInteracciones = $totalLikes + $totalComentarios + $totalCompartidos + $totalGuardados;
+        $totalInteracciones = $totalLikes + $totalComentarios + $totalCompartidos + $totalRepublicados;
+        $scoreImpactoTotal = ($totalLikes * 1) + ($totalComentarios * 3) + ($totalCompartidos * 5) + ($totalRepublicados * 10);
         $totalVistas = (int) $publicaciones->sum('total_vistas');
         $totalPauta = (float) $publicaciones->sum('monto_invertido_pauta');
 
@@ -1041,8 +1043,8 @@ class CandidatoController extends Controller
             return $p->tipo_pauta !== 'organico' && ((float) $p->monto_invertido_pauta > 0 || in_array($p->tipo_pauta, ['pauta_paga', 'boosted', 'dark_post']));
         });
 
-        $intOrganicas = $postsOrganicos->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
-        $intPautadas = $postsPautados->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
+        $intOrganicas = $postsOrganicos->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
+        $intPautadas = $postsPautados->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
         $vistasOrganicas = $postsOrganicos->sum('total_vistas');
         $vistasPautadas = $postsPautados->sum('total_vistas');
         $inversionPauta = (float) $publicaciones->sum('monto_invertido_pauta');
@@ -1076,7 +1078,7 @@ class CandidatoController extends Controller
             return strtolower($p->tipo_formato ?: 'foto');
         })->map(function ($items, $formato) {
             $count = $items->count();
-            $totalInt = $items->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
+            $totalInt = $items->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
             $totalV = $items->sum('total_vistas');
             $totalL = $items->sum('total_likes');
             $totalC = $items->sum('total_comentarios');
@@ -1113,7 +1115,7 @@ class CandidatoController extends Controller
             });
 
             $cantPosts = $postsDelMes->count();
-            $intDelMes = $postsDelMes->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
+            $intDelMes = $postsDelMes->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
             $pautaDelMes = (float) $postsDelMes->sum('monto_invertido_pauta');
 
             $estado = 'bajo';
@@ -1179,7 +1181,7 @@ class CandidatoController extends Controller
         // Si hay pocos posts este mes, tomar las últimas 8 publicaciones como muestra representativa
         $muestraReciente = $publicaciones->take(8);
         $vistasMuestra = (int) $muestraReciente->sum('total_vistas');
-        $intMuestra = (int) $muestraReciente->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
+        $intMuestra = (int) $muestraReciente->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
         $promedioVistasPorPost = $muestraReciente->count() > 0 ? (int) round($vistasMuestra / $muestraReciente->count()) : 0;
         $promedioIntPorPost = $muestraReciente->count() > 0 ? (int) round($intMuestra / $muestraReciente->count()) : 0;
 
@@ -1188,7 +1190,7 @@ class CandidatoController extends Controller
         if ($vistasEsteMes === 0 && $totalVistas > 0) {
             $vistasEsteMes = min($totalVistas, $promedioVistasPorPost * max(1, $postsEsteMes ?: 3));
         }
-        $intEsteMes = (int) $postsEsteMesCollection->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
+        $intEsteMes = (int) $postsEsteMesCollection->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
         if ($intEsteMes === 0 && $totalInteracciones > 0) {
             $intEsteMes = min($totalInteracciones, $promedioIntPorPost * max(1, $postsEsteMes ?: 3));
         }
@@ -1306,11 +1308,13 @@ class CandidatoController extends Controller
             'amplificacion' => [
                 'titulo' => 'Amplificación & Eficiencia Viral',
                 'total_compartidos' => $totalCompartidos,
+                'total_republicados' => $totalRepublicados,
                 'total_guardados' => $totalGuardados,
-                'amplificacion_estimada' => ($totalCompartidos * 15) + ($totalGuardados * 8),
+                'score_impacto_total' => $scoreImpactoTotal,
+                'amplificacion_estimada' => ($totalCompartidos * 5) + ($totalRepublicados * 10),
                 'costo_por_elector_ars' => $costoPorElectorAlcanzado,
                 'electores_alcanzados_estimados' => $electoresAlcanzadosEstimados,
-                'diagnostico' => 'Los compartidos y guardados expanden el mensaje hacia electores indecisos fuera de tu comunidad directa.',
+                'diagnostico' => 'Los compartidos y republicados expanden el mensaje hacia electores indecisos fuera de tu comunidad directa.',
             ],
         ];
 
@@ -1412,7 +1416,7 @@ class CandidatoController extends Controller
             $muestraReciente = $posts30d->count() >= 3 ? $posts30d : ($publicaciones->take(10)->count() > 0 ? $publicaciones->take(10) : $publicaciones);
             $totalMuestraCount = $muestraReciente->count();
 
-            $totalInteracciones30d = $muestraReciente->sum(fn ($p) => (int) $p->total_likes + (int) $p->total_comentarios + (int) $p->total_compartidos + (int) $p->total_guardados);
+            $totalInteracciones30d = $muestraReciente->sum(fn ($p) => (int) $p->total_likes + (int) $p->total_comentarios + (int) $p->total_compartidos + (int) ($p->total_republicados ?? 0));
             $promedioInteracciones30d = $totalMuestraCount > 0 ? round($totalInteracciones30d / $totalMuestraCount, 1) : 0;
             $promedioVistas30d = $totalMuestraCount > 0 ? round($muestraReciente->avg('visualizaciones') ?: $promedioVistasPorPost) : $promedioVistasPorPost;
 
@@ -1420,7 +1424,7 @@ class CandidatoController extends Controller
             $mesesAgrupados = $publicaciones->groupBy(function ($p) {
                 return $p->fecha_publicacion ? $p->fecha_publicacion->format('Y-m') : '2025-01';
             })->map(function ($postsMes, $key) {
-                $totalIntMes = $postsMes->sum(fn ($p) => (int) $p->total_likes + (int) $p->total_comentarios + (int) $p->total_compartidos + (int) $p->total_guardados);
+                $totalIntMes = $postsMes->sum(fn ($p) => (int) $p->total_likes + (int) $p->total_comentarios + (int) $p->total_compartidos + (int) ($p->total_republicados ?? 0));
                 $promedioMes = $postsMes->count() > 0 ? round($totalIntMes / $postsMes->count(), 1) : 0;
                 $nombreMes = $postsMes->first()->fecha_publicacion ? $postsMes->first()->fecha_publicacion->translatedFormat('F Y') : $key;
 
@@ -1519,7 +1523,7 @@ class CandidatoController extends Controller
         // 14. Distribución por Ejes Temáticos
         $distribucionEjes = $ejes->map(function ($eje) use ($publicaciones) {
             $postsDelEje = $publicaciones->where('eje_tematico_id', $eje->id);
-            $totalInt = $postsDelEje->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
+            $totalInt = $postsDelEje->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
 
             return [
                 'id' => $eje->id,
@@ -1533,11 +1537,11 @@ class CandidatoController extends Controller
         })->filter(fn ($e) => $e['total_posts'] > 0)->values();
 
         // 15. Top 6 Publicaciones más destacadas
-        $topPublicaciones = $publicaciones->sortByDesc(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados)
+        $topPublicaciones = $publicaciones->sortByDesc(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0))
             ->take(6)
             ->values()
             ->map(function ($p) use ($padronElectoral) {
-                $int = (int) ($p->total_likes + $p->total_comentarios + $p->total_compartidos + $p->total_guardados);
+                $int = (int) ($p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
                 $coberturaPostPct = $padronElectoral > 0 ? round(($p->total_vistas / $padronElectoral) * 100, 1) : 0;
 
                 return [
@@ -1552,7 +1556,9 @@ class CandidatoController extends Controller
                     'total_likes' => (int) $p->total_likes,
                     'total_comentarios' => (int) $p->total_comentarios,
                     'total_compartidos' => (int) $p->total_compartidos,
+                    'total_republicados' => (int) ($p->total_republicados ?? 0),
                     'total_guardados' => (int) $p->total_guardados,
+                    'score_impacto_organico' => (int) $p->score_impacto_organico,
                     'total_vistas' => (int) $p->total_vistas,
                     'total_interacciones' => $int,
                     'cobertura_padron_pct' => $coberturaPostPct,

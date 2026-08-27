@@ -58,4 +58,58 @@ class MetricasCanalTest extends TestCase
             ->has('distribucionEjes')
         );
     }
+
+    public function test_usuario_puede_acceder_al_dashboard_de_metricas_de_facebook_con_calculo_normalizado()
+    {
+        $user = User::where('role', 'consultor')->first();
+        $candidato = Candidato::where('es_propio', true)->first();
+
+        $perfilFb = $candidato->perfilesSociales()->firstOrCreate(
+            ['plataforma' => 'facebook'],
+            [
+                'handle_usuario' => '@ahoraalbardon',
+                'seguidores_actuales' => 9483,
+                'seguidores_punto_cero' => 9000,
+                'publicaciones_totales' => 120,
+                'publicaciones_punto_cero' => 100,
+                'esta_activo' => true,
+            ]
+        );
+
+        $response = $this->actingAs($user)
+            ->get(route('perfiles-sociales.metricas', $perfilFb));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Candidatos/MetricasCanal')
+            ->where('perfilSocial.plataforma', 'facebook')
+        );
+    }
+
+    public function test_usuario_puede_acceder_al_dashboard_de_metricas_de_tiktok_con_calculo_normalizado()
+    {
+        $user = User::where('role', 'consultor')->first();
+        $candidato = Candidato::where('es_propio', true)->first();
+
+        $perfilTt = $candidato->perfilesSociales()->firstOrCreate(
+            ['plataforma' => 'tiktok'],
+            [
+                'handle_usuario' => '@federico.sisterna',
+                'seguidores_actuales' => 1695,
+                'seguidores_punto_cero' => 1500,
+                'publicaciones_totales' => 20,
+                'publicaciones_punto_cero' => 18,
+                'esta_activo' => true,
+            ]
+        );
+
+        $response = $this->actingAs($user)
+            ->get(route('perfiles-sociales.metricas', $perfilTt));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('Candidatos/MetricasCanal')
+            ->where('perfilSocial.plataforma', 'tiktok')
+        );
+    }
 }

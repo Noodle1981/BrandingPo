@@ -584,7 +584,12 @@ class SocialProfileScraperService
 
         // 1. Extraer URL limpia si el usuario pegó un <iframe>, <blockquote> o HTML embed
         $url = $input;
-        if (preg_match('/plugins\/(?:post|video)\.php\?href=([^&"\']+)/i', $input, $m)) {
+        if (preg_match('/(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/(\d+)/i', $input, $tm)) {
+            $url = $tm[0];
+            if (! str_starts_with($url, 'http')) {
+                $url = 'https://'.$url;
+            }
+        } elseif (preg_match('/plugins\/(?:post|video)\.php\?href=([^&"\']+)/i', $input, $m)) {
             $url = urldecode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
         } elseif (preg_match('/data-instgrm-permalink="([^"]+)"/i', $input, $m)) {
             $url = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -602,7 +607,8 @@ class SocialProfileScraperService
         }
 
         // Limpiar parámetros de tracking innecesarios
-        $cleanUrl = preg_replace('/\?(?:utm_source|igsh|igsi|utm_medium|utm_campaign)=[^&]*&?/i', '?', $url);
+        $cleanUrl = preg_replace('/\?(?:utm_source|igsh|igsi|utm_medium|utm_campaign|ref_src|ref_url|s)=[^&]*&?/i', '?', $url);
+        $cleanUrl = preg_replace('/(\?|&)(?:twsrc|twcamp|tweetembed|twterm|twgr|twcon)=[^&]*/i', '', $cleanUrl);
         $cleanUrl = rtrim($cleanUrl, '?&');
         $result['url_post'] = $cleanUrl;
 
@@ -615,6 +621,10 @@ class SocialProfileScraperService
             $result['plataforma'] = 'facebook';
 
             return $this->scrapeFacebookPost($cleanUrl, $result);
+        } elseif (str_contains($cleanUrl, 'twitter.com') || str_contains($cleanUrl, 'x.com')) {
+            $result['plataforma'] = 'x_twitter';
+
+            return $this->scrapeTwitterPost($cleanUrl, $result);
         } elseif (str_contains($cleanUrl, 'youtube.com') || str_contains($cleanUrl, 'youtu.be')) {
             $result['plataforma'] = 'youtube';
 
@@ -626,6 +636,54 @@ class SocialProfileScraperService
         }
 
         return $this->scrapeGenericPost($cleanUrl, $result);
+    }
+
+    /**
+     * Scraping especializado de una publicación de X / Twitter.
+     */
+    protected function scrapeTwitterPost(string $url, array $result): array
+    {
+        $result['plataforma'] = 'x_twitter';
+        $result['tipo_formato'] = 'Post';
+
+        try {
+            // 1. Consultar endpoint oficial oEmbed de Twitter/X
+            $oembedUrl = 'https://publish.twitter.com/oembed?url='.urlencode($url).'&omit_script=true';
+            $resp = Http::timeout(6)->get($oembedUrl);
+
+            if ($resp->successful()) {
+                $data = $resp->json();
+                if (! empty($data['author_name'])) {
+                    $result['handle_autor'] = $data['author_name'];
+                }
+                if (! empty($data['author_url']) && preg_match('/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/i', $data['author_url'], $am)) {
+                    $result['handle_autor'] = '@'.$am[1];
+                }
+                if (! empty($data['html'])) {
+                    // Extraer texto limpio del <p> dentro del <blockquote>
+                    if (preg_match('/<p[^>]*>(.*?)<\/p>/is', $data['html'], $pm)) {
+                        $cleanText = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $pm[1]));
+                        $result['contenido_resumen'] = html_entity_decode(trim($cleanText), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    }
+                }
+            }
+
+            // 2. OpenGraph fallback para media_url si existe
+            $response = Http::withHeaders(['User-Agent' => 'Twitterbot/1.0'])->timeout(6)->get($url);
+            $html = $response->body();
+            if (empty($result['media_url']) && preg_match('/<meta[^>]+(?:property="og:image"|name="twitter:image")[^>]+content="([^"]*)"/i', $html, $mImg)) {
+                $result['media_url'] = html_entity_decode($mImg[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+        } catch (\Exception $e) {
+            // Silencioso
+        }
+
+        $result['success'] = ! empty($result['contenido_resumen']) || ! empty($result['media_url']);
+        $result['mensaje'] = $result['success']
+            ? '¡Publicación de X / Twitter extraída exitosamente!'
+            : 'X protegió la lectura. Puedes completar los datos manualmente.';
+
+        return $result;
     }
 
     /**
@@ -805,6 +863,88 @@ class SocialProfileScraperService
         $result['mensaje'] = $result['success']
             ? '¡Datos del post de Instagram extraídos exitosamente!'
             : 'No se pudieron extraer los datos automáticamente. Puedes completarlos a mano.';
+
+        return $result;
+    }
+
+    /**
+     * Scraping especializado de un video de TikTok (usando oEmbed oficial y OpenGraph).
+     */
+    protected function scrapeTikTokPost(string $url, array $result): array
+    {
+        $result['plataforma'] = 'tiktok';
+        $result['tipo_formato'] = 'Video Corto';
+
+        try {
+            // 1. Consultar endpoint oficial oEmbed de TikTok
+            $oembedUrl = 'https://www.tiktok.com/oembed?url='.urlencode($url);
+            $oembedResp = Http::timeout(6)->get($oembedUrl);
+
+            if ($oembedResp->successful()) {
+                $oembed = $oembedResp->json();
+                if (! empty($oembed['title'])) {
+                    $result['contenido_resumen'] = trim($oembed['title']);
+                }
+                if (! empty($oembed['thumbnail_url'])) {
+                    $result['media_url'] = $oembed['thumbnail_url'];
+                }
+                if (! empty($oembed['author_unique_id'])) {
+                    $result['handle_autor'] = '@'.ltrim($oembed['author_unique_id'], '@');
+                } elseif (! empty($oembed['author_name'])) {
+                    $result['handle_autor'] = $oembed['author_name'];
+                }
+            }
+
+            // 2. Intentar leer HTML con Bot Agent para extraer contadores si están disponibles
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+            $html = curl_exec($ch);
+            curl_close($ch);
+
+            if (! empty($html)) {
+                if (empty($result['media_url']) && preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]*)"/i', $html, $mImg)) {
+                    $result['media_url'] = html_entity_decode($mImg[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                }
+                if (empty($result['contenido_resumen']) && preg_match('/<meta[^>]+property="og:description"[^>]+content="([^"]*)"/i', $html, $mDesc)) {
+                    $result['contenido_resumen'] = html_entity_decode($mDesc[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                }
+
+                // Universal Data rehydration check
+                if (preg_match('/<script[^>]+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>(.*?)<\/script>/is', $html, $mJson)) {
+                    $uData = json_decode($mJson[1], true);
+                    $stats = $uData['__DEFAULT_SCOPE__']['webapp.video-detail']['itemInfo']['itemStruct']['stats'] ?? null;
+                    if ($stats) {
+                        if (isset($stats['diggCount'])) {
+                            $result['total_likes'] = (int) $stats['diggCount'];
+                        }
+                        if (isset($stats['commentCount'])) {
+                            $result['total_comentarios'] = (int) $stats['commentCount'];
+                        }
+                        if (isset($stats['shareCount'])) {
+                            $result['total_compartidos'] = (int) $stats['shareCount'];
+                        }
+                        if (isset($stats['collectCount'])) {
+                            $result['total_guardados'] = (int) $stats['collectCount'];
+                        }
+                        if (isset($stats['playCount'])) {
+                            $result['total_vistas'] = (int) $stats['playCount'];
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // Silencioso
+        }
+
+        $result['success'] = ! empty($result['contenido_resumen']) || ! empty($result['media_url']) || $result['total_likes'] > 0;
+        $result['mensaje'] = $result['success']
+            ? '¡Video de TikTok extraído exitosamente!'
+            : 'TikTok protegió la lectura. Puedes completar los datos manualmente.';
 
         return $result;
     }

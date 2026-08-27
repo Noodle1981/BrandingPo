@@ -48,6 +48,15 @@ La interfaz de **BrandingPo** combina la potencia analítica de una **Sala de Si
   - **Anuncio Directo / Dark Post:** Anuncio exclusivo de Ads Manager que no figura en el feed orgánico.
 - **6. Monitoreo de Medios & Prensa (Clipping):**
   - Auditoría de notas periodísticas clasificadas por medio, periodista, candidato mencionado (Propio vs. Oposición) y tono editorial (Favorable / Neutral / Crítico).
+- **7. Jerarquía y Normalización de Métricas de Interacción:**
+  - **Instagram (Estándar Base Normalizado):**
+    - ❤️ **Me gusta (Likes / Corazones):** Peso $1\text{ pt}$ (aprobación directa).
+    - 💬 **Comentarios:** Peso $3\text{ pts}$ (involucramiento activo y conversación).
+    - ✈️ **Compartidos / Envíos:** Peso $5\text{ pts}$ (difusión Dark Social / recomendación boca a boca).
+    - 🔁 **Republicar / Reposts:** Peso $10\text{ pts}$ (endoso público y megáfono orgánico).
+    - 👁️ **Reproducciones / Vistas:** Base de cálculo para el Engagement Rate Efectivo.
+    - 🔖 **Guardados:** Ítem propio de auditoría interna y seguimiento de campaña (separado de las métricas públicas).
+  - *Referencia extensible:* Este estándar de pesos e independencia de ítems internos servirá de matriz comparativa cuando se normalicen las demás redes (Facebook, TikTok, X, YouTube, LinkedIn).
 
 ### C. Tipografía, Espaciado y Micro-interacciones
 - Tipografía moderna (Inter o system-ui sans-serif), números tabulares monoespaciados (`font-mono`) para métricas y moneda.

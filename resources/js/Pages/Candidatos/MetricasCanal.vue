@@ -622,7 +622,7 @@ const chartOptions = computed(() => {
               }">
                 {{ formatNumber(semaforoPadron.movilizacion?.actual_interacciones) }}
               </span>
-              <span class="text-[11px] text-slate-400 block">reacciones + coment + compartidos</span>
+              <span class="text-[11px] text-slate-400 block">likes + coment + reposts + shares</span>
             </div>
 
             <div class="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-800/80">
@@ -692,7 +692,7 @@ const chartOptions = computed(() => {
                   🚀 Viralidad & CEA
                 </span>
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-500/15 text-purple-400">
-                  {{ semaforoPadron.amplificacion?.total_compartidos }} shares
+                  {{ (semaforoPadron.amplificacion?.total_compartidos || 0) + (semaforoPadron.amplificacion?.total_republicados || 0) }} difusiones
                 </span>
               </div>
               <div>
