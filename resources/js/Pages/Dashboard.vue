@@ -83,10 +83,18 @@ const props = defineProps({
     default: () => ({
       total_seguidores: '0',
       total_seguidores_raw: 0,
+      total_seguidores_netos: '0',
+      total_seguidores_netos_raw: 0,
       crecimiento_neto_seguidores: 0,
       crecimiento_pct_seguidores: 0,
       score_impacto_total: '0',
       score_impacto_raw: 0,
+      score_impacto_meta: '0',
+      score_impacto_meta_raw: 0,
+      score_impacto_pct: 0,
+      score_impacto_estado: 'mantenimiento',
+      score_impacto_estado_texto: 'Mantenimiento',
+      score_impacto_base_texto: 'Promedio redes activas (x500 pts)',
       total_vistas: '0',
       total_vistas_raw: 0,
       total_publicaciones: 0,
@@ -94,6 +102,8 @@ const props = defineProps({
       inversion_pauta_total: 0,
       humor_social_promedio: '4.8',
       ratio_penetracion: '0%',
+      ratio_penetracion_bruta: '0%',
+      tiers_desglose: [],
       share_of_voice: '0%',
     })
   },
@@ -482,7 +492,7 @@ const ejesBarChartOptions = {
 
     <!-- 2. HUD CENTRAL DE KPIS MULTICANAL NORMALIZADOS -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-      <!-- KPI 1: Comunidad Multired & Crecimiento Neto -->
+      <!-- KPI 1: Comunidad Multired & Crecimiento Neto (con Tiers) -->
       <div class="p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Comunidad Total</span>
@@ -491,9 +501,18 @@ const ejesBarChartOptions = {
           </div>
         </div>
         <div class="mt-2.5">
-          <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
-            {{ stats.total_seguidores }}
-          </p>
+          <div class="flex items-baseline justify-between gap-1">
+            <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+              {{ stats.total_seguidores }}
+            </p>
+            <span
+              v-if="stats.total_seguidores_netos && stats.total_seguidores_netos !== stats.total_seguidores"
+              class="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 font-mono px-1.5 py-0.5 rounded-md bg-cyan-500/10"
+              :title="`Alcance Único Neto por Tiers: ~${stats.total_seguidores_netos} personas reales desduplicadas`"
+            >
+              ~{{ stats.total_seguidores_netos }} netos
+            </span>
+          </div>
           <div class="mt-1 flex items-center gap-1.5 text-xs font-semibold" :class="stats.crecimiento_neto_seguidores >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'">
             <TrendingUp v-if="stats.crecimiento_neto_seguidores >= 0" class="w-3.5 h-3.5" />
             <TrendingDown v-else class="w-3.5 h-3.5" />
@@ -503,7 +522,7 @@ const ejesBarChartOptions = {
         </div>
       </div>
 
-      <!-- KPI 2: Score de Impacto Orgánico -->
+      <!-- KPI 2: Score de Impacto Orgánico vs Padrón Objetivo -->
       <div class="p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Score de Impacto</span>
@@ -512,12 +531,53 @@ const ejesBarChartOptions = {
           </div>
         </div>
         <div class="mt-2.5">
-          <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
-            {{ stats.score_impacto_total }}
-          </p>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Ponderado (1/3/5/10 pts)
-          </p>
+          <div class="flex items-baseline justify-between gap-1">
+            <div class="flex items-baseline gap-1.5 min-w-0">
+              <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                {{ stats.score_impacto_total }}
+              </p>
+              <span class="text-xs font-semibold text-slate-400 font-mono truncate" :title="`Meta objetivo: ${stats.score_impacto_meta || '3.500'} pts`">
+                / {{ stats.score_impacto_meta || '3.500' }}
+              </span>
+            </div>
+            <span
+              class="text-xs font-bold font-mono shrink-0"
+              :class="{
+                'text-emerald-500': (stats.score_impacto_pct || 0) >= 100,
+                'text-amber-500': (stats.score_impacto_pct || 0) >= 70 && (stats.score_impacto_pct || 0) < 100,
+                'text-rose-500': (stats.score_impacto_pct || 0) < 70
+              }"
+            >
+              {{ stats.score_impacto_pct || 0 }}%
+            </span>
+          </div>
+
+          <!-- Barra de progreso de penetración territorial -->
+          <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all duration-500"
+              :class="{
+                'bg-emerald-500': (stats.score_impacto_pct || 0) >= 100,
+                'bg-amber-500': (stats.score_impacto_pct || 0) >= 70 && (stats.score_impacto_pct || 0) < 100,
+                'bg-rose-500': (stats.score_impacto_pct || 0) < 70
+              }"
+              :style="{ width: `${Math.min(stats.score_impacto_pct || 0, 100)}%` }"
+            ></div>
+          </div>
+
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between">
+            <span class="truncate" :title="stats.score_impacto_base_texto">{{ stats.score_impacto_base_texto || 'Base: Padrón' }}</span>
+            <span
+              class="font-semibold shrink-0"
+              :class="{
+                'text-emerald-500': (stats.score_impacto_pct || 0) >= 100,
+                'text-amber-500': (stats.score_impacto_pct || 0) >= 70 && (stats.score_impacto_pct || 0) < 100,
+                'text-rose-500': (stats.score_impacto_pct || 0) < 70
+              }"
+            >
+              {{ stats.score_impacto_estado_texto || 'Mantenimiento' }}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -559,7 +619,7 @@ const ejesBarChartOptions = {
         </div>
       </div>
 
-      <!-- KPI 5: Penetración sobre el Padrón -->
+      <!-- KPI 5: Penetración sobre el Padrón (Neto por Tiers vs Bruto) -->
       <div class="p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Penetración Padrón</span>
@@ -568,11 +628,21 @@ const ejesBarChartOptions = {
           </div>
         </div>
         <div class="mt-2.5">
-          <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
-            {{ stats.ratio_penetracion }}
-          </p>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            del electorado territorial
+          <div class="flex items-baseline justify-between gap-1">
+            <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+              {{ stats.ratio_penetracion }}
+            </p>
+            <span
+              v-if="stats.ratio_penetracion_bruta && stats.ratio_penetracion_bruta !== stats.ratio_penetracion"
+              class="text-[11px] font-semibold text-slate-400 font-mono"
+              :title="`Penetración bruta sin desduplicar: ${stats.ratio_penetracion_bruta}`"
+            >
+              vs {{ stats.ratio_penetracion_bruta }} bruto
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
+            <span>Electores únicos (Tiers)</span>
+            <span class="font-bold text-blue-500 text-[11px]">Neto Real</span>
           </p>
         </div>
       </div>

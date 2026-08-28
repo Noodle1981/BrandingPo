@@ -57,9 +57,12 @@ class DashboardController extends Controller
             ->latest('fecha_publicacion')
             ->get();
 
-        $ejes = \App\Models\EjeTematico::where('workspace_id', $workspace->id)->get();
+        $ejes = \App\Models\EjeTematico::where('workspace_id', $workspace->id)
+            ->orderBy('orden')
+            ->orderBy('id')
+            ->get();
 
-        // Métricas directas del Perfil del Cliente
+        // Métricas directas del Perfil del Candidato (Comunidad Bruta)
         $totalSeguidores = (int) $candidato->perfilesSociales->sum('seguidores_actuales');
         $totalSeguidoresPuntoCero = (int) $candidato->perfilesSociales->sum('seguidores_punto_cero');
         $crecimientoNetoTotalSeguidores = $totalSeguidores - $totalSeguidoresPuntoCero;
@@ -67,6 +70,7 @@ class DashboardController extends Controller
             ? round(($crecimientoNetoTotalSeguidores / $totalSeguidoresPuntoCero) * 100, 1)
             : 0;
 
+        // Métricas directas de Publicaciones
         $totalVistas = (int) $publicaciones->sum('total_vistas');
         $totalLikes = (int) $publicaciones->sum('total_likes');
         $totalComentarios = (int) $publicaciones->sum('total_comentarios');
@@ -79,18 +83,103 @@ class DashboardController extends Controller
         $interaccionesTotales = $totalLikes + $totalComentarios + $totalCompartidos + $totalRepublicados;
         $scoreImpactoTotal = ($totalLikes * 1) + ($totalComentarios * 3) + ($totalCompartidos * 5) + ($totalRepublicados * 10);
 
+        // ─────────────────────────────────────────────────────────────
+        // DESDUPLICACIÓN DE AUDIENCIA POR TIERS (SOLO ELEMENTOS ACTIVOS)
+        // ─────────────────────────────────────────────────────────────
+        $perfilesActivos = $candidato->perfilesSociales
+            ->filter(fn ($p) => (bool) $p->esta_activo && (int) $p->seguidores_actuales > 0)
+            ->sortByDesc('seguidores_actuales')
+            ->values();
+
+        $seguidoresNetosEstimados = 0;
+        $plataformasProcesadas = [];
+        $tiersDesglose = [];
+
+        foreach ($perfilesActivos as $idx => $perfil) {
+            $seguidoresRed = (int) $perfil->seguidores_actuales;
+            $plataforma = $perfil->plataforma;
+            $tierNumero = $idx + 1;
+
+            if ($idx === 0) {
+                // Tier 1: Red Dominante Activa (100% base única)
+                $factorIncremental = 1.0;
+                $tierNombre = 'Tier 1 (Red Principal Activa)';
+            } else {
+                $esMeta = in_array($plataforma, ['facebook', 'instagram', 'threads']);
+                $tieneMetaPrevia = count(array_intersect($plataformasProcesadas, ['facebook', 'instagram', 'threads'])) > 0;
+
+                if ($esMeta && $tieneMetaPrevia) {
+                    // Solapamiento cruzado dentro de Meta (~65% solapado -> 35% personas únicas adicionales)
+                    $factorIncremental = 0.35;
+                    $tierNombre = "Tier {$tierNumero} (Meta / Solapado)";
+                } else {
+                    // Plataformas fuera de Meta (TikTok, X, YouTube) aportan mayor novedad
+                    $factorIncremental = 0.55;
+                    $tierNombre = "Tier {$tierNumero} (Nueva Audiencia)";
+                }
+            }
+
+            $seguidoresUnicosAportados = (int) round($seguidoresRed * $factorIncremental);
+            $seguidoresNetosEstimados += $seguidoresUnicosAportados;
+            $plataformasProcesadas[] = $plataforma;
+
+            $tiersDesglose[] = [
+                'tier' => $tierNumero,
+                'nombre' => $tierNombre,
+                'plataforma' => $plataforma,
+                'handle' => $perfil->handle_usuario,
+                'seguidores_brutos' => $seguidoresRed,
+                'seguidores_unicos' => $seguidoresUnicosAportados,
+                'factor_incremental_pct' => round($factorIncremental * 100),
+                'esta_activo' => true,
+            ];
+        }
+
+        if ($seguidoresNetosEstimados <= 0) {
+            $seguidoresNetosEstimados = $totalSeguidores;
+        }
+
         $engagementRate = $totalVistas > 0
             ? round(($interaccionesTotales / $totalVistas) * 100, 2)
-            : ($totalSeguidores > 0 ? round(($interaccionesTotales / $totalSeguidores) * 100, 2) : 0);
+            : ($seguidoresNetosEstimados > 0 ? round(($interaccionesTotales / $seguidoresNetosEstimados) * 100, 2) : 0);
 
         $humorPromedio = $publicaciones->whereNotNull('termometro_humor_social')->avg('termometro_humor_social');
         $humorPromedioFormateado = $humorPromedio ? number_format($humorPromedio, 1) : '4.8';
 
-        // Ratio de Penetración Territorial sobre el Padrón
+        // Ratio de Penetración Territorial sobre el Padrón (Neto Real vs Bruto)
         $padronElectoral = $candidato->territorio?->padron_electoral ?? 0;
-        $ratioPenetracion = $padronElectoral > 0
+        $ratioPenetracionNeta = $padronElectoral > 0
+            ? round(($seguidoresNetosEstimados / $padronElectoral) * 100, 1)
+            : 0;
+        $ratioPenetracionBruta = $padronElectoral > 0
             ? round(($totalSeguidores / $padronElectoral) * 100, 1)
             : 0;
+
+        // Meta de Score de Impacto: Basado en el promedio de publicaciones de las redes activas (/500 pts base por post)
+        // Ejemplo: 3 redes activas con 4 publicaciones c/u = 4 posts en promedio -> Meta = 4 x 500 = 2.000 pts
+        $perfilesActivos = $candidato->perfilesSociales->filter(function ($p) use ($publicaciones) {
+            return $p->esta_activo || $publicaciones->where('perfil_social_id', $p->id)->count() > 0;
+        });
+        $cantRedesActivas = max(1, $perfilesActivos->count() > 0 ? $perfilesActivos->count() : $candidato->perfilesSociales->count());
+        $promedioPostsPorRed = round($totalPosts / $cantRedesActivas, 1);
+
+        $scoreImpactoMeta = (int) max(500, round($promedioPostsPorRed * 500));
+        $scoreImpactoBaseTexto = "{$promedioPostsPorRed} posts prom. / {$cantRedesActivas} " . ($cantRedesActivas === 1 ? 'red' : 'redes') . ' (x500 pts)';
+
+        $scoreImpactoPct = $scoreImpactoMeta > 0
+            ? round(($scoreImpactoTotal / $scoreImpactoMeta) * 100, 1)
+            : 0;
+
+        if ($scoreImpactoPct >= 100) {
+            $scoreImpactoEstado = 'optimo';
+            $scoreImpactoEstadoTexto = 'Óptimo';
+        } elseif ($scoreImpactoPct >= 70) {
+            $scoreImpactoEstado = 'mantenimiento';
+            $scoreImpactoEstadoTexto = 'Mantenimiento';
+        } else {
+            $scoreImpactoEstado = 'frio';
+            $scoreImpactoEstadoTexto = 'Bajo impacto';
+        }
 
         // 1. Desglose por Red Social del Candidato con Métricas y Enlace
         $plataformasColores = [
@@ -205,8 +294,10 @@ class DashboardController extends Controller
 
             return [
                 'id' => $eje->id,
+                'pilar_principal' => $eje->pilar_principal,
                 'nombre' => $eje->nombre,
                 'color_badge' => $eje->color_badge ?: '#06b6d4',
+                'icono' => $eje->icono,
                 'posts_count' => $postsEje->count(),
                 'total_vistas' => $vistas,
                 'total_interacciones' => $intTotal,
@@ -311,8 +402,11 @@ class DashboardController extends Controller
                 'score_impacto' => ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10),
                 'termometro_humor_social' => $p->termometro_humor_social,
                 'eje_tematico' => $p->ejeTematico ? [
+                    'id' => $p->ejeTematico->id,
+                    'pilar_principal' => $p->ejeTematico->pilar_principal,
                     'nombre' => $p->ejeTematico->nombre,
                     'color_badge' => $p->ejeTematico->color_badge,
+                    'icono' => $p->ejeTematico->icono,
                 ] : null,
                 'url_post' => $p->url_post,
                 'media_url' => $p->media_url,
@@ -350,8 +444,11 @@ class DashboardController extends Controller
                 'total_republicados' => $p->total_republicados,
                 'termometro_humor_social' => $p->termometro_humor_social,
                 'eje_tematico' => $p->ejeTematico ? [
+                    'id' => $p->ejeTematico->id,
+                    'pilar_principal' => $p->ejeTematico->pilar_principal,
                     'nombre' => $p->ejeTematico->nombre,
                     'color_badge' => $p->ejeTematico->color_badge,
+                    'icono' => $p->ejeTematico->icono,
                 ] : null,
                 'figuras_acompanantes' => $p->figuras_acompanantes ?? [],
                 'comentarios_destacados' => $p->comentarios_destacados ?? [],
@@ -407,17 +504,28 @@ class DashboardController extends Controller
             'stats' => [
                 'total_seguidores' => number_format($totalSeguidores),
                 'total_seguidores_raw' => $totalSeguidores,
+                'total_seguidores_netos' => number_format($seguidoresNetosEstimados),
+                'total_seguidores_netos_raw' => $seguidoresNetosEstimados,
                 'crecimiento_neto_seguidores' => $crecimientoNetoTotalSeguidores,
                 'crecimiento_pct_seguidores' => $crecimientoPctTotalSeguidores,
                 'score_impacto_total' => number_format($scoreImpactoTotal),
                 'score_impacto_raw' => $scoreImpactoTotal,
+                'score_impacto_meta' => number_format($scoreImpactoMeta),
+                'score_impacto_meta_raw' => $scoreImpactoMeta,
+                'score_impacto_pct' => $scoreImpactoPct,
+                'score_impacto_estado' => $scoreImpactoEstado,
+                'score_impacto_estado_texto' => $scoreImpactoEstadoTexto,
+                'score_impacto_base_texto' => $scoreImpactoBaseTexto,
                 'total_vistas' => number_format($totalVistas),
                 'total_vistas_raw' => $totalVistas,
                 'total_publicaciones' => $totalPosts,
                 'engagement_promedio' => $engagementRate.'%',
                 'inversion_pauta_total' => $totalPauta,
                 'humor_social_promedio' => $humorPromedioFormateado,
-                'ratio_penetracion' => $ratioPenetracion.'%',
+                'ratio_penetracion' => $ratioPenetracionNeta.'%',
+                'ratio_penetracion_raw' => $ratioPenetracionNeta,
+                'ratio_penetracion_bruta' => $ratioPenetracionBruta.'%',
+                'tiers_desglose' => $tiersDesglose,
                 'share_of_voice' => $shareOfVoicePropio.'%',
             ],
             'redes_desglose' => $redesDesglose,

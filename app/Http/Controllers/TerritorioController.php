@@ -317,13 +317,67 @@ class TerritorioController extends Controller
         // Pirámide Demográfica
         $piramide = $territorioActivo?->piramide_etaria ?: $this->demographicService->generarPiramideEtaria($poblacionTotal, $padronElectoral);
 
-        // Perfiles Sociales del Candidato Propio y Desduplicación de Audiencia
+        // Perfiles Sociales del Candidato Propio y Desduplicación de Audiencia por TIERS (Solo Redes Activas)
         $perfiles = $candidatoPropio ? $candidatoPropio->perfilesSociales : collect();
         $totalSeguidoresBruto = (int) $perfiles->sum('seguidores_actuales');
-        $tasaSolapamiento = 0.30; // 30% de solapamiento inter-redes
-        $totalSeguidores = (int) round($totalSeguidoresBruto * (1 - $tasaSolapamiento));
 
+        // Desduplicación por Tiers sobre canales ACTIVOS
+        $perfilesActivos = $perfiles
+            ->filter(fn ($p) => (bool) $p->esta_activo && (int) $p->seguidores_actuales > 0)
+            ->sortByDesc('seguidores_actuales')
+            ->values();
+
+        $seguidoresNetosEstimados = 0;
+        $plataformasProcesadas = [];
+        $tiersDesglose = [];
+
+        foreach ($perfilesActivos as $idx => $perfil) {
+            $seguidoresRed = (int) $perfil->seguidores_actuales;
+            $plataforma = $perfil->plataforma;
+            $tierNumero = $idx + 1;
+
+            if ($idx === 0) {
+                // Tier 1: Red Dominante Activa (100% base única)
+                $factorIncremental = 1.0;
+                $tierNombre = 'Tier 1 (Red Principal Activa)';
+            } else {
+                $esMeta = in_array($plataforma, ['facebook', 'instagram', 'threads']);
+                $tieneMetaPrevia = count(array_intersect($plataformasProcesadas, ['facebook', 'instagram', 'threads'])) > 0;
+
+                if ($esMeta && $tieneMetaPrevia) {
+                    // Solapamiento cruzado dentro de Meta (~65% solapado -> 35% personas únicas adicionales)
+                    $factorIncremental = 0.35;
+                    $tierNombre = "Tier {$tierNumero} (Meta / Solapado)";
+                } else {
+                    // Plataformas fuera de Meta (TikTok, X, YouTube) aportan mayor novedad
+                    $factorIncremental = 0.55;
+                    $tierNombre = "Tier {$tierNumero} (Nueva Audiencia)";
+                }
+            }
+
+            $seguidoresUnicosAportados = (int) round($seguidoresRed * $factorIncremental);
+            $seguidoresNetosEstimados += $seguidoresUnicosAportados;
+            $plataformasProcesadas[] = $plataforma;
+
+            $tiersDesglose[] = [
+                'tier' => $tierNumero,
+                'nombre' => $tierNombre,
+                'plataforma' => $plataforma,
+                'handle' => $perfil->handle_usuario,
+                'seguidores_brutos' => $seguidoresRed,
+                'seguidores_unicos' => $seguidoresUnicosAportados,
+                'factor_incremental_pct' => round($factorIncremental * 100),
+                'esta_activo' => true,
+            ];
+        }
+
+        if ($seguidoresNetosEstimados <= 0) {
+            $seguidoresNetosEstimados = $totalSeguidoresBruto;
+        }
+
+        $totalSeguidores = $seguidoresNetosEstimados;
         $penetracionPadronPct = $padronElectoral > 0 ? round(($totalSeguidores / $padronElectoral) * 100, 2) : 0;
+        $penetracionPadronBrutaPct = $padronElectoral > 0 ? round(($totalSeguidoresBruto / $padronElectoral) * 100, 2) : 0;
         $coberturaMetaPct = $metaVotos > 0 ? round(($totalSeguidores / $metaVotos) * 100, 2) : 0;
 
         // Cargar Publicaciones del candidato para analítica de impacto
@@ -335,9 +389,22 @@ class TerritorioController extends Controller
         $totalLikes = (int) $publicaciones->sum('total_likes');
         $totalComentarios = (int) $publicaciones->sum('total_comentarios');
         $totalCompartidos = (int) $publicaciones->sum('total_compartidos');
+        $totalRepublicados = (int) $publicaciones->sum('total_republicados');
         $totalGuardados = (int) $publicaciones->sum('total_guardados');
-        $totalInteracciones = $totalLikes + $totalComentarios + $totalCompartidos + $totalGuardados;
+        $totalInteracciones = $totalLikes + $totalComentarios + $totalCompartidos + $totalRepublicados + $totalGuardados;
         $totalPautaInvertida = (float) $publicaciones->sum('monto_invertido_pauta');
+
+        $scoreImpactoTotal = ($totalLikes * 1) + ($totalComentarios * 3) + ($totalCompartidos * 5) + ($totalRepublicados * 10);
+
+        // Meta de Score de Impacto (/500 pts base por post)
+        $perfilesActivos = $perfiles->filter(function ($p) use ($publicaciones) {
+            return $p->esta_activo || $publicaciones->where('perfil_social_id', $p->id)->count() > 0;
+        });
+        $cantRedesActivas = max(1, $perfilesActivos->count() > 0 ? $perfilesActivos->count() : $perfiles->count());
+        $promedioPostsPorRed = round($totalPosts / $cantRedesActivas, 1);
+        $scoreImpactoMeta = (int) max(500, round($promedioPostsPorRed * 500));
+        $scoreImpactoPct = $scoreImpactoMeta > 0 ? round(($scoreImpactoTotal / $scoreImpactoMeta) * 100, 1) : 0;
+        $scoreImpactoBaseTexto = "{$promedioPostsPorRed} posts prom. / {$cantRedesActivas} " . ($cantRedesActivas === 1 ? 'red' : 'redes') . ' (x500 pts)';
 
         // Métricas de Rendimiento Individual por Publicación (Promedios & Techo Máximo)
         $promedioInteraccionesPorPost = $totalPosts > 0 ? round($totalInteracciones / $totalPosts, 1) : 0;
@@ -356,7 +423,7 @@ class TerritorioController extends Controller
         // Pastel 1: Comunidad Digital Desduplicada vs Padrón No Alcanzado
         $pastelPadron = [
             [
-                'label' => 'Comunidad Única en Redes',
+                'label' => 'Comunidad Única en Redes (Tiers)',
                 'valor' => $totalSeguidores,
                 'porcentaje' => $penetracionPadronPct,
                 'color' => '#06b6d4',
@@ -637,13 +704,20 @@ class TerritorioController extends Controller
                 'meta_votos' => $metaVotos,
                 'total_seguidores_bruto' => $totalSeguidoresBruto,
                 'total_seguidores_comunidad' => $totalSeguidores,
-                'tasa_solapamiento_pct' => 30,
                 'penetracion_padron_pct' => $penetracionPadronPct,
+                'penetracion_padron_bruta_pct' => $penetracionPadronBrutaPct,
                 'cobertura_meta_pct' => $coberturaMetaPct,
+                'tiers_desglose' => $tiersDesglose,
+                'score_impacto_total' => $scoreImpactoTotal,
+                'score_impacto_meta' => $scoreImpactoMeta,
+                'score_impacto_pct' => $scoreImpactoPct,
+                'score_impacto_base_texto' => $scoreImpactoBaseTexto,
                 'total_publicaciones' => $totalPosts,
                 'total_interacciones' => $totalInteracciones,
                 'total_likes' => $totalLikes,
                 'total_comentarios' => $totalComentarios,
+                'total_compartidos' => $totalCompartidos,
+                'total_republicados' => $totalRepublicados,
                 'total_pauta_invertida' => $totalPautaInvertida,
                 'costo_por_interaccion' => $totalInteracciones > 0 ? round($totalPautaInvertida / $totalInteracciones, 2) : 0,
                 // Rendimiento Individual & Promedios Reales

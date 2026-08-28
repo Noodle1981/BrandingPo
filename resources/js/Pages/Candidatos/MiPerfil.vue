@@ -361,11 +361,12 @@ const savePerfilSocial = () => {
 // Modal de edición de datos generales del candidato
 const isEditingCandidato = ref(false);
 const formCandidato = useForm({
+  workspace_nombre: page.props.workspace?.nombre || '',
   nombre_completo: props.candidato.nombre_completo || '',
   partido_coalicion: props.candidato.partido_coalicion || '',
   cargo_aspirado: props.candidato.cargo_aspirado || '',
   estado_politico: props.candidato.estado_politico || 'candidato',
-  ciclo_campana_id: props.candidato.ciclo_campana_id || props.ciclos[0]?.id,
+  ciclo_campana_id: props.candidato.ciclo_campana_id || props.ciclos[0]?.id || '',
   territorio_id: props.candidato.territorio_id || props.candidato.territorio?.id || '',
   territorio_nombre: props.candidato.territorio?.nombre || '',
   padron_electoral: props.candidato.territorio?.padron_electoral || 0,
@@ -430,24 +431,32 @@ const tabBadgeStyle = (colorEstado) => {
     case 'azul':
       // 🔵 Certificada / Verificada
       return {
-        tab: 'border-blue-500 bg-blue-500/10 text-blue-400 font-bold',
-        pill: 'bg-blue-500 text-white',
-        label: 'Verificada (Azul)'
+        tab: 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30',
+        pill: 'bg-blue-500 text-white font-bold',
+        label: 'Verificada'
       };
-    case 'naranja':
-      // 🟠 Activa / Vinculada
+    case 'verde':
+    case 'naranja': // retrocompatibilidad
+      // 🟢 Activa / En uso de campaña
       return {
-        tab: 'border-amber-500 bg-amber-500/10 text-amber-400 font-semibold',
-        pill: 'bg-amber-500 text-slate-950 font-bold',
-        label: 'Activa (Naranja)'
+        tab: 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold ring-2 ring-emerald-500/30',
+        pill: 'bg-emerald-500 text-white font-bold',
+        label: 'Activa'
       };
     case 'rojo':
-    default:
-      // 🔴 No vinculada / Inactiva
+      // 🔴 Vinculada pero Inactiva / Sin movimiento
       return {
-        tab: 'border-rose-500/50 bg-rose-500/10 text-rose-400 font-medium',
-        pill: 'bg-rose-500 text-white',
-        label: 'Inactiva (Roja)'
+        tab: 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold ring-2 ring-rose-500/30',
+        pill: 'bg-rose-500 text-white font-bold',
+        label: 'Inactiva'
+      };
+    case 'gris':
+    default:
+      // ⚪ Sin uso / Pendiente de configuración
+      return {
+        tab: 'border-slate-300 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-950 text-slate-500 dark:text-slate-400 font-medium ring-1 ring-slate-400/30',
+        pill: 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium',
+        label: 'Configurar'
       };
   }
 };
@@ -897,7 +906,7 @@ const refrescarCanal = () => {
               {{ candidato.cargo_aspirado }} &bull; <span class="text-slate-500 font-normal">{{ candidato.partido_coalicion }}</span>
             </p>
 
-            <div class="mt-2.5 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+            <div class="mt-2.5 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
               <span class="inline-flex items-center gap-1">
                 <MapPin class="w-3.5 h-3.5 text-cyan-500" />
                 {{ candidato.territorio?.nombre || 'Territorio General' }}
@@ -906,9 +915,23 @@ const refrescarCanal = () => {
                 <Vote class="w-3.5 h-3.5 text-emerald-500" />
                 Padrón: {{ Number(candidato.territorio.padron_electoral).toLocaleString('es-AR') }} electores
               </span>
-              <span class="inline-flex items-center gap-1 font-mono text-cyan-500 font-bold">
+              <!-- Seguidores Únicos Reales (TIERS) -->
+              <span
+                class="inline-flex items-center gap-1.5 font-mono text-cyan-600 dark:text-cyan-400 font-bold bg-cyan-500/10 px-2.5 py-1 rounded-xl border border-cyan-500/20"
+                :title="`Desduplicación por TIERS de canales activos: ${Number(candidato.total_seguidores_netos || candidato.total_seguidores).toLocaleString('es-AR')} electores únicos no repetidos`"
+              >
                 <Users class="w-3.5 h-3.5" />
-                Comunidad: {{ Number(candidato.total_seguidores).toLocaleString('es-AR') }} seguidores
+                <span>{{ Number(candidato.total_seguidores_netos || candidato.total_seguidores).toLocaleString('es-AR') }}</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-500">Únicos Reales</span>
+                <span class="text-[10px] text-slate-400 font-normal">({{ Number(candidato.total_seguidores_bruto || candidato.total_seguidores).toLocaleString('es-AR') }} brutos)</span>
+              </span>
+              <span
+                v-if="candidato.penetracion_neta_pct"
+                class="inline-flex items-center gap-1 font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 text-[11px]"
+                :title="`Penetración Neta sobre el padrón electoral`"
+              >
+                <Target class="w-3 h-3" />
+                <span>{{ candidato.penetracion_neta_pct }}% del padrón</span>
               </span>
             </div>
           </div>
@@ -937,8 +960,10 @@ const refrescarCanal = () => {
           class="p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-center gap-2 cursor-pointer relative shadow-xs group"
           :class="[
             selectedPlatformKey === red.key
-              ? 'ring-2 ring-cyan-500 shadow-md scale-102 ' + tabBadgeStyle(red.color_estado).tab
-              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm'
+              ? 'shadow-md scale-102 ' + tabBadgeStyle(red.color_estado).tab
+              : (red.color_estado === 'gris'
+                  ? 'border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 text-slate-400 opacity-75 hover:opacity-100 hover:border-slate-400 hover:bg-white dark:hover:bg-slate-900'
+                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm')
           ]"
         >
           <!-- Botón de Engranaje para Configurar Directamente -->
@@ -992,7 +1017,7 @@ const refrescarCanal = () => {
             class="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider font-mono truncate max-w-full"
             :class="tabBadgeStyle(red.color_estado).pill"
           >
-            {{ red.color_estado === 'azul' ? '✓ Verificada' : (red.color_estado === 'naranja' ? 'Activa' : 'Inactiva') }}
+            {{ tabBadgeStyle(red.color_estado).label }}
           </span>
         </div>
       </div>
@@ -1010,15 +1035,18 @@ const refrescarCanal = () => {
                 class="w-14 h-14 rounded-2xl object-cover border-2 border-cyan-500 shadow-sm"
               />
               <div
-                class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900"
+                class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-xs"
                 :class="{
                   'bg-blue-500 text-white': currentRed.color_estado === 'azul',
-                  'bg-amber-500 text-slate-950': currentRed.color_estado === 'naranja',
+                  'bg-emerald-500 text-white': currentRed.color_estado === 'verde' || currentRed.color_estado === 'naranja',
                   'bg-rose-500 text-white': currentRed.color_estado === 'rojo',
+                  'bg-slate-400 text-white': currentRed.color_estado === 'gris',
                 }"
               >
                 <CheckCircle v-if="currentRed.color_estado === 'azul'" class="w-3 h-3" />
-                <span v-else class="text-[9px] font-extrabold">{{ currentRed.color_estado === 'naranja' ? '●' : '×' }}</span>
+                <span v-else-if="currentRed.color_estado === 'verde' || currentRed.color_estado === 'naranja'" class="text-[9px] font-extrabold">●</span>
+                <span v-else-if="currentRed.color_estado === 'rojo'" class="text-[9px] font-extrabold">×</span>
+                <span v-else class="text-[9px] font-extrabold">+</span>
               </div>
             </div>
 
@@ -1572,25 +1600,25 @@ const refrescarCanal = () => {
 
               <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                 <div>
-                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">Canal Activo</span>
-                  <span class="text-[10px] text-amber-500 font-semibold">🟠 Pestaña Naranja</span>
+                  <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 block">Canal Activo</span>
+                  <span class="text-[10px] text-emerald-500 font-semibold">🟢 Pestaña Verde (Con actividad)</span>
                 </div>
                 <input
                   v-model="formRed.esta_activo"
                   type="checkbox"
-                  class="w-5 h-5 rounded text-cyan-500"
+                  class="w-5 h-5 rounded text-emerald-500 focus:ring-emerald-500"
                 />
               </div>
 
               <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                 <div>
                   <span class="text-xs font-bold text-blue-500 dark:text-blue-400 block">Cuenta Verificada</span>
-                  <span class="text-[10px] text-blue-400 font-semibold">🔵 Pestaña Azul</span>
+                  <span class="text-[10px] text-blue-400 font-semibold">🔵 Pestaña Azul (Oficial)</span>
                 </div>
                 <input
                   v-model="formRed.esta_verificado"
                   type="checkbox"
-                  class="w-5 h-5 rounded text-blue-500"
+                  class="w-5 h-5 rounded text-blue-500 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -1779,8 +1807,48 @@ const refrescarCanal = () => {
         </div>
 
         <form @submit.prevent="saveCandidato" class="space-y-4">
+          <!-- 1. NOMBRE DE LA CAMPAÑA / WORKSPACE (CABECERA PRINCIPAL) -->
+          <div class="p-4 rounded-2xl bg-cyan-500/5 border border-cyan-500/20 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-mono flex items-center gap-1.5">
+                <Flag class="w-4 h-4 text-cyan-500" />
+                <span>Nombre de la Campaña Activa (Cabecera Superior)</span>
+              </span>
+              <span class="text-[10px] text-cyan-500 font-mono font-bold uppercase">Workspace</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Título de la Campaña / Cliente *
+                </label>
+                <input
+                  v-model="formCandidato.workspace_nombre"
+                  type="text"
+                  required
+                  placeholder="ej. Campaña Sisterna — Albardón 2027"
+                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-bold focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Ciclo / Año Electoral
+                </label>
+                <select
+                  v-model="formCandidato.ciclo_campana_id"
+                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-bold focus:ring-2 focus:ring-cyan-500"
+                >
+                  <option v-for="c in ciclos" :key="c.id" :value="c.id">
+                    {{ c.nombre }} ({{ c.anio }})
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nombre Completo *</label>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nombre Completo del Candidato *</label>
             <input
               v-model="formCandidato.nombre_completo"
               type="text"

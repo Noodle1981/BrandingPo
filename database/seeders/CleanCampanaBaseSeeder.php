@@ -157,38 +157,161 @@ class CleanCampanaBaseSeeder extends Seeder
         );
 
         // ─────────────────────────────────────────────────────────
-        // 5. EJES TEMÁTICOS
+        // 5. EJES TEMÁTICOS (5 Pilares Estratégicos & 16 Sub-ejes)
         // ─────────────────────────────────────────────────────────
         $ejes = [
+            // 🌿 PILAR 1: Ciudad Moderna y Sostenible
             [
-                'nombre' => 'Obras & Infraestructura Barrial',
-                'slug' => 'obras',
-                'color_badge' => '#06b6d4',
-                'descripcion' => 'Pavimento, iluminación LED, plazas, cloacas y urbanización.',
-            ],
-            [
-                'nombre' => 'Seguridad Ciudadana & Prevención',
-                'slug' => 'seguridad',
-                'color_badge' => '#ef4444',
-                'descripcion' => 'Patrullas barriales, cámaras, monitoreo y tranquilidad vecinal.',
-            ],
-            [
-                'nombre' => 'Producción, Empleo & Juventud',
-                'slug' => 'produccion',
+                'pilar_principal' => '1. Ciudad Moderna y Sostenible',
+                'nombre' => 'Medio Ambiente y Sustentabilidad',
+                'slug' => 'medio-ambiente-y-sustentabilidad',
                 'color_badge' => '#10b981',
-                'descripcion' => 'Comercio local, primer empleo, apoyo a viñateros y emprendedores.',
+                'icono' => 'Leaf',
+                'orden' => 1,
+                'descripcion' => 'Espacios verdes, reciclaje, energías limpias y cuidado ambiental.',
             ],
             [
-                'nombre' => 'Salud, Niñez & Cercanía Social',
-                'slug' => 'salud',
+                'pilar_principal' => '1. Ciudad Moderna y Sostenible',
+                'nombre' => 'Obras e Infraestructura',
+                'slug' => 'obras-e-infraestructura',
+                'color_badge' => '#10b981',
+                'icono' => 'HardHat',
+                'orden' => 2,
+                'descripcion' => 'Pavimentación, cloacas, red de agua, iluminación LED y urbanismo.',
+            ],
+            [
+                'pilar_principal' => '1. Ciudad Moderna y Sostenible',
+                'nombre' => 'Movilidad Urbana y Transporte',
+                'slug' => 'movilidad-urbana-y-transporte',
+                'color_badge' => '#10b981',
+                'icono' => 'Bus',
+                'orden' => 3,
+                'descripcion' => 'Transporte público, ciclovías, conectividad barrial y accesibilidad.',
+            ],
+
+            // ⚡ PILAR 2: Desarrollo, Empleo y Futuro
+            [
+                'pilar_principal' => '2. Desarrollo, Empleo y Futuro',
+                'nombre' => 'Producción y Empleo',
+                'slug' => 'produccion-y-empleo',
+                'color_badge' => '#06b6d4',
+                'icono' => 'Briefcase',
+                'orden' => 4,
+                'descripcion' => 'Polo productivo, apoyo a pymes, primer empleo e industrias locales.',
+            ],
+            [
+                'pilar_principal' => '2. Desarrollo, Empleo y Futuro',
+                'nombre' => 'Innovación y Capacitación',
+                'slug' => 'innovacion-y-capacitacion',
+                'color_badge' => '#06b6d4',
+                'icono' => 'Sparkles',
+                'orden' => 5,
+                'descripcion' => 'Polos tecnológicos, cursos de oficios, economía del conocimiento.',
+            ],
+            [
+                'pilar_principal' => '2. Desarrollo, Empleo y Futuro',
+                'nombre' => 'Turismo y Comercio',
+                'slug' => 'turismo-y-comercio',
+                'color_badge' => '#06b6d4',
+                'icono' => 'ShoppingBag',
+                'orden' => 6,
+                'descripcion' => 'Rutas gastronómicas, hotelería, centros comerciales abiertos y ferias.',
+            ],
+            [
+                'pilar_principal' => '2. Desarrollo, Empleo y Futuro',
+                'nombre' => 'Juventud',
+                'slug' => 'juventud',
+                'color_badge' => '#06b6d4',
+                'icono' => 'Zap',
+                'orden' => 7,
+                'descripcion' => 'Oportunidades para jóvenes, becas, arte urbano y espacios de encuentro.',
+            ],
+
+            // 🧡 PILAR 3: Cuidado, Bienestar y Comunidad
+            [
+                'pilar_principal' => '3. Cuidado, Bienestar y Comunidad',
+                'nombre' => 'Salud y Deportes',
+                'slug' => 'salud-y-deportes',
                 'color_badge' => '#f59e0b',
-                'descripcion' => 'Dispensarios 24hs, asistencia alimentaria y centros de salud.',
+                'icono' => 'Activity',
+                'orden' => 8,
+                'descripcion' => 'Salitas 24hs, prevención sanitaria, clubes barriales y torneos.',
             ],
             [
-                'nombre' => 'Innovación, Deporte & Gobierno Abierto',
-                'slug' => 'innovacion',
+                'pilar_principal' => '3. Cuidado, Bienestar y Comunidad',
+                'nombre' => 'Infancia y Adultos Mayores',
+                'slug' => 'infancia-y-adultos-mayores',
+                'color_badge' => '#f59e0b',
+                'icono' => 'Users',
+                'orden' => 9,
+                'descripcion' => 'Centros de primera infancia, talleres de la tercera edad y contención.',
+            ],
+            [
+                'pilar_principal' => '3. Cuidado, Bienestar y Comunidad',
+                'nombre' => 'Género e Inclusión Social',
+                'slug' => 'genero-e-inclusion-social',
+                'color_badge' => '#f59e0b',
+                'icono' => 'HeartHandshake',
+                'orden' => 10,
+                'descripcion' => 'Políticas de equidad, asistencia a víctimas, discapacidad y derechos.',
+            ],
+            [
+                'pilar_principal' => '3. Cuidado, Bienestar y Comunidad',
+                'nombre' => 'Cultura y Eventos Comunitarios',
+                'slug' => 'cultura-y-eventos-comunitarios',
+                'color_badge' => '#f59e0b',
+                'icono' => 'Music',
+                'orden' => 11,
+                'descripcion' => 'Festivales populares, identidad local, artistas y talleres barriales.',
+            ],
+
+            // 🛡️ PILAR 4: Seguridad y Tranquilidad
+            [
+                'pilar_principal' => '4. Seguridad y Tranquilidad',
+                'nombre' => 'Seguridad Ciudadana y Prevención',
+                'slug' => 'seguridad-ciudadana-y-prevencion',
+                'color_badge' => '#ef4444',
+                'icono' => 'ShieldCheck',
+                'orden' => 12,
+                'descripcion' => 'Patrullaje inteligente, cámaras de videovigilancia, alarmas y centros de monitoreo.',
+            ],
+            [
+                'pilar_principal' => '4. Seguridad y Tranquilidad',
+                'nombre' => 'Tránsito y Control Urbano',
+                'slug' => 'transito-y-control-urbano',
+                'color_badge' => '#ef4444',
+                'icono' => 'Car',
+                'orden' => 13,
+                'descripcion' => 'Seguridad vial, semaforización, controles vehiculares y orden en la vía pública.',
+            ],
+
+            // 🔮 PILAR 5: Gobierno Transparente y Eficiente
+            [
+                'pilar_principal' => '5. Gobierno Transparente y Eficiente',
+                'nombre' => 'Atención Ciudadana y Trámites Digitales',
+                'slug' => 'atencion-ciudadana-y-tramites-digitales',
                 'color_badge' => '#8b5cf6',
-                'descripcion' => 'Polideportivos, cultura joven, trámites ágiles y transparencia.',
+                'icono' => 'Smartphone',
+                'orden' => 14,
+                'descripcion' => 'Municipio digital, reclamos por WhatsApp, simplificación de trámites.',
+            ],
+            [
+                'pilar_principal' => '5. Gobierno Transparente y Eficiente',
+                'nombre' => 'Transparencia y Participación Ciudadana',
+                'slug' => 'transparencia-y-participacion-ciudadana',
+                'color_badge' => '#8b5cf6',
+                'icono' => 'Eye',
+                'orden' => 15,
+                'descripcion' => 'Presupuesto participativo, datos abiertos, auditorías y rendición de cuentas.',
+            ],
+            [
+                'pilar_principal' => '5. Gobierno Transparente y Eficiente',
+                'nombre' => 'Política y Participación',
+                'slug' => 'politica-y-participacion',
+                'color_badge' => '#8b5cf6',
+                'icono' => 'Vote',
+                'orden' => 16,
+                'descripcion' => 'Consensos democráticos, diálogo institucional y articulación cívica.',
             ],
         ];
 

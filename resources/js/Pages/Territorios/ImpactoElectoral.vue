@@ -261,7 +261,7 @@ const getDonutSlices = (items) => {
           </div>
         </div>
 
-        <!-- 2. Penetración Digital Directa en el Padrón (Desduplicada) -->
+        <!-- 2. Penetración Digital Directa en el Padrón (Desduplicada por TIERS) -->
         <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">Penetración Única</span>
@@ -269,24 +269,62 @@ const getDonutSlices = (items) => {
               <TrendingUp class="w-4 h-4" />
             </div>
           </div>
-          <div class="flex items-baseline gap-2">
+          <div class="flex items-baseline justify-between gap-1">
             <span class="text-2xl font-black font-mono text-emerald-500">
               {{ stats.penetracion_padron_pct }}%
             </span>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-500">
-              Desduplicado (-30%)
+            <span
+              v-if="stats.penetracion_padron_bruta_pct"
+              class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-500"
+              :title="`Penetración bruta sin desduplicar: ${stats.penetracion_padron_bruta_pct}%`"
+            >
+              vs {{ stats.penetracion_padron_bruta_pct }}% bruto
             </span>
           </div>
           <div class="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 font-mono">
-            <span>Electores Únicos:</span>
+            <span>Electores Únicos (Tiers):</span>
             <span class="font-bold text-slate-700 dark:text-slate-300">{{ formatNumber(stats.total_seguidores_comunidad) }}</span>
           </div>
         </div>
 
-        <!-- 3. Rendimiento Promedio por Post -->
+        <!-- 3. Score de Impacto Orgánico Ponderado (vs Meta /500 pts) -->
         <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">⚡ Promedio / Post</span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">Score de Impacto</span>
+            <div class="w-8 h-8 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center">
+              <Zap class="w-4 h-4" />
+            </div>
+          </div>
+          <div class="flex items-baseline justify-between gap-1">
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black font-mono text-violet-500">
+                {{ formatNumber(stats.score_impacto_total) }}
+              </span>
+              <span class="text-xs font-mono text-slate-400">
+                / {{ formatNumber(stats.score_impacto_meta || 2000) }}
+              </span>
+            </div>
+            <span
+              class="text-xs font-bold font-mono"
+              :class="{
+                'text-emerald-500': (stats.score_impacto_pct || 0) >= 100,
+                'text-amber-500': (stats.score_impacto_pct || 0) >= 70 && (stats.score_impacto_pct || 0) < 100,
+                'text-rose-500': (stats.score_impacto_pct || 0) < 70
+              }"
+            >
+              {{ stats.score_impacto_pct || 0 }}%
+            </span>
+          </div>
+          <div class="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 font-mono">
+            <span class="truncate" :title="stats.score_impacto_base_texto">{{ stats.score_impacto_base_texto || 'Base: 500 pts/post prom.' }}</span>
+            <span class="font-bold text-violet-400">Ponderado</span>
+          </div>
+        </div>
+
+        <!-- 4. Rendimiento Promedio por Post & Pico Viral -->
+        <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">⚡ Rendimiento / Post</span>
             <div class="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
               <Flame class="w-4 h-4 fill-current" />
             </div>
@@ -300,30 +338,8 @@ const getDonutSlices = (items) => {
             </span>
           </div>
           <div class="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 font-mono">
-            <span>Moviliza por posteo:</span>
-            <span class="font-bold text-cyan-500">{{ stats.tasa_movilizacion_promedio_pct }}% del padrón</span>
-          </div>
-        </div>
-
-        <!-- 4. Pico Máximo Viral (Techo Histórico) -->
-        <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">🏆 Pico Máximo Viral</span>
-            <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-              <Award class="w-4 h-4" />
-            </div>
-          </div>
-          <div class="flex items-baseline gap-2">
-            <span class="text-2xl font-black font-mono text-amber-500">
-              {{ formatNumber(stats.pico_maximo_interacciones) }}
-            </span>
-            <span class="text-xs font-mono text-slate-400">
-              reacciones
-            </span>
-          </div>
-          <div class="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 font-mono">
-            <span>Techo de impacto:</span>
-            <span class="font-bold text-amber-500">{{ stats.tasa_movilizacion_pico_pct }}% del padrón</span>
+            <span>Pico Viral:</span>
+            <span class="font-bold text-amber-500">{{ formatNumber(stats.pico_maximo_interacciones) }} react. ({{ stats.tasa_movilizacion_pico_pct }}%)</span>
           </div>
         </div>
       </div>
@@ -524,6 +540,62 @@ const getDonutSlices = (items) => {
           </div>
         </div>
 
+      </div>
+
+      <!-- SECCIÓN: 🏛️ MATRIZ DE TIERS & DESDUPLICACIÓN DE AUDIENCIA MULTICANAL -->
+      <div v-if="stats.tiers_desglose && stats.tiers_desglose.length" class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div>
+            <h3 class="text-sm font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Layers class="w-4 h-4 text-cyan-500" />
+              <span>Matriz de TIERS: Desduplicación de Audiencia Única</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Desglose de electores reales no repetidos por canal. Total Bruto: <strong class="text-slate-700 dark:text-slate-200 font-mono">{{ formatNumber(stats.total_seguidores_bruto) }}</strong> cuentas vs. <strong class="text-cyan-500 font-mono">{{ formatNumber(stats.total_seguidores_comunidad) }}</strong> electores netos únicos.
+            </p>
+          </div>
+          <span class="text-xs font-bold font-mono px-2.5 py-1 rounded-xl bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 shrink-0">
+            Penetración Neta: {{ stats.penetracion_padron_pct }}% del Padrón
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+          <div
+            v-for="(t, idx) in stats.tiers_desglose"
+            :key="idx"
+            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 space-y-3"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold font-mono text-cyan-500 uppercase">
+                {{ t.nombre }}
+              </span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                {{ t.factor_incremental_pct }}% incremental
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100 capitalize">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                <span>{{ t.plataforma }}</span>
+              </div>
+              <span class="font-mono text-xs text-slate-400">
+                {{ t.handle || '@' + t.plataforma }}
+              </span>
+            </div>
+
+            <div class="space-y-1.5 pt-2 border-t border-slate-200/60 dark:border-slate-800/60 font-mono text-xs">
+              <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                <span>Cuentas brutas:</span>
+                <span class="font-bold text-slate-700 dark:text-slate-300">{{ formatNumber(t.seguidores_brutos) }}</span>
+              </div>
+              <div class="flex items-center justify-between text-cyan-600 dark:text-cyan-400 font-semibold">
+                <span>Electores únicos aportados:</span>
+                <span class="font-black text-slate-900 dark:text-slate-100">+{{ formatNumber(t.seguidores_unicos) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- SECCIÓN 3: 👥 CRUCE DEMOGRÁFICO DE VOTO POTENCIAL POR FRANJA ETARIA -->

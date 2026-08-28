@@ -52,6 +52,14 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  anios_disponibles: {
+    type: Array,
+    default: () => [],
+  },
+  meses_disponibles: {
+    type: Array,
+    default: () => [],
+  },
   stats_resumen: {
     type: Object,
     default: () => ({}),
@@ -65,8 +73,10 @@ const selectedCandidato = ref(props.filtros.candidato_id || '');
 const selectedPlataforma = ref(props.filtros.plataforma || '');
 const selectedTipoPauta = ref(props.filtros.tipo_pauta || '');
 const selectedEje = ref(props.filtros.eje_tematico_id || '');
+const selectedAnio = ref(props.filtros.anio || '');
 const selectedMes = ref(props.filtros.mes || '');
 const selectedRangoAprobacion = ref(props.filtros.rango_aprobacion || '');
+const selectedOrden = ref(props.filtros.orden || 'recientes');
 const searchQuery = ref(props.filtros.search || '');
 
 const plataformas = [
@@ -78,6 +88,20 @@ const plataformas = [
   { key: 'x_twitter', label: 'X (Twitter)', color: '#64748b' },
   { key: 'linkedin', label: 'LinkedIn', color: '#0A66C2' },
 ];
+
+const groupedEjes = computed(() => {
+  const list = props.ejes || [];
+  const groups = {};
+  list.forEach((eje) => {
+    if (!eje.pilar_principal) return;
+    const pilar = eje.pilar_principal;
+    if (!groups[pilar]) {
+      groups[pilar] = [];
+    }
+    groups[pilar].push(eje);
+  });
+  return groups;
+});
 
 const tiposPauta = [
   { key: 'organico', label: 'Orgánica Pura', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
@@ -92,8 +116,10 @@ const applyFilters = () => {
     plataforma: selectedPlataforma.value || undefined,
     tipo_pauta: selectedTipoPauta.value || undefined,
     eje_tematico_id: selectedEje.value || undefined,
+    anio: selectedAnio.value || undefined,
     mes: selectedMes.value || undefined,
     rango_aprobacion: selectedRangoAprobacion.value || undefined,
+    orden: selectedOrden.value !== 'recientes' ? selectedOrden.value : undefined,
     search: searchQuery.value || undefined,
   }, {
     preserveState: true,
@@ -116,8 +142,10 @@ const clearFilters = () => {
   selectedPlataforma.value = '';
   selectedTipoPauta.value = '';
   selectedEje.value = '';
+  selectedAnio.value = '';
   selectedMes.value = '';
   selectedRangoAprobacion.value = '';
+  selectedOrden.value = 'recientes';
   searchQuery.value = '';
   applyFilters();
 };
@@ -508,8 +536,8 @@ const formatCurrency = (amount) => {
           </button>
         </div>
 
-        <!-- Fila 2: Selectores de Eje, Tipo de Pauta, Aprobación %, Mes y Buscador -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <!-- Fila 2: Selectores de Eje, Tipo de Pauta, Aprobación %, Año, Mes y Buscador -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
           <!-- Buscador -->
           <div class="relative">
             <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -517,7 +545,7 @@ const formatCurrency = (amount) => {
               v-model="searchQuery"
               @input="applyFilters"
               type="text"
-              placeholder="Buscar en texto del post..."
+              placeholder="Buscar en texto..."
               class="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
             />
           </div>
@@ -528,10 +556,12 @@ const formatCurrency = (amount) => {
             @change="applyFilters"
             class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
           >
-            <option value="">Todos los Ejes</option>
-            <option v-for="eje in ejes" :key="eje.id" :value="eje.id">
-              {{ eje.nombre }}
-            </option>
+            <option value="">🎯 Todos los Ejes (5 Pilares)</option>
+            <optgroup v-for="(ejesInGroup, pilar) in groupedEjes" :key="pilar" :label="pilar">
+              <option v-for="eje in ejesInGroup" :key="eje.id" :value="eje.id">
+                • {{ eje.nombre }}
+              </option>
+            </optgroup>
           </select>
 
           <!-- Selector de Tipo de Pauta -->
@@ -542,8 +572,8 @@ const formatCurrency = (amount) => {
           >
             <option value="">Orgánico & Pauta</option>
             <option value="organico">Orgánico Puro</option>
-            <option value="organico_impulsado">Orgánico Impulsado (Boost)</option>
-            <option value="pauta_paga">Anuncio Directo / Pauta</option>
+            <option value="organico_impulsado">Orgánico Impulsado</option>
+            <option value="pauta_paga">Anuncio / Pauta</option>
           </select>
 
           <!-- Selector de Aprobación Neta (%) -->
@@ -552,19 +582,55 @@ const formatCurrency = (amount) => {
             @change="applyFilters"
             class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
           >
-            <option value="">Aprobación (%) — Todas</option>
+            <option value="">Aprobación (%)</option>
             <option value="alta">🟢 Alta (≥ 80%)</option>
             <option value="media">🔵 Media (50% - 79%)</option>
-            <option value="baja">🔴 Baja / Alerta (&lt; 50%)</option>
+            <option value="baja">🔴 Baja (&lt; 50%)</option>
           </select>
 
-          <!-- Selector de Mes -->
-          <input
+          <!-- Selector de Año (Valores reales de la DB) -->
+          <select
+            v-model="selectedAnio"
+            @change="applyFilters"
+            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
+          >
+            <option value="">Año (Todos)</option>
+            <option
+              v-for="a in anios_disponibles"
+              :key="a"
+              :value="a"
+            >
+              {{ a }}
+            </option>
+          </select>
+
+          <!-- Selector de Mes (Valores reales de la DB) -->
+          <select
             v-model="selectedMes"
             @change="applyFilters"
-            type="month"
             class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
-          />
+          >
+            <option value="">Mes (Todos)</option>
+            <option
+              v-for="m in meses_disponibles"
+              :key="m.numero"
+              :value="m.numero"
+            >
+              {{ m.nombre }}
+            </option>
+          </select>
+
+          <!-- Selector de Orden Cronológico -->
+          <select
+            v-model="selectedOrden"
+            @change="applyFilters"
+            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
+            title="Orden de las publicaciones"
+          >
+            <option value="recientes">🕒 Más Recientes (Cronológico)</option>
+            <option value="antiguos">⏳ Más Antiguos</option>
+            <option value="interacciones">🔥 Más Interacciones</option>
+          </select>
         </div>
       </div>
 
@@ -708,15 +774,17 @@ const formatCurrency = (amount) => {
           <!-- Fila 3: Eje Temático, Formato y Fecha -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Eje Temático:</label>
+              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Eje Temático (5 Pilares):</label>
               <select
                 v-model="createForm.eje_tematico_id"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-semibold"
               >
-                <option value="">Seleccionar Eje...</option>
-                <option v-for="e in ejes" :key="e.id" :value="e.id">
-                  {{ e.nombre }}
-                </option>
+                <option value="">-- Seleccionar Eje Temático --</option>
+                <optgroup v-for="(ejesInGroup, pilar) in groupedEjes" :key="pilar" :label="pilar">
+                  <option v-for="e in ejesInGroup" :key="e.id" :value="e.id">
+                    • {{ e.nombre }}
+                  </option>
+                </optgroup>
               </select>
             </div>
 

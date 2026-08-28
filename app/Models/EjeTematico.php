@@ -12,9 +12,12 @@ class EjeTematico extends Model
 
     protected $fillable = [
         'workspace_id',
+        'pilar_principal',
         'nombre',
         'slug',
         'color_badge',
+        'icono',
+        'orden',
         'descripcion',
     ];
 

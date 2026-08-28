@@ -221,23 +221,34 @@ const saveCandidato = () => {
 const tabBadgeStyle = (colorEstado) => {
   switch (colorEstado) {
     case 'azul':
+      // 🔵 Certificada / Verificada
       return {
-        tab: 'border-blue-500 bg-blue-500/10 text-blue-400 font-bold',
-        pill: 'bg-blue-500 text-white',
-        label: 'Verificada (Azul)'
+        tab: 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30',
+        pill: 'bg-blue-500 text-white font-bold',
+        label: 'Verificada'
       };
-    case 'naranja':
+    case 'verde':
+    case 'naranja': // retrocompatibilidad
+      // 🟢 Activa / En uso de campaña
       return {
-        tab: 'border-amber-500 bg-amber-500/10 text-amber-400 font-semibold',
-        pill: 'bg-amber-500 text-slate-950 font-bold',
-        label: 'Activa (Naranja)'
+        tab: 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold ring-2 ring-emerald-500/30',
+        pill: 'bg-emerald-500 text-white font-bold',
+        label: 'Activa'
       };
     case 'rojo':
-    default:
+      // 🔴 Vinculada pero Inactiva / Sin movimiento
       return {
-        tab: 'border-rose-500/50 bg-rose-500/10 text-rose-400 font-medium',
-        pill: 'bg-rose-500 text-white',
-        label: 'Inactiva (Roja)'
+        tab: 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold ring-2 ring-rose-500/30',
+        pill: 'bg-rose-500 text-white font-bold',
+        label: 'Inactiva'
+      };
+    case 'gris':
+    default:
+      // ⚪ Sin uso / Pendiente de configuración
+      return {
+        tab: 'border-slate-300 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-950 text-slate-500 dark:text-slate-400 font-medium ring-1 ring-slate-400/30',
+        pill: 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium',
+        label: 'Configurar'
       };
   }
 };

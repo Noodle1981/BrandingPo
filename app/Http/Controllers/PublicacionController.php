@@ -46,7 +46,7 @@ class PublicacionController extends Controller
                 'fecha_publicacion' => $duplicado->fecha_publicacion?->format('d/m/Y H:i'),
                 'autor' => $duplicado->candidato?->nombre_completo,
                 'plataforma' => $duplicado->perfilSocial?->plataforma,
-                'mensaje' => '⚠️ Esta publicación ya se encuentra registrada en el sistema (ID #'.$duplicado->id.'). No se pueden duplicar contenidos.',
+                'mensaje' => '⚠️ Esta publicación ya se encuentra registrada en el sistema. No se pueden duplicar contenidos.',
             ]);
         }
 
@@ -192,13 +192,38 @@ class PublicacionController extends Controller
         $plataforma = $request->input('plataforma');
         $tipoPauta = $request->input('tipo_pauta');
         $ejeTematicoId = $request->input('eje_tematico_id');
+        $anio = $request->input('anio');
         $mes = $request->input('mes');
         $search = $request->input('search');
         $filtro = $request->input('filtro'); // 'propio' | 'oposicion'
 
+        // Obtener Años y Meses reales que existen en la base de datos para este workspace
+        $fechasPublicaciones = Publicacion::where('workspace_id', $workspace->id)
+            ->whereNotNull('fecha_publicacion')
+            ->pluck('fecha_publicacion');
+
+        $nombresMeses = [
+            '01' => 'Enero', '02' => 'Febrero', '03' => 'Marzo', '04' => 'Abril',
+            '05' => 'Mayo', '06' => 'Junio', '07' => 'Julio', '08' => 'Agosto',
+            '09' => 'Septiembre', '10' => 'Octubre', '11' => 'Noviembre', '12' => 'Diciembre',
+        ];
+
+        $aniosDisponibles = $fechasPublicaciones->map(fn ($f) => \Carbon\Carbon::parse($f)->format('Y'))
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $mesesDisponibles = $fechasPublicaciones->map(function ($f) use ($nombresMeses) {
+            $numMes = \Carbon\Carbon::parse($f)->format('m');
+
+            return [
+                'numero' => $numMes,
+                'nombre' => $nombresMeses[$numMes] ?? $numMes,
+            ];
+        })->unique('numero')->sortBy('numero')->values();
+
         $query = Publicacion::where('workspace_id', $workspace->id)
-            ->with(['candidato', 'perfilSocial', 'ejeTematico'])
-            ->orderByDesc('fecha_publicacion');
+            ->with(['candidato', 'perfilSocial', 'ejeTematico']);
 
         if ($filtro === 'propio') {
             $query->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
@@ -216,10 +241,7 @@ class PublicacionController extends Controller
                 default => [$plataforma],
             };
 
-            $query->where(function ($sub) use ($platforms) {
-                $sub->whereHas('perfilSocial', fn ($q) => $q->whereIn('plataforma', $platforms))
-                    ->orWhereIn('plataforma', $platforms);
-            });
+            $query->whereHas('perfilSocial', fn ($q) => $q->whereIn('plataforma', $platforms));
         }
 
         if ($tipoPauta) {
@@ -230,8 +252,22 @@ class PublicacionController extends Controller
             $query->where('eje_tematico_id', $ejeTematicoId);
         }
 
-        if ($mes) {
-            $query->where('fecha_publicacion', 'like', "{$mes}%");
+        if ($anio && $mes) {
+            if (strlen($mes) > 2) {
+                $query->where('fecha_publicacion', 'like', "{$mes}%");
+            } else {
+                $mesFormatted = str_pad($mes, 2, '0', STR_PAD_LEFT);
+                $query->where('fecha_publicacion', 'like', "{$anio}-{$mesFormatted}%");
+            }
+        } elseif ($anio) {
+            $query->where('fecha_publicacion', 'like', "{$anio}%");
+        } elseif ($mes) {
+            if (strlen($mes) > 2) {
+                $query->where('fecha_publicacion', 'like', "{$mes}%");
+            } else {
+                $mesFormatted = str_pad($mes, 2, '0', STR_PAD_LEFT);
+                $query->where('fecha_publicacion', 'like', "%-{$mesFormatted}-%");
+            }
         }
 
         $rangoAprobacion = $request->input('rango_aprobacion');
@@ -245,6 +281,16 @@ class PublicacionController extends Controller
 
         if ($search) {
             $query->where('contenido_resumen', 'like', "%{$search}%");
+        }
+
+        $orden = $request->input('orden', 'recientes');
+        if ($orden === 'antiguos') {
+            $query->orderBy('fecha_publicacion', 'asc')->orderBy('id', 'asc');
+        } elseif ($orden === 'interacciones') {
+            $query->orderByDesc('total_likes')->orderByDesc('fecha_publicacion');
+        } else {
+            // Por defecto: Cronología de la red social (publicación más reciente arriba)
+            $query->orderByDesc('fecha_publicacion')->orderByDesc('id');
         }
 
         $publicaciones = $query->get()->map(function ($p) {
@@ -265,11 +311,15 @@ class PublicacionController extends Controller
                     'handle_usuario' => $p->perfilSocial?->handle_usuario,
                 ],
                 'eje_tematico' => $p->ejeTematico ? [
+                    'id' => $p->ejeTematico->id,
+                    'pilar_principal' => $p->ejeTematico->pilar_principal,
                     'nombre' => $p->ejeTematico->nombre,
                     'color_badge' => $p->ejeTematico->color_badge,
+                    'icono' => $p->ejeTematico->icono,
                 ] : null,
-                'plataforma' => $p->plataforma ?? $p->perfilSocial?->plataforma,
+                'plataforma' => $p->perfilSocial?->plataforma ?: 'facebook',
                 'fecha_publicacion' => $p->fecha_publicacion?->format('d/m/Y H:i'),
+                'fecha_publicacion_raw' => $p->fecha_publicacion?->format('Y-m-d\TH:i'),
                 'fecha_relativa' => $p->fecha_publicacion?->diffForHumans(),
                 'tipo_formato' => $p->tipo_formato,
                 'tipo_pauta' => $p->tipo_pauta,
@@ -310,22 +360,27 @@ class PublicacionController extends Controller
         $candidatos = $candidatosQuery->with('perfilesSociales')->get();
 
         $ejes = EjeTematico::where('workspace_id', $workspace->id)
-            ->orderBy('nombre')
-            ->get(['id', 'nombre', 'color_badge']);
+            ->orderBy('orden')
+            ->orderBy('id')
+            ->get(['id', 'pilar_principal', 'nombre', 'slug', 'color_badge', 'icono', 'orden']);
 
         return Inertia::render('Publicaciones/Feed', [
             'publicaciones' => $publicaciones,
             'candidatos' => $candidatos,
             'ejes' => $ejes,
+            'anios_disponibles' => $aniosDisponibles,
+            'meses_disponibles' => $mesesDisponibles,
             'filtros' => [
                 'filtro' => $filtro,
                 'candidato_id' => $candidatoId,
                 'plataforma' => $plataforma,
                 'tipo_pauta' => $tipoPauta,
                 'eje_tematico_id' => $ejeTematicoId,
+                'anio' => $anio,
                 'mes' => $mes,
                 'rango_aprobacion' => $rangoAprobacion,
                 'search' => $search,
+                'orden' => $orden,
             ],
             'stats_resumen' => [
                 'total_posts' => $publicaciones->count(),
@@ -440,7 +495,7 @@ class PublicacionController extends Controller
 
         if ($duplicado) {
             return redirect()->back()->withInput()->withErrors([
-                'url_post' => '⚠️ Esta publicación ya se encuentra registrada en el sistema (ID #'.$duplicado->id.'). Las publicaciones deben ser únicas.',
+                'url_post' => '⚠️ Esta publicación ya se encuentra registrada en el sistema. Las publicaciones deben ser únicas.',
             ]);
         }
 

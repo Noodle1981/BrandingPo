@@ -899,6 +899,12 @@ class SocialProfileScraperService
             if (empty($result['contenido_resumen']) && ! empty($rawDesc)) {
                 $result['contenido_resumen'] = $rawDesc;
             }
+
+            // Extraer fecha real de publicación de Facebook
+            $extractedDate = $this->extractPublicationDate($html, 'facebook');
+            if ($extractedDate) {
+                $result['fecha_publicacion'] = $extractedDate;
+            }
         } catch (\Exception $e) {
             // Silencioso
         }
@@ -980,6 +986,12 @@ class SocialProfileScraperService
             } elseif (preg_match('/["“]([\s\S]+)["”]/', $rawTitle, $m)) {
                 $result['contenido_resumen'] = trim($m[1]);
             }
+
+            // Extraer fecha real de publicación de Instagram
+            $extractedDate = $this->extractPublicationDate($html, 'instagram');
+            if ($extractedDate) {
+                $result['fecha_publicacion'] = $extractedDate;
+            }
         }
 
         $result['success'] = ! empty($result['contenido_resumen']) || $result['total_likes'] > 0 || ! empty($result['media_url']);
@@ -1058,6 +1070,11 @@ class SocialProfileScraperService
                             $result['total_vistas'] = (int) $stats['playCount'];
                         }
                     }
+                }
+
+                $extractedDate = $this->extractPublicationDate($html, 'tiktok');
+                if ($extractedDate) {
+                    $result['fecha_publicacion'] = $extractedDate;
                 }
             }
         } catch (\Exception $e) {
@@ -1251,5 +1268,53 @@ class SocialProfileScraperService
         }
 
         return $canonical;
+    }
+
+    /**
+     * Extraer la fecha y hora real de publicación original de la red social.
+     */
+    public function extractPublicationDate(string $html, string $plataforma = 'generic'): ?string
+    {
+        try {
+            // 1. Timestamps de Facebook (publish_time / creation_time)
+            if (preg_match('/"(?:publish_time|creation_time)"\s*:\s*(\d{9,11})/i', $html, $m)) {
+                $ts = (int) $m[1];
+                if ($ts > 1000000000 && $ts < 2500000000) {
+                    return date('Y-m-d\TH:i', $ts);
+                }
+            }
+
+            // 2. Timestamps de Instagram / TikTok (taken_at_timestamp / createTime)
+            if (preg_match('/"(?:taken_at_timestamp|createTime)"\s*:\s*(\d{9,11})/i', $html, $m)) {
+                $ts = (int) $m[1];
+                if ($ts > 1000000000 && $ts < 2500000000) {
+                    return date('Y-m-d\TH:i', $ts);
+                }
+            }
+
+            // 3. Meta tags estándar (article:published_time, og:article:published_time, datePublished)
+            if (preg_match('/<meta[^>]+(?:property="article:published_time"|property="og:article:published_time"|itemprop="datePublished"|name="publish_date"|name="pubdate")[^>]+content="([^"]+)"/i', $html, $m)) {
+                $carbon = \Carbon\Carbon::parse($m[1]);
+                return $carbon->format('Y-m-d\TH:i');
+            }
+
+            // 4. Schema.org / JSON-LD ("datePublished": "...", "uploadDate": "...")
+            if (preg_match('/"(?:datePublished|uploadDate|created_at|dateCreated)"\s*:\s*"([^"]+)"/i', $html, $m)) {
+                $carbon = \Carbon\Carbon::parse($m[1]);
+                return $carbon->format('Y-m-d\TH:i');
+            }
+
+            // 5. Fallback para created_time en Facebook/Instagram
+            if (preg_match('/"created_time"\s*:\s*(\d{9,11})/i', $html, $m)) {
+                $ts = (int) $m[1];
+                if ($ts > 1000000000 && $ts < 2500000000) {
+                    return date('Y-m-d\TH:i', $ts);
+                }
+            }
+        } catch (\Exception $e) {
+            // Silencioso
+        }
+
+        return null;
     }
 }

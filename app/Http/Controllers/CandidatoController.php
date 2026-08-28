@@ -200,13 +200,31 @@ class CandidatoController extends Controller
             'linkedin' => ['nombre' => 'LinkedIn', 'formato_default' => 'Artículo'],
         ];
 
-        // Mapear cada plataforma asegurando que exista en la vista (con semáforo de color)
+        // Mapear cada plataforma asegurando que exista en la vista (con semáforo de 4 estados: Verde=Activa, Rojo=Inactiva, Gris=Sin Uso/Configurar, Azul=Verificada)
         $redesMapeadas = collect($plataformasEstandar)->map(function ($info, $key) use ($candidato) {
             $perfil = $candidato->perfilesSociales->firstWhere('plataforma', $key);
 
+            $existe = (bool) $perfil && ! empty($perfil->handle_usuario);
             $estaActivo = $perfil ? (bool) $perfil->esta_activo : false;
             $estaVerificado = $perfil ? (bool) $perfil->esta_verificado : false;
-            $colorEstado = $estaVerificado ? 'azul' : ($estaActivo ? 'naranja' : 'rojo');
+
+            if (! $existe) {
+                // ⚪ Sin uso / No configurada (Gris)
+                $colorEstado = 'gris';
+                $estadoTexto = 'Configurar';
+            } elseif ($estaVerificado) {
+                // 🔵 Certificada / Verificada (Azul)
+                $colorEstado = 'azul';
+                $estadoTexto = 'Verificada';
+            } elseif ($estaActivo) {
+                // 🟢 Activa con movimiento de campaña (Verde)
+                $colorEstado = 'verde';
+                $estadoTexto = 'Activa';
+            } else {
+                // 🔴 Inactiva / Sin movimiento (Rojo)
+                $colorEstado = 'rojo';
+                $estadoTexto = 'Inactiva';
+            }
 
             $seguidoresActuales = $perfil ? (int) $perfil->seguidores_actuales : 0;
             $seguidoresBaseline = $perfil ? (int) $perfil->seguidores_punto_cero : 0;
@@ -297,8 +315,10 @@ class CandidatoController extends Controller
                     'eje_tematico_id' => $p->eje_tematico_id,
                     'eje_tematico' => $p->ejeTematico ? [
                         'id' => $p->ejeTematico->id,
+                        'pilar_principal' => $p->ejeTematico->pilar_principal,
                         'nombre' => $p->ejeTematico->nombre,
                         'color_badge' => $p->ejeTematico->color_badge,
+                        'icono' => $p->ejeTematico->icono,
                     ] : null,
                     'fecha_publicacion' => $p->fecha_publicacion?->format('d/m/Y H:i'),
                     'fecha_publicacion_raw' => $p->fecha_publicacion?->format('Y-m-d\TH:i'),
@@ -325,8 +345,65 @@ class CandidatoController extends Controller
             });
 
         $ejes = EjeTematico::where('workspace_id', $workspace->id)
-            ->orderBy('nombre')
-            ->get(['id', 'nombre', 'color_badge']);
+            ->orderBy('orden')
+            ->orderBy('id')
+            ->get(['id', 'pilar_principal', 'nombre', 'slug', 'color_badge', 'icono', 'orden']);
+
+        // Desduplicación por TIERS para Seguidores Únicos Reales
+        $perfilesActivos = $candidato->perfilesSociales
+            ->filter(fn ($p) => (bool) $p->esta_activo && (int) $p->seguidores_actuales > 0)
+            ->sortByDesc('seguidores_actuales')
+            ->values();
+
+        $seguidoresNetosEstimados = 0;
+        $plataformasProcesadas = [];
+        $tiersDesglose = [];
+
+        foreach ($perfilesActivos as $idx => $perfil) {
+            $seguidoresRed = (int) $perfil->seguidores_actuales;
+            $plataforma = $perfil->plataforma;
+            $tierNumero = $idx + 1;
+
+            if ($idx === 0) {
+                $factorIncremental = 1.0;
+                $tierNombre = 'Tier 1 (Red Principal)';
+            } else {
+                $esMeta = in_array($plataforma, ['facebook', 'instagram', 'threads']);
+                $tieneMetaPrevia = count(array_intersect($plataformasProcesadas, ['facebook', 'instagram', 'threads'])) > 0;
+
+                if ($esMeta && $tieneMetaPrevia) {
+                    $factorIncremental = 0.35;
+                    $tierNombre = "Tier {$tierNumero} (Meta / Solapado)";
+                } else {
+                    $factorIncremental = 0.55;
+                    $tierNombre = "Tier {$tierNumero} (Nueva Audiencia)";
+                }
+            }
+
+            $seguidoresUnicosAportados = (int) round($seguidoresRed * $factorIncremental);
+            $seguidoresNetosEstimados += $seguidoresUnicosAportados;
+            $plataformasProcesadas[] = $plataforma;
+
+            $tiersDesglose[] = [
+                'tier' => $tierNumero,
+                'nombre' => $tierNombre,
+                'plataforma' => $plataforma,
+                'handle' => $perfil->handle_usuario,
+                'seguidores_brutos' => $seguidoresRed,
+                'seguidores_unicos' => $seguidoresUnicosAportados,
+                'factor_incremental_pct' => round($factorIncremental * 100),
+                'esta_activo' => true,
+            ];
+        }
+
+        $totalSeguidoresBruto = (int) $candidato->perfilesSociales->where('esta_activo', true)->sum('seguidores_actuales');
+        if ($seguidoresNetosEstimados <= 0) {
+            $seguidoresNetosEstimados = $totalSeguidoresBruto;
+        }
+
+        $padronElectoral = (int) ($candidato->territorio?->padron_electoral ?? 0);
+        $penetracionNetaPct = $padronElectoral > 0 ? round(($seguidoresNetosEstimados / $padronElectoral) * 100, 1) : 0;
+        $penetracionBrutaPct = $padronElectoral > 0 ? round(($totalSeguidoresBruto / $padronElectoral) * 100, 1) : 0;
 
         return Inertia::render('Candidatos/MiPerfil', [
             'candidato' => [
@@ -341,7 +418,12 @@ class CandidatoController extends Controller
                 'ciclo_campana_id' => $candidato->ciclo_campana_id,
                 'territorio_id' => $candidato->territorio_id,
                 'territorio' => $candidato->territorio,
-                'total_seguidores' => $candidato->perfilesSociales->where('esta_activo', true)->sum('seguidores_actuales'),
+                'total_seguidores' => $totalSeguidoresBruto,
+                'total_seguidores_netos' => $seguidoresNetosEstimados,
+                'total_seguidores_bruto' => $totalSeguidoresBruto,
+                'penetracion_neta_pct' => $penetracionNetaPct,
+                'penetracion_bruta_pct' => $penetracionBrutaPct,
+                'tiers_desglose' => $tiersDesglose,
                 'total_publicaciones' => $candidato->perfilesSociales->where('esta_activo', true)->sum('publicaciones_totales'),
             ],
             'redes' => $redesMapeadas,
@@ -542,9 +624,23 @@ class CandidatoController extends Controller
         $redesMapeadas = collect($plataformasEstandar)->map(function ($info, $key) use ($candidato) {
             $perfil = $candidato->perfilesSociales->firstWhere('plataforma', $key);
 
+            $existe = (bool) $perfil && ! empty($perfil->handle_usuario);
             $estaActivo = $perfil ? (bool) $perfil->esta_activo : false;
             $estaVerificado = $perfil ? (bool) $perfil->esta_verificado : false;
-            $colorEstado = $estaVerificado ? 'azul' : ($estaActivo ? 'naranja' : 'rojo');
+
+            if (! $existe) {
+                // ⚪ Sin uso / No configurada (Gris)
+                $colorEstado = 'gris';
+            } elseif ($estaVerificado) {
+                // 🔵 Certificada / Verificada (Azul)
+                $colorEstado = 'azul';
+            } elseif ($estaActivo) {
+                // 🟢 Activa con movimiento de campaña (Verde)
+                $colorEstado = 'verde';
+            } else {
+                // 🔴 Inactiva / Sin movimiento (Rojo)
+                $colorEstado = 'rojo';
+            }
 
             $seguidoresActuales = $perfil ? (int) $perfil->seguidores_actuales : 0;
             $seguidoresBaseline = $perfil ? (int) $perfil->seguidores_punto_cero : 0;
@@ -669,6 +765,7 @@ class CandidatoController extends Controller
         $workspace = WorkspaceHelper::activo($request);
 
         $validated = $request->validate([
+            'workspace_nombre' => ['nullable', 'string', 'max:255'],
             'nombre_completo' => ['required', 'string', 'max:255'],
             'partido_coalicion' => ['required', 'string', 'max:255'],
             'cargo_aspirado' => ['nullable', 'string', 'max:255'],
@@ -683,6 +780,10 @@ class CandidatoController extends Controller
             'avatar_url' => ['nullable', 'url', 'max:500'],
             'bio_resumen' => ['nullable', 'string'],
         ]);
+
+        if (! empty($validated['workspace_nombre'])) {
+            $workspace->update(['nombre' => $validated['workspace_nombre']]);
+        }
 
         $territorioId = $validated['territorio_id'] ?? $candidato->territorio_id;
 
@@ -1600,14 +1701,17 @@ class CandidatoController extends Controller
                     'sentimiento_predominante' => $p->sentimiento_predominante,
                     'termometro_humor_social' => $p->termometro_humor_social,
                     'eje_tematico' => $p->ejeTematico ? [
+                        'id' => $p->ejeTematico->id,
+                        'pilar_principal' => $p->ejeTematico->pilar_principal,
                         'nombre' => $p->ejeTematico->nombre,
                         'color_badge' => $p->ejeTematico->color_badge,
+                        'icono' => $p->ejeTematico->icono,
                     ] : null,
                 ];
             });
 
-        // Color semáforo de la cuenta
-        $semaforoColor = $perfilSocial->esta_verificado ? 'azul' : ($perfilSocial->esta_activo ? 'naranja' : 'rojo');
+        // Color semáforo de la cuenta: Azul (Verificada), Verde (Activa), Rojo (Inactiva)
+        $semaforoColor = $perfilSocial->esta_verificado ? 'azul' : ($perfilSocial->esta_activo ? 'verde' : 'rojo');
 
         return Inertia::render('Candidatos/MetricasCanal', [
             'candidato' => [

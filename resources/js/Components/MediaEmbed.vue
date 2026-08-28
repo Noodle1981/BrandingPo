@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { ExternalLink, Play, Image as ImageIcon, Video } from '@lucide/vue';
 
 const props = defineProps({
@@ -21,9 +21,23 @@ const props = defineProps({
   }
 });
 
+const imageError = ref(false);
+
+const cleanUrl = (input) => {
+  if (!input) return null;
+  const str = String(input).trim();
+  if (str.includes('<iframe') || str.includes('src=')) {
+    const match = str.match(/src=["']([^"']+)["']/i);
+    if (match) {
+      return match[1].replace(/&amp;/g, '&');
+    }
+  }
+  return str;
+};
+
 // Detect YouTube Video ID
 const youtubeId = computed(() => {
-  const target = props.url || props.mediaUrl;
+  const target = cleanUrl(props.url || props.mediaUrl);
   if (!target) return null;
   const match = target.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/i);
   return match ? match[1] : null;
@@ -31,7 +45,7 @@ const youtubeId = computed(() => {
 
 // Detect TikTok Video ID / Embed
 const tiktokVideoId = computed(() => {
-  const target = props.url || props.mediaUrl;
+  const target = cleanUrl(props.url || props.mediaUrl);
   if (!target) return null;
   const match = target.match(/tiktok\.com\/(?:@[\w.-]+\/video\/|v\/|embed\/v2\/)(\d+)/i)
     || target.match(/tiktok\.com\/.*?(?:video\/)(\d+)/i);
@@ -47,13 +61,13 @@ const tiktokEmbedUrl = computed(() => {
 
 // Detect Instagram Reel or Post
 const isInstagramReel = computed(() => {
-  const target = (props.url || props.mediaUrl || '').toLowerCase();
+  const target = (cleanUrl(props.url) || cleanUrl(props.mediaUrl) || '').toLowerCase();
   return target.includes('/reel/') || target.includes('/reels/') || props.formato === 'Reel';
 });
 
 // Detect Instagram Embed
 const instagramEmbedUrl = computed(() => {
-  const target = props.url || props.mediaUrl;
+  const target = cleanUrl(props.url || props.mediaUrl);
   if (!target) return null;
   const match = target.match(/instagram\.com\/(?:p|reel|reels|tv)\/([^/?#&]+)/i);
   if (match) {
@@ -62,42 +76,57 @@ const instagramEmbedUrl = computed(() => {
   return null;
 });
 
-// Detect Facebook Video / Reel Embed
+// Detect Facebook Video / Reel / Post Embed
 const isFacebookReel = computed(() => {
-  const target = (props.url || props.mediaUrl || '').toLowerCase();
+  const target = (cleanUrl(props.url) || cleanUrl(props.mediaUrl) || '').toLowerCase();
   return target.includes('/reel/') || target.includes('/reels/') || (props.plataforma === 'facebook' && props.formato === 'Reel');
 });
 
 const isFacebookVideo = computed(() => {
-  const target = (props.url || props.mediaUrl || '').toLowerCase();
+  const target = (cleanUrl(props.url) || cleanUrl(props.mediaUrl) || '').toLowerCase();
   return target.includes('/watch') || target.includes('/videos/') || target.includes('fb.watch') || (props.plataforma === 'facebook' && props.formato === 'Video');
 });
 
-const facebookVideoEmbedUrl = computed(() => {
-  const target = props.url || props.mediaUrl;
-  if (!target) return null;
-  if (target.includes('facebook.com') || target.includes('fb.watch')) {
-    if (isFacebookReel.value || isFacebookVideo.value) {
-      const encoded = encodeURIComponent(target);
+const facebookEmbedUrl = computed(() => {
+  const rawTarget = cleanUrl(props.mediaUrl) || cleanUrl(props.url);
+  if (!rawTarget) return null;
+
+  // Si ya es un URL oficial del plugin de Facebook (post.php o video.php)
+  if (rawTarget.includes('facebook.com/plugins/post.php') || rawTarget.includes('facebook.com/plugins/video.php')) {
+    return rawTarget;
+  }
+
+  // Si es un post, reel, video, foto o historia de Facebook
+  const postUrl = cleanUrl(props.url) || rawTarget;
+  if (postUrl && (postUrl.includes('facebook.com') || postUrl.includes('fb.watch') || props.plataforma === 'facebook')) {
+    const isVideoOrReel = isFacebookReel.value || isFacebookVideo.value;
+    const encoded = encodeURIComponent(postUrl);
+    if (isVideoOrReel) {
       return `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&width=500`;
     }
+    // Es un Post / Foto / Contenido de Facebook
+    return `https://www.facebook.com/plugins/post.php?href=${encoded}&show_text=true&width=500`;
   }
+
   return null;
 });
 
-// Detect Direct Image (solo cuando no haya un embed de video disponible)
+// Detect Direct Image (solo cuando no haya un embed de Facebook/Instagram/TikTok disponible y la imagen sea válida)
 const isDirectImage = computed(() => {
-  if (youtubeId.value || instagramEmbedUrl.value || tiktokEmbedUrl.value || facebookVideoEmbedUrl.value) {
+  if (imageError.value) return false;
+  if (youtubeId.value || instagramEmbedUrl.value || tiktokEmbedUrl.value || facebookEmbedUrl.value) {
     return false;
   }
-  const target = props.mediaUrl;
+  const target = cleanUrl(props.mediaUrl);
   if (!target) return false;
+  if (target.includes('<iframe') || target.includes('/plugins/')) return false;
+  if (target.includes('lookaside.fbsbx.com')) return false; // Bloquea hotlinking
   return target.startsWith('http://') || target.startsWith('https://') || target.startsWith('/');
 });
 
 const directImageUrl = computed(() => {
-  if (isDirectImage.value) {
-    return props.mediaUrl;
+  if (isDirectImage.value && !imageError.value) {
+    return cleanUrl(props.mediaUrl);
   }
   return null;
 });
@@ -169,17 +198,17 @@ const plataformaName = computed(() => {
       ></iframe>
     </div>
 
-    <!-- 4. Facebook Interactive Video / Reel Player Embed -->
+    <!-- 4. Facebook Interactive Post / Video / Reel Player Embed -->
     <div
-      v-else-if="facebookVideoEmbedUrl"
+      v-else-if="facebookEmbedUrl"
       class="relative w-full overflow-hidden flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 rounded-2xl"
     >
       <iframe
-        :src="facebookVideoEmbedUrl"
+        :src="facebookEmbedUrl"
         class="w-full max-w-[500px] rounded-2xl border-0 shadow-sm transition-all"
         :style="{
-          height: isFacebookReel ? '620px' : '380px',
-          minHeight: isFacebookReel ? '580px' : '320px'
+          height: isFacebookReel ? '620px' : (isFacebookVideo ? '380px' : '640px'),
+          minHeight: isFacebookReel ? '580px' : (isFacebookVideo ? '320px' : '560px')
         }"
         frameborder="0"
         scrolling="no"
@@ -195,6 +224,8 @@ const plataformaName = computed(() => {
         :src="directImageUrl"
         alt="Foto de la publicación"
         referrerpolicy="no-referrer"
+        loading="lazy"
+        @error="imageError = true"
         class="w-full max-h-[480px] object-cover hover:scale-101 transition-transform duration-200"
       />
     </div>
@@ -216,14 +247,14 @@ const plataformaName = computed(() => {
               {{ formato }}
             </span>
           </div>
-          <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-xs sm:max-w-md mt-0.5" :title="url || mediaUrl">
-            {{ url || mediaUrl }}
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-xs sm:max-w-md mt-0.5" :title="cleanUrl(url || mediaUrl)">
+            {{ cleanUrl(url || mediaUrl) }}
           </p>
         </div>
       </div>
 
       <a
-        :href="url || mediaUrl"
+        :href="cleanUrl(url || mediaUrl)"
         target="_blank"
         rel="noopener noreferrer"
         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-xs transition-all shrink-0 hover:scale-102"
