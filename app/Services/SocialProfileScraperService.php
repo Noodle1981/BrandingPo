@@ -1030,6 +1030,15 @@ class SocialProfileScraperService
                 }
             }
 
+            // Extraer fecha nativa directa del Video ID (TikTok Snowflake Algorithm)
+            if (preg_match('/video\/(\d+)/i', $url, $vm)) {
+                $videoId = $vm[1];
+                $ts = (int) ($videoId >> 32);
+                if ($ts > 1000000000 && $ts < 2500000000) {
+                    $result['fecha_publicacion'] = date('Y-m-d\TH:i', $ts);
+                }
+            }
+
             // 2. Intentar leer HTML con Bot Agent para extraer contadores si están disponibles
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
@@ -1180,6 +1189,19 @@ class SocialProfileScraperService
         }
 
         $url = trim($url);
+        if (preg_match('/plugins\/(?:post|video)\.php\?href=([^&"\']+)/i', $url, $m)) {
+            $url = urldecode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        } elseif (preg_match('/src="([^"]+)"/i', $url, $m)) {
+            $src = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (preg_match('/href=([^&]+)/i', $src, $hm)) {
+                $url = urldecode($hm[1]);
+            } else {
+                $url = $src;
+            }
+        } elseif (preg_match('/https?:\/\/[^\s"\'<>]+/i', $url, $m)) {
+            $url = $m[0];
+        }
+
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
             return $url;
         }
