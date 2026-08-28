@@ -797,6 +797,17 @@ class SocialProfileScraperService
             if (empty($result['media_url']) && preg_match('/<meta[^>]+(?:property="og:image"|name="twitter:image")[^>]+content="([^"]*)"/i', $html, $mImg)) {
                 $result['media_url'] = html_entity_decode($mImg[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             }
+
+            // 3. Extraer fecha nativa directa del Tweet ID (Twitter/X Snowflake Algorithm)
+            if (preg_match('/status\/(\d+)/i', $url, $tm)) {
+                $tweetId = (int) $tm[1];
+                $epoch = 1288834974657;
+                $tsMs = ($tweetId >> 22) + $epoch;
+                $ts = (int) round($tsMs / 1000);
+                if ($ts > 1000000000 && $ts < 2500000000) {
+                    $result['fecha_publicacion'] = date('Y-m-d\TH:i', $ts);
+                }
+            }
         } catch (\Exception $e) {
             // Silencioso
         }
@@ -1114,6 +1125,11 @@ class SocialProfileScraperService
             $result['media_url'] = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
+        $extractedDate = $this->extractPublicationDate($html, 'youtube');
+        if ($extractedDate) {
+            $result['fecha_publicacion'] = $extractedDate;
+        }
+
         $result['success'] = ! empty($result['contenido_resumen']);
         $result['mensaje'] = $result['success'] ? '¡Datos de YouTube extraídos!' : 'No se pudo leer YouTube.';
 
@@ -1136,6 +1152,11 @@ class SocialProfileScraperService
 
         if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i', $html, $m)) {
             $result['media_url'] = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        $extractedDate = $this->extractPublicationDate($html, 'generic');
+        if ($extractedDate) {
+            $result['fecha_publicacion'] = $extractedDate;
         }
 
         $result['success'] = ! empty($result['contenido_resumen']);

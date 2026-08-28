@@ -768,19 +768,22 @@ const ejesBarChartOptions = {
           v-for="red in redes_desglose"
           :key="red.id"
           :href="`/perfiles-sociales/${red.id}/metricas`"
-          class="p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs hover:border-cyan-500/50 hover:shadow-md transition-all group flex flex-col justify-between block cursor-pointer"
+          class="p-4.5 rounded-2xl border transition-all group flex flex-col justify-between block cursor-pointer"
+          :class="red.esta_activo && (red.seguidores > 0 || red.publicaciones_count > 0 || red.handle_usuario)
+            ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xs hover:border-cyan-500/50 hover:shadow-md'
+            : 'bg-slate-100/50 dark:bg-slate-900/30 border-dashed border-slate-300 dark:border-slate-800/80 opacity-60 hover:opacity-100'"
         >
           <div>
             <!-- Header de Canal con Ícono Oficial -->
             <div class="flex items-center justify-between gap-2 mb-3">
-              <div class="flex items-center gap-2.5">
+              <div class="flex items-center gap-2.5" :class="!(red.esta_activo && (red.seguidores > 0 || red.publicaciones_count > 0 || red.handle_usuario)) ? 'grayscale opacity-75' : ''">
                 <SocialPlatformIcon :platform="red.plataforma" size="md" />
                 <div>
                   <h3 class="font-bold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wider font-mono">
                     {{ red.plataforma.replace('_', ' ') }}
                   </h3>
                   <span class="text-[11px] text-slate-500 dark:text-slate-400 block truncate max-w-[130px]">
-                    {{ red.handle_usuario || '@pendiente' }}
+                    {{ red.handle_usuario || '@sin_configurar' }}
                   </span>
                 </div>
               </div>
@@ -788,13 +791,13 @@ const ejesBarChartOptions = {
               <!-- Semáforo de Estado -->
               <span
                 class="w-2.5 h-2.5 rounded-full"
-                :class="red.esta_verificado ? 'bg-cyan-500 shadow-xs shadow-cyan-500/50' : (red.esta_activo ? 'bg-emerald-500' : 'bg-rose-500')"
-                :title="red.esta_verificado ? 'Verificada' : (red.esta_activo ? 'Activa' : 'Inactiva')"
+                :class="red.esta_verificado ? 'bg-cyan-500 shadow-xs shadow-cyan-500/50' : (red.esta_activo ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-600')"
+                :title="red.esta_verificado ? 'Verificada' : (red.esta_activo ? 'Activa' : 'Inactiva / Sin datos')"
               ></span>
             </div>
 
             <!-- Métricas Clave del Canal -->
-            <div class="grid grid-cols-2 gap-2 font-mono py-2 border-y border-slate-100 dark:border-slate-800/80">
+            <div v-if="red.esta_activo && (red.seguidores > 0 || red.publicaciones_count > 0 || red.handle_usuario)" class="grid grid-cols-2 gap-2 font-mono py-2 border-y border-slate-100 dark:border-slate-800/80">
               <div>
                 <span class="text-[10px] text-slate-400 uppercase block">Comunidad</span>
                 <span class="text-base font-extrabold text-slate-900 dark:text-slate-100">
@@ -814,11 +817,16 @@ const ejesBarChartOptions = {
                 </span>
               </div>
             </div>
+            <div v-else class="py-3 px-2 rounded-xl bg-slate-200/40 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-800/50 text-center font-mono text-[11px] text-slate-400 my-2">
+              <span>⏳ Canal inactivo / Sin datos</span>
+            </div>
           </div>
 
           <!-- Footer con Botón Directo -->
-          <div class="mt-3 pt-1 flex items-center justify-between text-xs font-semibold text-cyan-600 dark:text-cyan-400 group-hover:translate-x-0.5 transition-transform">
-            <span>Ver Métricas & Cadencia</span>
+          <div class="mt-3 pt-1 flex items-center justify-between text-xs font-semibold"
+            :class="red.esta_activo && (red.seguidores > 0 || red.publicaciones_count > 0 || red.handle_usuario) ? 'text-cyan-600 dark:text-cyan-400 group-hover:translate-x-0.5 transition-transform' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'"
+          >
+            <span>{{ red.esta_activo ? 'Ver Métricas & Cadencia' : 'Configurar Canal' }}</span>
             <ChevronRight class="w-4 h-4" />
           </div>
         </Link>

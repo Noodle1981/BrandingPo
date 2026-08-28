@@ -49,18 +49,22 @@ import {
   Tooltip,
   Legend,
   LineElement,
+  BarElement,
+  ArcElement,
   LinearScale,
   PointElement,
   CategoryScale,
   Filler
 } from 'chart.js';
-import { Line } from 'vue-chartjs';
+import { Line, Bar, Doughnut } from 'vue-chartjs';
 
 ChartJS.register(
   Title,
   Tooltip,
   Legend,
   LineElement,
+  BarElement,
+  ArcElement,
   LinearScale,
   PointElement,
   CategoryScale,
@@ -211,10 +215,14 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
 });
 
-// Chart.js Data & Options for Time-Series Modal
-const chartData = computed(() => {
+// ══════════════════════════════════════════════════════════════════════════
+// MODAL GRÁFICO MULTI-PESTAÑA (5 EJES DE INTELIGENCIA)
+// ══════════════════════════════════════════════════════════════════════════
+const activeChartTab = ref('audiencia');
+
+// 1. AUDIENCIA & SEGUIDORES (Time-Series)
+const audienciaChartData = computed(() => {
   const data = props.historicoMediciones || [];
-  
   const labels = data.map(m => m.fecha_corta || m.fecha);
   const seguidoresData = data.map(m => m.seguidores);
   const crecimientoData = data.map(m => m.crecimiento_neto_seguidores);
@@ -255,7 +263,7 @@ const chartData = computed(() => {
   };
 });
 
-const chartOptions = computed(() => {
+const audienciaChartOptions = computed(() => {
   const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
   const textColor = isDark ? '#94a3b8' : '#64748b';
   const gridColor = isDark ? 'rgba(51, 65, 85, 0.35)' : 'rgba(226, 232, 240, 0.8)';
@@ -263,19 +271,11 @@ const chartOptions = computed(() => {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    interaction: {
-      mode: 'index',
-      intersect: false,
-    },
+    interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: {
         position: 'top',
-        labels: {
-          color: textColor,
-          font: { family: 'ui-monospace, monospace', size: 12, weight: 'bold' },
-          usePointStyle: true,
-          padding: 20,
-        }
+        labels: { color: textColor, font: { family: 'ui-monospace, monospace', size: 12, weight: 'bold' }, usePointStyle: true, padding: 15 }
       },
       tooltip: {
         backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
@@ -286,43 +286,246 @@ const chartOptions = computed(() => {
         padding: 12,
         cornerRadius: 12,
         callbacks: {
-          label: (context) => {
-            let label = context.dataset.label || '';
-            if (label) label += ': ';
-            if (context.parsed.y !== null) {
-              label += Number(context.parsed.y).toLocaleString('es-AR');
-            }
-            return label;
-          }
+          label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toLocaleString('es-AR')}`
         }
       }
     },
     scales: {
-      x: {
-        grid: { color: gridColor, drawBorder: false },
-        ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 11 } }
-      },
+      x: { grid: { color: gridColor, drawBorder: false }, ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 11 } } },
       y: {
         type: 'linear',
         display: true,
         position: 'left',
         grid: { color: gridColor, drawBorder: false },
-        ticks: {
-          color: textColor,
-          font: { family: 'ui-monospace, monospace', size: 11 },
-          callback: (value) => Number(value).toLocaleString('es-AR')
-        }
+        ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 11 }, callback: (v) => Number(v).toLocaleString('es-AR') }
       },
       y1: {
         type: 'linear',
         display: true,
         position: 'right',
         grid: { drawOnChartArea: false },
-        ticks: {
-          color: '#10b981',
-          font: { family: 'ui-monospace, monospace', size: 11 },
-          callback: (value) => (value >= 0 ? '+' : '') + Number(value).toLocaleString('es-AR')
+        ticks: { color: '#10b981', font: { family: 'ui-monospace, monospace', size: 11 }, callback: (v) => (v >= 0 ? '+' : '') + Number(v).toLocaleString('es-AR') }
+      }
+    }
+  };
+});
+
+// 2. INTERACCIONES & ENGAGEMENT MENSUAL
+const interaccionesChartData = computed(() => {
+  const meses = props.consistenciaMensual || [];
+  const labels = meses.map(m => m.mes_nombre);
+  const interacciones = meses.map(m => m.total_interacciones);
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Interacciones Totales (Likes + Coment + Comp)',
+        data: interacciones,
+        backgroundColor: '#06b6d4',
+        borderRadius: 10,
+        hoverBackgroundColor: '#22d3ee',
+      }
+    ]
+  };
+});
+
+const interaccionesChartOptions = computed(() => {
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? 'rgba(51, 65, 85, 0.35)' : 'rgba(226, 232, 240, 0.8)';
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        titleColor: isDark ? '#f8fafc' : '#0f172a',
+        bodyColor: isDark ? '#cbd5e1' : '#334155',
+        borderColor: isDark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(203, 213, 225, 0.8)',
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 12,
+        callbacks: {
+          label: (context) => `🔥 Interacciones: ${Number(context.parsed.y).toLocaleString('es-AR')}`
         }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 11 } } },
+      y: {
+        grid: { color: gridColor, drawBorder: false },
+        ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 11 }, callback: (v) => Number(v).toLocaleString('es-AR') }
+      }
+    }
+  };
+});
+
+// 3. CADENCIA & VOLUMEN DE PUBLICACIONES VS META
+const cadenciaChartData = computed(() => {
+  const meses = props.consistenciaMensual || [];
+  const labels = meses.map(m => m.mes_nombre);
+  const postsCount = meses.map(m => m.posts_count);
+  const metas = meses.map(m => m.meta_mensual || 16);
+
+  return {
+    labels,
+    datasets: [
+      {
+        type: 'bar',
+        label: 'Posts Publicados',
+        data: postsCount,
+        backgroundColor: postsCount.map(c => (c >= 16 ? '#10b981' : (c >= 12 ? '#f59e0b' : (c === 0 ? '#ef4444' : '#64748b')))),
+        borderRadius: 10,
+        order: 2,
+      },
+      {
+        type: 'line',
+        label: 'Meta de Campaña (≥ 16 posts)',
+        data: metas,
+        borderColor: '#f59e0b',
+        borderWidth: 2,
+        borderDash: [6, 6],
+        pointRadius: 0,
+        fill: false,
+        order: 1,
+      }
+    ]
+  };
+});
+
+const cadenciaChartOptions = computed(() => {
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? 'rgba(51, 65, 85, 0.35)' : 'rgba(226, 232, 240, 0.8)';
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: { color: textColor, font: { family: 'ui-monospace, monospace', size: 11, weight: 'bold' }, usePointStyle: true }
+      },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        titleColor: isDark ? '#f8fafc' : '#0f172a',
+        bodyColor: isDark ? '#cbd5e1' : '#334155',
+        borderColor: isDark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(203, 213, 225, 0.8)',
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 12,
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 11 } } },
+      y: {
+        grid: { color: gridColor, drawBorder: false },
+        ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 11 }, stepSize: 4 }
+      }
+    }
+  };
+});
+
+// 4. FORMATOS & MIX DE CONTENIDO (Doughnut)
+const formatosChartData = computed(() => {
+  const formatos = props.rendimientoPorFormato || [];
+  const labels = formatos.map(f => f.tipo_formato || f.formato || 'Otro');
+  const data = formatos.map(f => Number(f.cantidad_posts ?? f.cantidad ?? 0));
+  const colors = ['#06b6d4', '#ec4899', '#8b5cf6', '#f59e0b', '#10b981', '#64748b', '#3b82f6'];
+
+  return {
+    labels,
+    datasets: [
+      {
+        data,
+        backgroundColor: colors.slice(0, labels.length),
+        borderWidth: 2,
+        borderColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? '#0f172a' : '#ffffff',
+        hoverOffset: 8,
+      }
+    ]
+  };
+});
+
+const formatosChartOptions = computed(() => {
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: { color: textColor, font: { family: 'ui-monospace, monospace', size: 12, weight: 'bold' }, padding: 15, usePointStyle: true }
+      },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        titleColor: isDark ? '#f8fafc' : '#0f172a',
+        bodyColor: isDark ? '#cbd5e1' : '#334155',
+        borderColor: isDark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(203, 213, 225, 0.8)',
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 12,
+        callbacks: {
+          label: (context) => ` ${context.label}: ${context.parsed} posts`
+        }
+      }
+    }
+  };
+});
+
+// 5. PAUTA VS ORGÁNICO & INVERSIÓN MENSUAL
+const pautaChartData = computed(() => {
+  const meses = props.consistenciaMensual || [];
+  const labels = meses.map(m => m.mes_nombre);
+  const pautaInvertida = meses.map(m => m.total_pauta || 0);
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Inversión en Pauta ($)',
+        data: pautaInvertida,
+        backgroundColor: '#8b5cf6',
+        borderRadius: 10,
+        hoverBackgroundColor: '#a78bfa',
+      }
+    ]
+  };
+});
+
+const pautaChartOptions = computed(() => {
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? 'rgba(51, 65, 85, 0.35)' : 'rgba(226, 232, 240, 0.8)';
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+        titleColor: isDark ? '#f8fafc' : '#0f172a',
+        bodyColor: isDark ? '#cbd5e1' : '#334155',
+        borderColor: isDark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(203, 213, 225, 0.8)',
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 12,
+        callbacks: {
+          label: (context) => ` Inversión: $${Number(context.parsed.y).toLocaleString('es-AR')}`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 11 } } },
+      y: {
+        grid: { color: gridColor, drawBorder: false },
+        ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 11 }, callback: (v) => '$' + Number(v).toLocaleString('es-AR') }
       }
     }
   };
@@ -728,9 +931,9 @@ const chartOptions = computed(() => {
       <!-- ══════════════════════════════════════════════════════════════════════════ -->
       <!-- 2. RADIOGRAFÍA DEMOGRÁFICA DE AUDIENCIA & CRUCE CON EL PADRÓN ELECTORAL -->
       <!-- ══════════════════════════════════════════════════════════════════════════ -->
-      <div v-if="demografiaAudiencia" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- A. Cruce por Franjas Etarias vs Padrón (2 Cols) -->
-        <div class="lg:col-span-2 p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+      <div v-if="demografiaAudiencia" class="space-y-6">
+        <!-- A. Cruce por Franjas Etarias vs Padrón (Full Width) -->
+        <div class="w-full p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
           <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-2">
             <div>
               <div class="flex items-center gap-2">
@@ -849,64 +1052,73 @@ const chartOptions = computed(() => {
           </div>
         </div>
 
-        <!-- B. Género, Top Ciudades y Horarios Pico (1 Col) -->
-        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+        <!-- B. Género, Top Ciudades y Horarios Pico (Debajo en Full Width con Grid de 3 Columnas) -->
+        <div class="w-full p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
           <div class="border-b border-slate-100 dark:border-slate-800 pb-3">
             <h4 class="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <PieChart class="w-4 h-4 text-emerald-500" />
               <span>Demografía & Anclaje Geográfico</span>
             </h4>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Origen territorial y momentos de mayor resonancia.
+              Origen territorial, desglose por género y momentos de mayor resonancia de la comunidad.
             </p>
           </div>
 
-          <!-- Género -->
-          <div v-if="demografiaAudiencia.genero" class="space-y-2">
-            <span class="text-[11px] font-mono uppercase font-bold text-slate-400 block">Distribución de Género</span>
-            <div class="w-full h-3 rounded-full overflow-hidden flex bg-slate-200 dark:bg-slate-800 shadow-inner">
-              <div
-                class="h-full bg-[#E4405F] transition-all"
-                :style="{ width: `${demografiaAudiencia.genero.femenino_pct}%` }"
-                :title="`Mujeres: ${demografiaAudiencia.genero.femenino_pct}%`"
-              ></div>
-              <div
-                class="h-full bg-[#1877F2] transition-all"
-                :style="{ width: `${demografiaAudiencia.genero.masculino_pct}%` }"
-                :title="`Varones: ${demografiaAudiencia.genero.masculino_pct}%`"
-              ></div>
-            </div>
-            <div class="flex justify-between text-[11px] font-mono">
-              <span class="text-[#E4405F] font-bold">👩 {{ demografiaAudiencia.genero.femenino_pct }}% Mujeres</span>
-              <span class="text-[#1877F2] font-bold">👨 {{ demografiaAudiencia.genero.masculino_pct }}% Varones</span>
-            </div>
-          </div>
-
-          <!-- Top Ciudades -->
-          <div v-if="demografiaAudiencia.ciudades_principales" class="space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <span class="text-[11px] font-mono uppercase font-bold text-slate-400 block">Top Ciudades de la Audiencia</span>
-            <div class="space-y-1.5 font-mono text-xs">
-              <div
-                v-for="c in demografiaAudiencia.ciudades_principales"
-                :key="c.ciudad"
-                class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between"
-              >
-                <span class="flex items-center gap-1.5 text-slate-800 dark:text-slate-200 font-medium">
-                  <MapPin class="w-3.5 h-3.5 text-cyan-500" />
-                  {{ c.ciudad }}
-                </span>
-                <span class="font-bold text-cyan-500">{{ c.pct }}%</span>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Columna 1: Distribución de Género -->
+            <div v-if="demografiaAudiencia.genero" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/70 dark:border-slate-800 space-y-3 flex flex-col justify-between">
+              <div>
+                <span class="text-[11px] font-mono uppercase font-bold text-slate-400 block mb-2">Distribución de Género</span>
+                <div class="w-full h-3.5 rounded-full overflow-hidden flex bg-slate-200 dark:bg-slate-800 shadow-inner">
+                  <div
+                    class="h-full bg-[#E4405F] transition-all"
+                    :style="{ width: `${demografiaAudiencia.genero.femenino_pct}%` }"
+                    :title="`Mujeres: ${demografiaAudiencia.genero.femenino_pct}%`"
+                  ></div>
+                  <div
+                    class="h-full bg-[#1877F2] transition-all"
+                    :style="{ width: `${demografiaAudiencia.genero.masculino_pct}%` }"
+                    :title="`Varones: ${demografiaAudiencia.genero.masculino_pct}%`"
+                  ></div>
+                </div>
+              </div>
+              <div class="flex justify-between text-xs font-mono pt-1">
+                <span class="text-[#E4405F] font-bold">👩 {{ demografiaAudiencia.genero.femenino_pct }}% Mujeres</span>
+                <span class="text-[#1877F2] font-bold">👨 {{ demografiaAudiencia.genero.masculino_pct }}% Varones</span>
               </div>
             </div>
-          </div>
 
-          <!-- Horarios & Días Pico -->
-          <div v-if="demografiaAudiencia.horarios_actividad" class="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-xs space-y-1 text-cyan-800 dark:text-cyan-200">
-            <span class="font-bold font-mono text-[11px] uppercase block">⏰ Momentos de Mayor Actividad:</span>
-            <p class="text-[11px] leading-relaxed">
-              <strong>Días:</strong> {{ demografiaAudiencia.horarios_actividad.dias_pico.join(', ') }}<br />
-              <strong>Horarios Prime:</strong> {{ demografiaAudiencia.horarios_actividad.horas_pico.join(' & ') }}
-            </p>
+            <!-- Columna 2: Top Ciudades de la Audiencia -->
+            <div v-if="demografiaAudiencia.ciudades_principales" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/70 dark:border-slate-800 space-y-2.5">
+              <span class="text-[11px] font-mono uppercase font-bold text-slate-400 block">Top Ciudades de la Audiencia</span>
+              <div class="space-y-1.5 font-mono text-xs">
+                <div
+                  v-for="c in demografiaAudiencia.ciudades_principales"
+                  :key="c.ciudad"
+                  class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between"
+                >
+                  <span class="flex items-center gap-1.5 text-slate-800 dark:text-slate-200 font-medium">
+                    <MapPin class="w-3.5 h-3.5 text-cyan-500" />
+                    {{ c.ciudad }}
+                  </span>
+                  <span class="font-bold text-cyan-500">{{ c.pct }}%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna 3: Horarios & Días Pico -->
+            <div v-if="demografiaAudiencia.horarios_actividad" class="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-xs space-y-2 text-cyan-800 dark:text-cyan-200 flex flex-col justify-between">
+              <div>
+                <span class="font-bold font-mono text-[11px] uppercase block mb-1">⏰ Momentos de Mayor Actividad:</span>
+                <p class="text-xs leading-relaxed space-y-1">
+                  <div><strong>Días:</strong> {{ demografiaAudiencia.horarios_actividad.dias_pico.join(', ') }}</div>
+                  <div><strong>Horarios Prime:</strong> {{ demografiaAudiencia.horarios_actividad.horas_pico.join(' & ') }}</div>
+                </p>
+              </div>
+              <div class="text-[10px] opacity-75 font-mono">
+                💡 Programar publicaciones en estas ventanas para maximizar alcance.
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1255,15 +1467,25 @@ const chartOptions = computed(() => {
           </span>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div
+          class="grid gap-3"
+          :class="{
+            'grid-cols-1 sm:grid-cols-2': consistenciaMensual.length === 2,
+            'grid-cols-1 sm:grid-cols-3': consistenciaMensual.length === 3,
+            'grid-cols-2 sm:grid-cols-4': consistenciaMensual.length === 4,
+            'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5': consistenciaMensual.length === 5,
+            'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6': consistenciaMensual.length >= 6,
+          }"
+        >
           <div
             v-for="mes in consistenciaMensual"
             :key="mes.mes_key"
-            class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border transition-all space-y-2.5"
+            class="p-4 rounded-2xl border transition-all space-y-2.5"
             :class="{
-              'border-emerald-500/40 shadow-xs': mes.estado === 'excelente',
-              'border-amber-500/40': mes.estado === 'adecuado',
-              'border-slate-200 dark:border-slate-800': mes.estado === 'bajo',
+              'bg-emerald-500/10 border-emerald-500/40 shadow-xs': mes.estado === 'excelente',
+              'bg-amber-500/10 border-amber-500/40': mes.estado === 'adecuado',
+              'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800': mes.estado === 'bajo',
+              'bg-rose-500/10 border-rose-500/50 dark:bg-rose-950/20': mes.estado === 'inactivo_perdido',
             }"
           >
             <div class="flex items-center justify-between">
@@ -1271,17 +1493,25 @@ const chartOptions = computed(() => {
                 {{ mes.mes_nombre }}
               </span>
               <span
-                class="w-2 h-2 rounded-full"
+                class="w-2.5 h-2.5 rounded-full"
                 :class="{
                   'bg-emerald-500': mes.estado === 'excelente',
                   'bg-amber-500': mes.estado === 'adecuado',
-                  'bg-rose-500': mes.estado === 'bajo' && mes.posts_count === 0,
-                  'bg-slate-400': mes.estado === 'bajo' && mes.posts_count > 0,
+                  'bg-slate-400': mes.estado === 'bajo',
+                  'bg-rose-500 animate-pulse shadow-sm shadow-rose-500/50': mes.estado === 'inactivo_perdido',
                 }"
               ></span>
             </div>
 
-            <div>
+            <div v-if="mes.estado === 'inactivo_perdido'">
+              <span class="text-base font-black font-mono block text-rose-500">
+                0 posts
+              </span>
+              <span class="text-[10px] font-mono text-rose-500/90 font-bold block mt-0.5">
+                ⚠️ Mes Inactivo / Perdido
+              </span>
+            </div>
+            <div v-else>
               <span class="text-lg font-black font-mono block text-cyan-600 dark:text-cyan-400">
                 {{ mes.posts_count }} posts
               </span>
@@ -1298,13 +1528,17 @@ const chartOptions = computed(() => {
                   'bg-emerald-500': mes.estado === 'excelente',
                   'bg-amber-500': mes.estado === 'adecuado',
                   'bg-slate-400': mes.estado === 'bajo',
+                  'bg-rose-500': mes.estado === 'inactivo_perdido',
                 }"
-                :style="{ width: `${mes.pct_cumplimiento}%` }"
+                :style="{ width: `${mes.estado === 'inactivo_perdido' ? 0 : mes.pct_cumplimiento}%` }"
               ></div>
             </div>
 
-            <div class="text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-800/60 flex justify-between">
-              <span>🔥 {{ formatNumber(mes.total_interacciones) }}</span>
+            <div class="text-[10px] font-mono pt-1 border-t flex justify-between"
+              :class="mes.estado === 'inactivo_perdido' ? 'border-rose-500/20 text-rose-400' : 'border-slate-200/60 dark:border-slate-800/60 text-slate-400'"
+            >
+              <span v-if="mes.estado === 'inactivo_perdido'">⛔ Sin publicaciones</span>
+              <span v-else>🔥 {{ formatNumber(mes.total_interacciones) }}</span>
               <span v-if="mes.total_pauta > 0" class="text-violet-400">📢 ${{ formatNumber(mes.total_pauta) }}</span>
             </div>
           </div>
@@ -1471,7 +1705,7 @@ const chartOptions = computed(() => {
 
     </div>
 
-    <!-- MODAL GRÁFICO DE EVOLUCIÓN TEMPORAL (CHART.JS) -->
+    <!-- MODAL GRÁFICO DE EVOLUCIÓN TEMPORAL MULTI-PESTAÑA (CHART.JS) -->
     <div
       v-if="isChartModalOpen"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm"
@@ -1479,17 +1713,17 @@ const chartOptions = computed(() => {
     >
       <div class="w-full max-w-5xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
         <!-- Header Modal -->
-        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-3">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-2xl bg-cyan-500/15 text-cyan-500 flex items-center justify-center">
               <LineChartIcon class="w-5 h-5" />
             </div>
             <div>
               <h3 class="text-lg font-black text-slate-900 dark:text-slate-100">
-                Gráfico Evolutivo: {{ getSocialMeta(perfilSocial.plataforma).name }}
+                Centro de Inteligencia Visual: {{ getSocialMeta(perfilSocial.plataforma).name }}
               </h3>
               <p class="text-xs text-slate-500 dark:text-slate-400">
-                Curva temporal de seguidores y crecimiento neto acumulado de {{ perfilSocial.handle_usuario }}
+                Gráficos evolutivos, cadencia, interacción y mix de contenidos de {{ perfilSocial.handle_usuario }}
               </p>
             </div>
           </div>
@@ -1503,20 +1737,115 @@ const chartOptions = computed(() => {
           </button>
         </div>
 
-        <!-- Canvas del Gráfico -->
+        <!-- Pestañas de Gráficos (5 Ejes Estratégicos) -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-100 dark:border-slate-800 scrollbar-thin">
+          <button
+            type="button"
+            @click="activeChartTab = 'audiencia'"
+            class="px-3.5 py-2 rounded-xl font-mono text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer"
+            :class="activeChartTab === 'audiencia'
+              ? 'bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-500/20'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+          >
+            <Users class="w-3.5 h-3.5" />
+            <span>Audiencia & Seguidores</span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeChartTab = 'interacciones'"
+            class="px-3.5 py-2 rounded-xl font-mono text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer"
+            :class="activeChartTab === 'interacciones'
+              ? 'bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-500/20'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+          >
+            <Flame class="w-3.5 h-3.5" />
+            <span>Interacciones & Engagement</span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeChartTab = 'cadencia'"
+            class="px-3.5 py-2 rounded-xl font-mono text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer"
+            :class="activeChartTab === 'cadencia'
+              ? 'bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-500/20'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+          >
+            <Calendar class="w-3.5 h-3.5" />
+            <span>Cadencia de Posts</span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeChartTab = 'formatos'"
+            class="px-3.5 py-2 rounded-xl font-mono text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer"
+            :class="activeChartTab === 'formatos'
+              ? 'bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-500/20'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+          >
+            <Layers class="w-3.5 h-3.5" />
+            <span>Mix de Formatos</span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeChartTab = 'pauta'"
+            class="px-3.5 py-2 rounded-xl font-mono text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer"
+            :class="activeChartTab === 'pauta'
+              ? 'bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-500/20'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
+          >
+            <DollarSign class="w-3.5 h-3.5" />
+            <span>Pauta vs Orgánico</span>
+          </button>
+        </div>
+
+        <!-- Canvas del Gráfico Dinámico -->
         <div class="w-full h-80 sm:h-96 relative bg-slate-50 dark:bg-slate-950 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
+          <!-- Tab 1: Audiencia -->
           <Line
-            v-if="historicoMediciones.length > 0"
-            :data="chartData"
-            :options="chartOptions"
+            v-if="activeChartTab === 'audiencia' && historicoMediciones.length > 0"
+            :data="audienciaChartData"
+            :options="audienciaChartOptions"
           />
+
+          <!-- Tab 2: Interacciones -->
+          <Bar
+            v-else-if="activeChartTab === 'interacciones' && consistenciaMensual.length > 0"
+            :data="interaccionesChartData"
+            :options="interaccionesChartOptions"
+          />
+
+          <!-- Tab 3: Cadencia -->
+          <Bar
+            v-else-if="activeChartTab === 'cadencia' && consistenciaMensual.length > 0"
+            :data="cadenciaChartData"
+            :options="cadenciaChartOptions"
+          />
+
+          <!-- Tab 4: Formatos -->
+          <Doughnut
+            v-else-if="activeChartTab === 'formatos' && rendimientoPorFormato.length > 0"
+            :data="formatosChartData"
+            :options="formatosChartOptions"
+          />
+
+          <!-- Tab 5: Pauta -->
+          <Bar
+            v-else-if="activeChartTab === 'pauta' && consistenciaMensual.length > 0"
+            :data="pautaChartData"
+            :options="pautaChartOptions"
+          />
+
+          <!-- Fallback Sin Datos -->
           <div v-else class="h-full flex items-center justify-center text-slate-400 font-mono text-xs">
-            No hay suficientes mediciones temporales registradas para graficar.
+            No hay suficientes datos registrados para graficar esta pestaña.
           </div>
         </div>
 
-        <!-- Resumen Rápido debajo del Gráfico -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
+        <!-- Resumen Rápido Contextual según la Pestaña Activa -->
+        <!-- Resumen Pestaña 1: Audiencia -->
+        <div v-if="activeChartTab === 'audiencia'" class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
           <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
             <span class="text-[10px] text-slate-400 uppercase font-bold block">Punto Alfa Inicial</span>
             <span class="text-base font-extrabold text-slate-800 dark:text-slate-200 block mt-0.5">
@@ -1533,6 +1862,82 @@ const chartOptions = computed(() => {
             <span class="text-[10px] text-slate-400 uppercase font-bold block">Crecimiento Neto</span>
             <span class="text-base font-extrabold block mt-0.5" :class="stats.crecimiento_neto_seguidores >= 0 ? 'text-emerald-500' : 'text-rose-500'">
               {{ stats.crecimiento_neto_seguidores >= 0 ? '+' : '' }}{{ formatNumber(stats.crecimiento_neto_seguidores) }} ({{ stats.crecimiento_pct_seguidores }}%)
+            </span>
+          </div>
+        </div>
+
+        <!-- Resumen Pestaña 2: Interacciones -->
+        <div v-else-if="activeChartTab === 'interacciones'" class="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">❤️ Total Likes</span>
+            <span class="text-base font-extrabold text-rose-500 block mt-0.5">{{ formatNumber(stats.total_likes) }}</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">💬 Comentarios</span>
+            <span class="text-base font-extrabold text-cyan-500 block mt-0.5">{{ formatNumber(stats.total_comentarios) }}</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">✈️ Compartidos</span>
+            <span class="text-base font-extrabold text-amber-500 block mt-0.5">{{ formatNumber(stats.total_compartidos + (stats.total_republicados || 0)) }}</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">⚡ Impact Score</span>
+            <span class="text-base font-extrabold text-emerald-500 block mt-0.5">{{ formatNumber(stats.score_impacto_total) }} pts</span>
+          </div>
+        </div>
+
+        <!-- Resumen Pestaña 3: Cadencia -->
+        <div v-else-if="activeChartTab === 'cadencia'" class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Total Publicaciones</span>
+            <span class="text-base font-extrabold text-cyan-500 block mt-0.5">{{ formatNumber(stats.posts_actuales) }} posts</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Meta Mensual</span>
+            <span class="text-base font-extrabold text-amber-500 block mt-0.5">≥ {{ benchmarks.posts_semana_ideal * 4 }} posts/mes</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Frecuencia Promedio</span>
+            <span class="text-base font-extrabold text-slate-800 dark:text-slate-200 block mt-0.5">~{{ frecuenciaPublicacion.promedio_semanal }} posts/sem</span>
+          </div>
+        </div>
+
+        <!-- Resumen Pestaña 4: Formatos -->
+        <div v-else-if="activeChartTab === 'formatos'" class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Formatos Utilizados</span>
+            <span class="text-base font-extrabold text-cyan-500 block mt-0.5">{{ rendimientoPorFormato.length }} tipos</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Formato Más Usado</span>
+            <span class="text-base font-extrabold text-emerald-500 block mt-0.5">
+              {{ rendimientoPorFormato[0]?.tipo_formato || 'N/A' }} ({{ rendimientoPorFormato[0]?.cantidad_posts || 0 }} posts)
+            </span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Mejor Rendimiento</span>
+            <span class="text-base font-extrabold text-amber-500 block mt-0.5">
+              ~{{ formatNumber(rendimientoPorFormato[0]?.promedio_interacciones || 0) }} reacc/post
+            </span>
+          </div>
+        </div>
+
+        <!-- Resumen Pestaña 5: Pauta -->
+        <div v-else-if="activeChartTab === 'pauta'" class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Total Invertido en Pauta</span>
+            <span class="text-base font-extrabold text-violet-400 block mt-0.5">${{ formatNumber(organicoVsPauta.monto_total_pauta || 0) }}</span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Mix Orgánico vs Pauta</span>
+            <span class="text-base font-extrabold text-slate-800 dark:text-slate-200 block mt-0.5">
+              {{ organicoVsPauta.organicos_count }} org. / {{ organicoVsPauta.pauta_count }} impulsados
+            </span>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Multiplicador de Tracción</span>
+            <span class="text-base font-extrabold text-emerald-500 block mt-0.5">
+              x{{ organicoVsPauta.multiplicador_pauta }} tracción
             </span>
           </div>
         </div>

@@ -1220,8 +1220,10 @@ class CandidatoController extends Controller
             $totalP = (float) $items->sum('monto_invertido_pauta');
 
             return [
-                'formato' => $formato,
+                'formato' => ucfirst($formato),
+                'tipo_formato' => ucfirst($formato),
                 'cantidad' => $count,
+                'cantidad_posts' => $count,
                 'total_interacciones' => $totalInt,
                 'promedio_interacciones' => $count > 0 ? round($totalInt / $count, 1) : 0,
                 'total_vistas' => $totalV,
@@ -1232,9 +1234,9 @@ class CandidatoController extends Controller
             ];
         })->sortByDesc('promedio_interacciones')->values();
 
-        // 9. Consistencia Mensual (Últimos 6 meses)
+        // 9. Consistencia Mensual & Auditoría de Cadencia (Desde el primer mes activo)
         $mesesNombres = [1 => 'Ene', 2 => 'Feb', 3 => 'Mar', 4 => 'Abr', 5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago', 9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic'];
-        $consistenciaMensual = [];
+        $consistenciaRaw = [];
         $metaMensual = ($benchmark['posts_semana_ideal'] ?? 4) * 4;
         $minMensual = ($benchmark['posts_semana_min'] ?? 3) * 4;
 
@@ -1243,7 +1245,7 @@ class CandidatoController extends Controller
             $mesYear = $mesFecha->year;
             $mesNum = $mesFecha->month;
             $mesKey = $mesFecha->format('Y-m');
-            $nombreLabel = ($mesesNombres[$mesNum] ?? '') . ' ' . $mesYear;
+            $nombreLabel = ($mesesNombres[$mesNum] ?? '').' '.$mesYear;
 
             $postsDelMes = $publicaciones->filter(function ($p) use ($mesYear, $mesNum) {
                 return $p->fecha_publicacion && $p->fecha_publicacion->year === $mesYear && $p->fecha_publicacion->month === $mesNum;
@@ -1253,14 +1255,7 @@ class CandidatoController extends Controller
             $intDelMes = $postsDelMes->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
             $pautaDelMes = (float) $postsDelMes->sum('monto_invertido_pauta');
 
-            $estado = 'bajo';
-            if ($cantPosts >= $metaMensual) {
-                $estado = 'excelente';
-            } elseif ($cantPosts >= $minMensual) {
-                $estado = 'adecuado';
-            }
-
-            $consistenciaMensual[] = [
+            $consistenciaRaw[] = [
                 'mes_key' => $mesKey,
                 'mes_nombre' => $nombreLabel,
                 'posts_count' => $cantPosts,
@@ -1269,8 +1264,42 @@ class CandidatoController extends Controller
                 'meta_mensual' => $metaMensual,
                 'min_mensual' => $minMensual,
                 'pct_cumplimiento' => min(100, round(($cantPosts / max(1, $metaMensual)) * 100)),
-                'estado' => $estado,
             ];
+        }
+
+        // Buscar el primer mes activo en la serie histórica
+        $primerMesActivoIdx = null;
+        foreach ($consistenciaRaw as $idx => $m) {
+            if ($m['posts_count'] > 0) {
+                $primerMesActivoIdx = $idx;
+                break;
+            }
+        }
+
+        $consistenciaMensual = [];
+        if ($primerMesActivoIdx !== null) {
+            // Solo incluir desde el primer mes de actividad en adelante (lo anterior a la campaña se omite)
+            $mesesDesdeInicio = array_slice($consistenciaRaw, $primerMesActivoIdx);
+
+            foreach ($mesesDesdeInicio as $m) {
+                $cantPosts = $m['posts_count'];
+                if ($cantPosts === 0) {
+                    $estado = 'inactivo_perdido'; // Mes intermedio hueco / perdido en rojo
+                } elseif ($cantPosts >= $metaMensual) {
+                    $estado = 'excelente';
+                } elseif ($cantPosts >= $minMensual) {
+                    $estado = 'adecuado';
+                } else {
+                    $estado = 'bajo';
+                }
+                $m['estado'] = $estado;
+                $consistenciaMensual[] = $m;
+            }
+        } elseif (! empty($consistenciaRaw)) {
+            // Si aún no hay publicaciones cargadas en ningún mes, se muestra el mes actual como pendiente
+            $ultimo = end($consistenciaRaw);
+            $ultimo['estado'] = 'inactivo_perdido';
+            $consistenciaMensual = [$ultimo];
         }
 
         // 10. Promedio de Vistas por Reel / Video vs Benchmark
