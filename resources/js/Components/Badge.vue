@@ -67,6 +67,29 @@ const badgeStyles = computed(() => {
     return 'bg-[#0A66C2]/15 text-[#0A66C2] border-[#0A66C2]/30 dark:bg-[#0A66C2]/20 dark:text-[#379bf7] dark:border-[#0A66C2]/40';
   }
 
+  // Social & Audit States
+  if (val === 'verificado') {
+    return 'bg-cyan-500/15 text-cyan-600 border-cyan-500/40 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/50 font-bold';
+  }
+  if (val === 'activo' || val === 'en_campana') {
+    return 'bg-emerald-500/15 text-emerald-700 border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/50 font-semibold';
+  }
+  if (val === 'inactivo' || val === 'inactivo_perdido') {
+    return 'bg-rose-500/15 text-rose-700 border-rose-500/40 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/50 font-semibold';
+  }
+  if (val === 'sin_configurar' || val === 'pendiente') {
+    return 'border-dashed border-slate-300 dark:border-slate-700 bg-slate-100/60 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 font-medium';
+  }
+  if (val === 'excelente') {
+    return 'bg-emerald-500/15 text-emerald-700 border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/50 font-bold';
+  }
+  if (val === 'adecuado') {
+    return 'bg-amber-500/15 text-amber-700 border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/50 font-semibold';
+  }
+  if (val === 'bajo') {
+    return 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+  }
+
   // Political States
   if (val === 'intendente_electo' || val === 'gobernador_electo' || val === 'electo') {
     return 'bg-emerald-500/15 text-emerald-700 border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/50 shadow-xs shadow-emerald-500/20 font-semibold';
@@ -146,6 +169,14 @@ const labelText = computed(() => {
     en_funciones: 'En Funciones',
     opositor: 'Opositor',
     inactivo: 'Inactivo',
+    activo: 'Activo',
+    verificado: 'Verificado',
+    sin_configurar: 'Sin Configurar',
+    pendiente: 'Pendiente',
+    inactivo_perdido: 'Inactivo / Perdido',
+    excelente: 'Excelente',
+    adecuado: 'Adecuado',
+    bajo: 'Bajo Ritmo',
     facebook: 'Facebook',
     instagram: 'Instagram',
     x_twitter: 'X (Twitter)',

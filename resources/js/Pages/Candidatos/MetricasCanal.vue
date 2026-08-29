@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import Badge from '../../Components/Badge.vue';
+import SocialPlatformIcon from '../../Components/SocialPlatformIcon.vue';
 import {
   ArrowLeft,
   Sparkles,
@@ -147,6 +148,10 @@ const props = defineProps({
   ejes: {
     type: Array,
     default: () => [],
+  },
+  canalesCandidato: {
+    type: Array,
+    default: () => [],
   }
 });
 
@@ -159,6 +164,37 @@ const formatNumber = (n) => {
 
 const formatCurrency = (n) => {
   return '$' + Number(n || 0).toLocaleString('es-AR');
+};
+
+const tabBadgeStyle = (colorEstado) => {
+  switch (colorEstado) {
+    case 'azul':
+      return {
+        tab: 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30',
+        pill: 'bg-blue-500 text-white font-bold',
+        label: 'Verificada'
+      };
+    case 'verde':
+    case 'naranja':
+      return {
+        tab: 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold ring-2 ring-emerald-500/30',
+        pill: 'bg-emerald-500 text-white font-bold',
+        label: 'Activa'
+      };
+    case 'rojo':
+      return {
+        tab: 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold ring-2 ring-rose-500/30',
+        pill: 'bg-rose-500 text-white font-bold',
+        label: 'Inactiva'
+      };
+    case 'gris':
+    default:
+      return {
+        tab: 'border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 text-slate-400 opacity-75 hover:opacity-100 hover:border-slate-400 hover:bg-white dark:hover:bg-slate-900 border-dashed',
+        pill: 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium',
+        label: 'Configurar'
+      };
+  }
 };
 
 const getSocialMeta = (key) => {
@@ -583,6 +619,48 @@ const pautaChartOptions = computed(() => {
             <span>{{ perfilSocial.handle_usuario }}</span>
             <ExternalLink class="w-3.5 h-3.5 text-cyan-500" />
           </a>
+        </div>
+      </div>
+
+      <!-- BARRA DE LOS 7 CANALES OFICIALES EN 1 SOLA FILA (ESTILO MI-PERFIL) -->
+      <div v-if="canalesCandidato && canalesCandidato.length > 0" class="space-y-2">
+        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 lg:grid-cols-7 gap-2.5 sm:gap-3">
+          <component
+            :is="canal.perfil_id && canal.color_estado !== 'gris' ? Link : 'a'"
+            v-for="canal in canalesCandidato"
+            :key="canal.key"
+            :href="canal.perfil_id && canal.color_estado !== 'gris' ? `/perfiles-sociales/${canal.perfil_id}/metricas` : '/mi-candidato'"
+            class="p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-between text-center gap-2 cursor-pointer relative shadow-xs group"
+            :class="[
+              perfilSocial.plataforma === canal.key
+                ? 'shadow-md scale-102 ' + tabBadgeStyle(canal.color_estado).tab
+                : (canal.color_estado === 'gris'
+                    ? 'border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 text-slate-400 opacity-75 hover:opacity-100 hover:border-slate-400 hover:bg-white dark:hover:bg-slate-900'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm')
+            ]"
+          >
+            <!-- Logo Oficial de la Red -->
+            <div class="flex items-center justify-center w-8 h-8 rounded-xl shadow-2xs shrink-0" :class="getSocialMeta(canal.key).bgLight">
+              <SocialPlatformIcon :platform="canal.key" size="sm" />
+            </div>
+
+            <div class="min-w-0 w-full">
+              <span class="font-bold text-xs leading-tight block text-slate-900 dark:text-slate-100 truncate">
+                {{ canal.nombre }}
+              </span>
+              <span class="text-[10px] text-slate-500 dark:text-slate-400 block truncate mt-0.5 font-mono">
+                {{ canal.handle_usuario || '@sin_configurar' }}
+              </span>
+            </div>
+
+            <!-- Pill de Estado Oficial -->
+            <span
+              class="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider font-mono truncate max-w-full"
+              :class="tabBadgeStyle(canal.color_estado).pill"
+            >
+              {{ tabBadgeStyle(canal.color_estado).label }}
+            </span>
+          </component>
         </div>
       </div>
 
@@ -1467,79 +1545,96 @@ const pautaChartOptions = computed(() => {
           </span>
         </div>
 
+        <!-- Contenedor en Línea Única Adaptable (Evita elementos impares descolgados) -->
         <div
-          class="grid gap-3"
-          :class="{
-            'grid-cols-1 sm:grid-cols-2': consistenciaMensual.length === 2,
-            'grid-cols-1 sm:grid-cols-3': consistenciaMensual.length === 3,
-            'grid-cols-2 sm:grid-cols-4': consistenciaMensual.length === 4,
-            'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5': consistenciaMensual.length === 5,
-            'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6': consistenciaMensual.length >= 6,
-          }"
+          class="grid grid-flow-col auto-cols-[minmax(165px,1fr)] lg:auto-cols-fr gap-3 overflow-x-auto pb-2 scrollbar-thin"
         >
           <div
             v-for="mes in consistenciaMensual"
             :key="mes.mes_key"
-            class="p-4 rounded-2xl border transition-all space-y-2.5"
+            class="p-4 rounded-2xl border transition-all space-y-2.5 flex flex-col justify-between"
             :class="{
               'bg-emerald-500/10 border-emerald-500/40 shadow-xs': mes.estado === 'excelente',
               'bg-amber-500/10 border-amber-500/40': mes.estado === 'adecuado',
               'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800': mes.estado === 'bajo',
               'bg-rose-500/10 border-rose-500/50 dark:bg-rose-950/20': mes.estado === 'inactivo_perdido',
+              'border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 opacity-75': mes.estado === 'sin_configurar' || mes.estado === 'pendiente',
             }"
           >
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-extrabold text-slate-900 dark:text-slate-100 font-mono">
-                {{ mes.mes_nombre }}
-              </span>
-              <span
-                class="w-2.5 h-2.5 rounded-full"
-                :class="{
-                  'bg-emerald-500': mes.estado === 'excelente',
-                  'bg-amber-500': mes.estado === 'adecuado',
-                  'bg-slate-400': mes.estado === 'bajo',
-                  'bg-rose-500 animate-pulse shadow-sm shadow-rose-500/50': mes.estado === 'inactivo_perdido',
-                }"
-              ></span>
+            <div>
+              <div class="flex items-center justify-between gap-1.5 mb-1.5">
+                <span class="text-xs font-extrabold text-slate-900 dark:text-slate-100 font-mono truncate">
+                  {{ mes.mes_nombre }}
+                </span>
+                <span
+                  class="w-2.5 h-2.5 rounded-full shrink-0"
+                  :class="{
+                    'bg-emerald-500': mes.estado === 'excelente',
+                    'bg-amber-500': mes.estado === 'adecuado',
+                    'bg-slate-400': mes.estado === 'bajo',
+                    'bg-rose-500 animate-pulse shadow-sm shadow-rose-500/50': mes.estado === 'inactivo_perdido',
+                    'bg-slate-300 dark:bg-slate-600': mes.estado === 'sin_configurar' || mes.estado === 'pendiente',
+                  }"
+                  :title="mes.estado"
+                ></span>
+              </div>
+
+              <!-- Badge de Estado Explícito -->
+              <div class="mb-2">
+                <Badge :variant="mes.estado" :value="mes.estado" size="sm" />
+              </div>
+
+              <div v-if="mes.estado === 'inactivo_perdido'">
+                <span class="text-base font-black font-mono block text-rose-500">
+                  0 posts
+                </span>
+                <span class="text-[10px] font-mono text-rose-500/90 font-bold block mt-0.5">
+                  ⚠️ Mes Inactivo / Perdido
+                </span>
+              </div>
+              <div v-else-if="mes.estado === 'sin_configurar' || mes.estado === 'pendiente'">
+                <span class="text-base font-black font-mono block text-slate-400">
+                  0 posts
+                </span>
+                <span class="text-[10px] font-mono text-slate-400 font-medium block mt-0.5">
+                  ⏳ Sin registrar
+                </span>
+              </div>
+              <div v-else>
+                <span class="text-lg font-black font-mono block text-cyan-600 dark:text-cyan-400">
+                  {{ mes.posts_count }} posts
+                </span>
+                <span class="text-[10px] font-mono text-slate-400 block mt-0.5">
+                  {{ mes.pct_cumplimiento }}% de la meta
+                </span>
+              </div>
             </div>
 
-            <div v-if="mes.estado === 'inactivo_perdido'">
-              <span class="text-base font-black font-mono block text-rose-500">
-                0 posts
-              </span>
-              <span class="text-[10px] font-mono text-rose-500/90 font-bold block mt-0.5">
-                ⚠️ Mes Inactivo / Perdido
-              </span>
-            </div>
-            <div v-else>
-              <span class="text-lg font-black font-mono block text-cyan-600 dark:text-cyan-400">
-                {{ mes.posts_count }} posts
-              </span>
-              <span class="text-[10px] font-mono text-slate-400 block mt-0.5">
-                {{ mes.pct_cumplimiento }}% de la meta
-              </span>
-            </div>
+            <div class="space-y-2 pt-2">
+              <!-- Mini Barra de Cumplimiento -->
+              <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                <div
+                  class="h-full transition-all"
+                  :class="{
+                    'bg-emerald-500': mes.estado === 'excelente',
+                    'bg-amber-500': mes.estado === 'adecuado',
+                    'bg-slate-400': mes.estado === 'bajo',
+                    'bg-rose-500': mes.estado === 'inactivo_perdido',
+                    'bg-slate-300 dark:bg-slate-700': mes.estado === 'sin_configurar' || mes.estado === 'pendiente',
+                  }"
+                  :style="{ width: `${mes.estado === 'inactivo_perdido' || mes.estado === 'sin_configurar' || mes.estado === 'pendiente' ? 0 : mes.pct_cumplimiento}%` }"
+                ></div>
+              </div>
 
-            <!-- Mini Barra de Cumplimiento -->
-            <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
               <div
-                class="h-full transition-all"
-                :class="{
-                  'bg-emerald-500': mes.estado === 'excelente',
-                  'bg-amber-500': mes.estado === 'adecuado',
-                  'bg-slate-400': mes.estado === 'bajo',
-                  'bg-rose-500': mes.estado === 'inactivo_perdido',
-                }"
-                :style="{ width: `${mes.estado === 'inactivo_perdido' ? 0 : mes.pct_cumplimiento}%` }"
-              ></div>
-            </div>
-
-            <div class="text-[10px] font-mono pt-1 border-t flex justify-between"
-              :class="mes.estado === 'inactivo_perdido' ? 'border-rose-500/20 text-rose-400' : 'border-slate-200/60 dark:border-slate-800/60 text-slate-400'"
-            >
-              <span v-if="mes.estado === 'inactivo_perdido'">⛔ Sin publicaciones</span>
-              <span v-else>🔥 {{ formatNumber(mes.total_interacciones) }}</span>
-              <span v-if="mes.total_pauta > 0" class="text-violet-400">📢 ${{ formatNumber(mes.total_pauta) }}</span>
+                class="text-[10px] font-mono pt-1 border-t flex justify-between items-center"
+                :class="mes.estado === 'inactivo_perdido' ? 'border-rose-500/20 text-rose-400' : 'border-slate-200/60 dark:border-slate-800/60 text-slate-400'"
+              >
+                <span v-if="mes.estado === 'inactivo_perdido'">⛔ Sin posts</span>
+                <span v-else-if="mes.estado === 'sin_configurar' || mes.estado === 'pendiente'">⏳ Sin datos</span>
+                <span v-else>🔥 {{ formatNumber(mes.total_interacciones) }}</span>
+                <span v-if="mes.total_pauta > 0" class="text-violet-400 font-semibold">📢 ${{ formatNumber(mes.total_pauta) }}</span>
+              </div>
             </div>
           </div>
         </div>

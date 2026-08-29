@@ -262,11 +262,25 @@ const formatNumber = (num) => {
     <!-- Empty State -->
     <div
       v-if="!candidatos.length"
-      class="text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8"
+      class="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xs"
     >
-      <Users class="w-12 h-12 text-slate-400 mx-auto mb-3 opacity-50" />
-      <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">No se encontraron candidatos</h3>
-      <p class="text-xs text-slate-500 mt-1">Prueba ajustando los filtros de campaña o estado político.</p>
+      <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center mx-auto mb-4">
+        <Users class="w-8 h-8 opacity-80" />
+      </div>
+      <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">No hay candidatos rivales u oposición registrados</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-md mx-auto">
+        Actualmente no hay candidatos opositores en este workspace. Puedes registrar rivales para monitorear sus redes y contrastar métricas.
+      </p>
+      <div v-if="canWrite" class="mt-5">
+        <button
+          type="button"
+          @click="openCreateModal"
+          class="px-4 py-2 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs inline-flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+        >
+          <UserPlus class="w-4 h-4" />
+          <span>Registrar Candidato Rival</span>
+        </button>
+      </div>
     </div>
 
     <!-- Cards Grid View -->

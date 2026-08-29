@@ -1739,6 +1739,49 @@ class CandidatoController extends Controller
                 ];
             });
 
+        // Plataformas estándar a auditar para selector en 1 fila
+        $plataformasEstandar = [
+            'instagram' => 'Instagram',
+            'facebook' => 'Facebook',
+            'threads' => 'Threads',
+            'tiktok' => 'TikTok',
+            'x_twitter' => 'X (Twitter)',
+            'youtube' => 'YouTube',
+            'linkedin' => 'LinkedIn',
+        ];
+
+        $canalesCandidato = collect($plataformasEstandar)->map(function ($nombre, $key) use ($candidato) {
+            $p = $candidato->perfilesSociales->firstWhere('plataforma', $key);
+            $tieneHandle = $p && ! empty(trim($p->handle_usuario ?? ''));
+            $estaActivo = $p ? (bool) $p->esta_activo : false;
+            $estaVerificado = $p ? (bool) $p->esta_verificado : false;
+
+            if (! $tieneHandle) {
+                $colorEstado = 'gris';
+                $estadoTexto = 'Configurar';
+            } elseif ($estaVerificado) {
+                $colorEstado = 'azul';
+                $estadoTexto = 'Verificada';
+            } elseif ($estaActivo && ((int) $p->publicaciones_totales > 0 || (int) $p->seguidores_actuales > 0)) {
+                $colorEstado = 'verde';
+                $estadoTexto = 'Activa';
+            } else {
+                $colorEstado = 'rojo';
+                $estadoTexto = 'Inactiva';
+            }
+
+            return [
+                'key' => $key,
+                'nombre' => $nombre,
+                'perfil_id' => $p?->id,
+                'handle_usuario' => $p?->handle_usuario ?? '',
+                'color_estado' => $colorEstado,
+                'estado_texto' => $estadoTexto,
+                'seguidores' => $p ? (int) $p->seguidores_actuales : 0,
+                'publicaciones' => $p ? (int) $p->publicaciones_totales : 0,
+            ];
+        })->values();
+
         // Color semáforo de la cuenta: Azul (Verificada), Verde (Activa), Rojo (Inactiva)
         $semaforoColor = $perfilSocial->esta_verificado ? 'azul' : ($perfilSocial->esta_activo ? 'verde' : 'rojo');
 
@@ -1755,6 +1798,7 @@ class CandidatoController extends Controller
                 'territorio_nombre' => $nombreTerritorio,
                 'padron_electoral' => $padronElectoral,
             ],
+            'canalesCandidato' => $canalesCandidato,
             'perfilSocial' => [
                 'id' => $perfilSocial->id,
                 'plataforma' => $perfilSocial->plataforma,

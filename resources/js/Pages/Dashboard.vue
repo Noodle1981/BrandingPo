@@ -92,9 +92,9 @@ const props = defineProps({
       score_impacto_meta: '0',
       score_impacto_meta_raw: 0,
       score_impacto_pct: 0,
-      score_impacto_estado: 'mantenimiento',
-      score_impacto_estado_texto: 'Mantenimiento',
-      score_impacto_base_texto: 'Promedio redes activas (x500 pts)',
+      score_impacto_estado: 'frio',
+      score_impacto_estado_texto: 'Sin datos',
+      score_impacto_base_texto: 'Sin audiencia neta calculada',
       total_vistas: '0',
       total_vistas_raw: 0,
       total_publicaciones: 0,
@@ -172,6 +172,60 @@ const formatNumber = (num) => {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
   if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
   return num.toString();
+};
+
+const tabBadgeStyle = (colorEstado) => {
+  switch (colorEstado) {
+    case 'azul':
+      return {
+        tab: 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30',
+        pill: 'bg-blue-500 text-white font-bold',
+        label: 'Verificada'
+      };
+    case 'verde':
+    case 'naranja':
+      return {
+        tab: 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold ring-2 ring-emerald-500/30',
+        pill: 'bg-emerald-500 text-white font-bold',
+        label: 'Activa'
+      };
+    case 'rojo':
+      return {
+        tab: 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold ring-2 ring-rose-500/30',
+        pill: 'bg-rose-500 text-white font-bold',
+        label: 'Inactiva'
+      };
+    case 'gris':
+    default:
+      return {
+        tab: 'border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 text-slate-400 opacity-75 hover:opacity-100 hover:border-slate-400 hover:bg-white dark:hover:bg-slate-900 border-dashed',
+        pill: 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium',
+        label: 'Configurar'
+      };
+  }
+};
+
+const getSocialMeta = (key) => {
+  switch (key) {
+    case 'instagram':
+      return { color: '#E4405F', bgLight: 'bg-[#E4405F]/15' };
+    case 'facebook':
+      return { color: '#1877F2', bgLight: 'bg-[#1877F2]/15' };
+    case 'tiktok':
+      return { color: '#00F2FE', bgLight: 'bg-cyan-500/15' };
+    case 'threads':
+      return { color: '#000000', bgLight: 'bg-slate-900/15 dark:bg-white/10' };
+    case 'x_twitter':
+    case 'twitter':
+    case 'x':
+      return { color: '#000000', bgLight: 'bg-slate-500/15 dark:bg-white/10' };
+    case 'youtube':
+      return { color: '#FF0000', bgLight: 'bg-red-500/15' };
+    case 'linkedin':
+      return { color: '#0A66C2', bgLight: 'bg-[#0A66C2]/15' };
+    default:
+      return { color: '#06b6d4', bgLight: 'bg-cyan-500/15' };
+  }
 };
 
 // 1. Gráfico de Evolución Temporal (Line Chart)
@@ -544,8 +598,9 @@ const ejesBarChartOptions = {
               class="text-xs font-bold font-mono shrink-0"
               :class="{
                 'text-emerald-500': (stats.score_impacto_pct || 0) >= 100,
-                'text-amber-500': (stats.score_impacto_pct || 0) >= 70 && (stats.score_impacto_pct || 0) < 100,
-                'text-rose-500': (stats.score_impacto_pct || 0) < 70
+                'text-amber-500': (stats.score_impacto_pct || 0) >= 60 && (stats.score_impacto_pct || 0) < 100,
+                'text-cyan-500': (stats.score_impacto_pct || 0) >= 35 && (stats.score_impacto_pct || 0) < 60,
+                'text-rose-500': (stats.score_impacto_pct || 0) < 35
               }"
             >
               {{ stats.score_impacto_pct || 0 }}%
@@ -558,24 +613,26 @@ const ejesBarChartOptions = {
               class="h-full rounded-full transition-all duration-500"
               :class="{
                 'bg-emerald-500': (stats.score_impacto_pct || 0) >= 100,
-                'bg-amber-500': (stats.score_impacto_pct || 0) >= 70 && (stats.score_impacto_pct || 0) < 100,
-                'bg-rose-500': (stats.score_impacto_pct || 0) < 70
+                'bg-amber-500': (stats.score_impacto_pct || 0) >= 60 && (stats.score_impacto_pct || 0) < 100,
+                'bg-cyan-500': (stats.score_impacto_pct || 0) >= 35 && (stats.score_impacto_pct || 0) < 60,
+                'bg-rose-500': (stats.score_impacto_pct || 0) < 35
               }"
               :style="{ width: `${Math.min(stats.score_impacto_pct || 0, 100)}%` }"
             ></div>
           </div>
 
           <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between">
-            <span class="truncate" :title="stats.score_impacto_base_texto">{{ stats.score_impacto_base_texto || 'Base: Padrón' }}</span>
+            <span class="truncate" :title="stats.score_impacto_base_texto">{{ stats.score_impacto_base_texto || 'Calculando...' }}</span>
             <span
               class="font-semibold shrink-0"
               :class="{
                 'text-emerald-500': (stats.score_impacto_pct || 0) >= 100,
-                'text-amber-500': (stats.score_impacto_pct || 0) >= 70 && (stats.score_impacto_pct || 0) < 100,
-                'text-rose-500': (stats.score_impacto_pct || 0) < 70
+                'text-amber-500': (stats.score_impacto_pct || 0) >= 60 && (stats.score_impacto_pct || 0) < 100,
+                'text-cyan-500': (stats.score_impacto_pct || 0) >= 35 && (stats.score_impacto_pct || 0) < 60,
+                'text-rose-500': (stats.score_impacto_pct || 0) < 35
               }"
             >
-              {{ stats.score_impacto_estado_texto || 'Mantenimiento' }}
+              {{ stats.score_impacto_estado_texto || 'Sin datos' }}
             </span>
           </div>
         </div>
@@ -748,7 +805,7 @@ const ejesBarChartOptions = {
       </div>
     </div>
 
-    <!-- 4. MALLA DE CANALES SOCIALES (CON SEMÁFORO Y ACCESO EN 1 CLIC A /perfiles-sociales/{id}/metricas) -->
+    <!-- 4. MALLA DE CANALES SOCIALES (7 CANALES EN 1 SOLA FILA ESTILO MI-PERFIL) -->
     <div class="space-y-3.5">
       <div class="flex items-center justify-between">
         <div>
@@ -756,78 +813,62 @@ const ejesBarChartOptions = {
             <Sparkles class="w-4 h-4 text-cyan-500" />
             <span>Auditoría de Canales Sociales Conectados</span>
           </h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Haz clic en cualquier canal para abrir su panel analítico detallado</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Haz clic en cualquier canal para auditar sus métricas o configurar su Punto Cero</p>
         </div>
         <Link href="/mi-candidato" class="text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:underline">
           Configurar Punto Cero &rarr;
         </Link>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+      <!-- Grid de 7 Canales en 1 Sola Fila Continua -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 lg:grid-cols-7 gap-2.5 sm:gap-3">
         <Link
           v-for="red in redes_desglose"
-          :key="red.id"
-          :href="`/perfiles-sociales/${red.id}/metricas`"
-          class="p-4.5 rounded-2xl border transition-all group flex flex-col justify-between block cursor-pointer"
-          :class="red.esta_activo && (red.seguidores > 0 || red.publicaciones_count > 0 || red.handle_usuario)
-            ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xs hover:border-cyan-500/50 hover:shadow-md'
-            : 'bg-slate-100/50 dark:bg-slate-900/30 border-dashed border-slate-300 dark:border-slate-800/80 opacity-60 hover:opacity-100'"
+          :key="red.plataforma"
+          :href="red.id && red.color_estado !== 'gris' ? `/perfiles-sociales/${red.id}/metricas` : '/mi-candidato'"
+          class="p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-between text-center gap-2 cursor-pointer relative shadow-xs group"
+          :class="[
+            red.color_estado === 'gris'
+              ? 'border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 text-slate-400 opacity-75 hover:opacity-100 hover:border-slate-400 hover:bg-white dark:hover:bg-slate-900'
+              : (red.color_estado === 'azul'
+                  ? 'border-blue-500/60 bg-blue-500/5 hover:border-blue-500 hover:shadow-md'
+                  : (red.color_estado === 'verde'
+                      ? 'border-emerald-500/60 bg-emerald-500/5 hover:border-emerald-500 hover:shadow-md'
+                      : 'border-rose-500/40 bg-rose-500/5 hover:border-rose-500 hover:shadow-md'))
+          ]"
         >
-          <div>
-            <!-- Header de Canal con Ícono Oficial -->
-            <div class="flex items-center justify-between gap-2 mb-3">
-              <div class="flex items-center gap-2.5" :class="!(red.esta_activo && (red.seguidores > 0 || red.publicaciones_count > 0 || red.handle_usuario)) ? 'grayscale opacity-75' : ''">
-                <SocialPlatformIcon :platform="red.plataforma" size="md" />
-                <div>
-                  <h3 class="font-bold text-xs text-slate-900 dark:text-slate-100 uppercase tracking-wider font-mono">
-                    {{ red.plataforma.replace('_', ' ') }}
-                  </h3>
-                  <span class="text-[11px] text-slate-500 dark:text-slate-400 block truncate max-w-[130px]">
-                    {{ red.handle_usuario || '@sin_configurar' }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Semáforo de Estado -->
-              <span
-                class="w-2.5 h-2.5 rounded-full"
-                :class="red.esta_verificado ? 'bg-cyan-500 shadow-xs shadow-cyan-500/50' : (red.esta_activo ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-600')"
-                :title="red.esta_verificado ? 'Verificada' : (red.esta_activo ? 'Activa' : 'Inactiva / Sin datos')"
-              ></span>
-            </div>
-
-            <!-- Métricas Clave del Canal -->
-            <div v-if="red.esta_activo && (red.seguidores > 0 || red.publicaciones_count > 0 || red.handle_usuario)" class="grid grid-cols-2 gap-2 font-mono py-2 border-y border-slate-100 dark:border-slate-800/80">
-              <div>
-                <span class="text-[10px] text-slate-400 uppercase block">Comunidad</span>
-                <span class="text-base font-extrabold text-slate-900 dark:text-slate-100">
-                  {{ formatNumber(red.seguidores) }}
-                </span>
-                <span class="text-[10px] block" :class="red.crecimiento_neto_seguidores >= 0 ? 'text-emerald-500' : 'text-rose-500'">
-                  {{ red.crecimiento_neto_seguidores >= 0 ? '+' : '' }}{{ formatNumber(red.crecimiento_neto_seguidores) }} neto
-                </span>
-              </div>
-              <div>
-                <span class="text-[10px] text-slate-400 uppercase block">Engagement</span>
-                <span class="text-base font-extrabold text-cyan-600 dark:text-cyan-400">
-                  {{ red.tasa_engagement }}%
-                </span>
-                <span class="text-[10px] text-slate-400 block">
-                  {{ red.publicaciones_count }} publicaciones
-                </span>
-              </div>
-            </div>
-            <div v-else class="py-3 px-2 rounded-xl bg-slate-200/40 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-800/50 text-center font-mono text-[11px] text-slate-400 my-2">
-              <span>⏳ Canal inactivo / Sin datos</span>
-            </div>
+          <!-- Logo Oficial de la Red -->
+          <div class="flex items-center justify-center w-9 h-9 rounded-xl shadow-2xs shrink-0" :class="getSocialMeta(red.plataforma).bgLight">
+            <SocialPlatformIcon :platform="red.plataforma" size="md" />
           </div>
 
-          <!-- Footer con Botón Directo -->
-          <div class="mt-3 pt-1 flex items-center justify-between text-xs font-semibold"
-            :class="red.esta_activo && (red.seguidores > 0 || red.publicaciones_count > 0 || red.handle_usuario) ? 'text-cyan-600 dark:text-cyan-400 group-hover:translate-x-0.5 transition-transform' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'"
+          <div class="min-w-0 w-full">
+            <span class="font-bold text-xs leading-tight block text-slate-900 dark:text-slate-100 truncate">
+              {{ red.plataforma.replace('_', ' ') }}
+            </span>
+            <span class="text-[10px] text-slate-500 dark:text-slate-400 block truncate mt-0.5 font-mono">
+              {{ red.handle_usuario || '@sin_configurar' }}
+            </span>
+          </div>
+
+          <!-- Pill de Estado Oficial -->
+          <span
+            class="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider font-mono truncate max-w-full"
+            :class="tabBadgeStyle(red.color_estado).pill"
           >
-            <span>{{ red.esta_activo ? 'Ver Métricas & Cadencia' : 'Configurar Canal' }}</span>
-            <ChevronRight class="w-4 h-4" />
+            {{ tabBadgeStyle(red.color_estado).label }}
+          </span>
+
+          <!-- Métricas o Estado -->
+          <div v-if="red.color_estado === 'verde' || red.color_estado === 'azul'" class="w-full pt-1.5 border-t border-slate-200/60 dark:border-slate-800/80 font-mono text-[10px] flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span>{{ formatNumber(red.seguidores) }} seg</span>
+            <span class="text-cyan-600 dark:text-cyan-400 font-bold">{{ red.publicaciones_count }} posts</span>
+          </div>
+          <div v-else-if="red.color_estado === 'rojo'" class="w-full pt-1.5 border-t border-rose-500/20 font-mono text-[9px] text-rose-500 truncate">
+            0 publicaciones
+          </div>
+          <div v-else class="w-full pt-1.5 border-t border-dashed border-slate-300 dark:border-slate-800 font-mono text-[9px] text-slate-400 truncate">
+            Sin vincular
           </div>
         </Link>
       </div>

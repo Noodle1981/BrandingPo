@@ -21,10 +21,7 @@ class MediosAndCrisisSeeder extends Seeder
         $territorio = Territorio::first();
         $candidatos = Candidato::all()->keyBy('nombre_completo');
 
-        $propio = $candidatos->get('Martín Rodríguez');
-        $rival = $candidatos->get('Carlos Morales');
-        $precandidata = $candidatos->get('Lucía Fernández');
-        $electo = $candidatos->get('Esteban Rossi');
+        $propio = $candidatos->firstWhere('es_propio', true) ?? $candidatos->first();
 
         $now = Carbon::now();
 
@@ -103,7 +100,7 @@ class MediosAndCrisisSeeder extends Seeder
                 'candidato' => $propio,
                 'fecha' => $now->copy()->subDays(1),
                 'titulo' => 'La Municipalidad finalizó la pavimentación del anillo norte y sumó 500 luminarias LED',
-                'resumen' => 'El intendente Martín Rodríguez encabezó el acto junto a vecinos y anunció una inversión complementaria para desagües pluviales.',
+                'resumen' => 'El intendente encabezó el acto junto a vecinos y anunció una inversión complementaria para desagües pluviales.',
                 'tono' => 'favorable',
                 'tapa' => true,
                 'interacciones' => 4500,
@@ -119,39 +116,6 @@ class MediosAndCrisisSeeder extends Seeder
                 'tapa' => false,
                 'interacciones' => 6200,
                 'replica' => 'Secretaría de Salud emitió comunicado demostrando aumento del 40% en atenciones por guardia pediátrica estacional.',
-            ],
-            [
-                'medio' => 'Cadena 3 Argentina',
-                'candidato' => $rival,
-                'fecha' => $now->copy()->subDays(2),
-                'titulo' => 'Carlos Morales: "La presión tributaria en la ciudad ahoga a comerciantes e industrias"',
-                'resumen' => 'El candidato opositor presentó su plan de rebaja del 30% en contribuciones municipales en el almuerzo de cámaras empresarias.',
-                'tono' => 'favorable',
-                'tapa' => false,
-                'interacciones' => 8900,
-                'replica' => null,
-            ],
-            [
-                'medio' => 'El Doce TV (Canal 12)',
-                'candidato' => $precandidata,
-                'fecha' => $now->copy()->subDays(3),
-                'titulo' => 'Lucía Fernández gana protagonismo joven con proyectos de transporte y salud mental',
-                'resumen' => 'Informe especial sobre las nuevas figuras políticas que desafían el bipartidismo tradicional en el Concejo Deliberante.',
-                'tono' => 'favorable',
-                'tapa' => false,
-                'interacciones' => 11200,
-                'replica' => null,
-            ],
-            [
-                'medio' => 'Perfil Córdoba',
-                'candidato' => $electo,
-                'fecha' => $now->copy()->subDays(4),
-                'titulo' => 'Esteban Rossi coordina agenda de transición con los intendentes metropolitanos',
-                'resumen' => 'Encuentro clave para delinear una empresa conjunta de transporte interurbano y saneamiento de cuencas.',
-                'tono' => 'favorable',
-                'tapa' => true,
-                'interacciones' => 3100,
-                'replica' => null,
             ],
             [
                 'medio' => 'Hoy Día Córdoba',
@@ -219,19 +183,6 @@ class MediosAndCrisisSeeder extends Seeder
                 'estrategia_contencion' => 'Operativo especial de limpieza exprés 24hs anunciado en redes barriales y centros vecinales.',
                 'estado' => 'resuelto',
                 'impacto_estimado' => 'Bajo',
-            ]);
-        }
-
-        if ($rival) {
-            EventoCrisis::create([
-                'candidato_id' => $rival->id,
-                'titulo' => 'Filtración de audio con fuertes discusiones en el armado de listas distritales',
-                'fecha_evento' => $now->copy()->subHours(14),
-                'nivel_gravedad' => 'critico',
-                'minutos_tiempo_respuesta' => 120,
-                'estrategia_contencion' => 'Silencio de voceros durante las primeras 2 horas; posterior desmentida alegando edición maliciosa.',
-                'estado' => 'en_contencion',
-                'impacto_estimado' => 'Alto',
             ]);
         }
 

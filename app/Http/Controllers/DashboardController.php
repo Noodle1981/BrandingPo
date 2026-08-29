@@ -155,33 +155,42 @@ class DashboardController extends Controller
             ? round(($totalSeguidores / $padronElectoral) * 100, 1)
             : 0;
 
-        // Meta de Score de Impacto: Basado en el promedio de publicaciones de las redes activas (/500 pts base por post)
-        // Ejemplo: 3 redes activas con 4 publicaciones c/u = 4 posts en promedio -> Meta = 4 x 500 = 2.000 pts
-        $perfilesActivos = $candidato->perfilesSociales->filter(function ($p) use ($publicaciones) {
-            return $p->esta_activo || $publicaciones->where('perfil_social_id', $p->id)->count() > 0;
-        });
-        $cantRedesActivas = max(1, $perfilesActivos->count() > 0 ? $perfilesActivos->count() : $candidato->perfilesSociales->count());
-        $promedioPostsPorRed = round($totalPosts / $cantRedesActivas, 1);
+        // Meta de Score de Impacto: Anclada a la audiencia real deduplicada por Tiers (cross-platform)
+        // El sistema de Tiers ya descuenta solapamiento entre redes (ej: 100 FB + 150 IG = 150 únicos, no 250).
+        // Meta = seguidores únicos netos (post-deduplicación) × factor de engagement objetivo (0.5 = 50% debería interactuar).
+        // Esto hace que la meta escale con la AUDIENCIA REAL, no con el ritmo de publicación propio.
+        $factorEngagementObjetivo = 0.5;
+        $scoreImpactoMeta = (int) max(500, round($seguidoresNetosEstimados * $factorEngagementObjetivo));
 
-        $scoreImpactoMeta = (int) max(500, round($promedioPostsPorRed * 500));
-        $scoreImpactoBaseTexto = "{$promedioPostsPorRed} posts prom. / {$cantRedesActivas} " . ($cantRedesActivas === 1 ? 'red' : 'redes') . ' (x500 pts)';
+        // Contexto de padrón: qué % del universo electoral cubre la audiencia neta actual
+        $pctPadronCubiertoPorTiers = $padronElectoral > 0
+            ? round(($seguidoresNetosEstimados / $padronElectoral) * 100, 1)
+            : 0;
+
+        $scoreImpactoBaseTexto = number_format($seguidoresNetosEstimados, 0, ',', '.')
+            . ' únicos netos (Tiers) × ' . $factorEngagementObjetivo
+            . ' — cubre ' . $pctPadronCubiertoPorTiers . '% del padrón';
 
         $scoreImpactoPct = $scoreImpactoMeta > 0
             ? round(($scoreImpactoTotal / $scoreImpactoMeta) * 100, 1)
             : 0;
 
+        // Semáforo ajustado: el umbral de "Óptimo" exige alcanzar el 100% de la meta basada en audiencia real
         if ($scoreImpactoPct >= 100) {
             $scoreImpactoEstado = 'optimo';
             $scoreImpactoEstadoTexto = 'Óptimo';
-        } elseif ($scoreImpactoPct >= 70) {
+        } elseif ($scoreImpactoPct >= 60) {
             $scoreImpactoEstado = 'mantenimiento';
             $scoreImpactoEstadoTexto = 'Mantenimiento';
+        } elseif ($scoreImpactoPct >= 35) {
+            $scoreImpactoEstado = 'creciendo';
+            $scoreImpactoEstadoTexto = 'Creciendo';
         } else {
             $scoreImpactoEstado = 'frio';
             $scoreImpactoEstadoTexto = 'Bajo impacto';
         }
 
-        // 1. Desglose por Red Social del Candidato con Métricas y Enlace
+        // 1. Desglose por Red Social del Candidato con Métricas y Enlace (7 Plataformas Oficiales)
         $plataformasColores = [
             'instagram' => '#E4405F',
             'facebook' => '#1877F2',
@@ -192,48 +201,100 @@ class DashboardController extends Controller
             'linkedin' => '#0A66C2',
         ];
 
+        $plataformasOrden = ['instagram', 'facebook', 'threads', 'tiktok', 'x_twitter', 'youtube', 'linkedin'];
         $now = \Carbon\Carbon::now();
         $startOfMonth = $now->copy()->startOfMonth();
 
-        $redesDesglose = $candidato->perfilesSociales->map(function ($perfil) use ($publicaciones, $startOfMonth, $plataformasColores) {
-            $postsRed = $publicaciones->where('perfil_social_id', $perfil->id);
-            $likesRed = (int) $postsRed->sum('total_likes');
-            $comentariosRed = (int) $postsRed->sum('total_comentarios');
-            $compartidosRed = (int) $postsRed->sum('total_compartidos');
-            $republicadosRed = (int) $postsRed->sum('total_republicados');
-            $vistasRed = (int) $postsRed->sum('total_vistas');
-            $intRed = $likesRed + $comentariosRed + $compartidosRed + $republicadosRed;
+        $perfilesPorPlataforma = $candidato->perfilesSociales->keyBy('plataforma');
 
-            $seguidoresActuales = (int) $perfil->seguidores_actuales;
-            $seguidoresPuntoCero = (int) $perfil->seguidores_punto_cero;
-            $crecimientoSeguidores = $seguidoresActuales - $seguidoresPuntoCero;
+        $redesDesglose = collect($plataformasOrden)->map(function ($plat) use ($perfilesPorPlataforma, $publicaciones, $startOfMonth, $plataformasColores) {
+            $perfil = $perfilesPorPlataforma->get($plat);
+            $tieneHandle = $perfil && (!empty(trim($perfil->handle_usuario ?? '')) || !empty(trim($perfil->url_perfil ?? '')));
 
-            $postsMes = $postsRed->filter(function ($p) use ($startOfMonth) {
-                return $p->fecha_publicacion && $p->fecha_publicacion->greaterThanOrEqualTo($startOfMonth);
-            })->count();
+            if ($perfil && $tieneHandle) {
+                $postsRed = $publicaciones->where('perfil_social_id', $perfil->id);
+                $cantPosts = $postsRed->count();
+                $likesRed = (int) $postsRed->sum('total_likes');
+                $comentariosRed = (int) $postsRed->sum('total_comentarios');
+                $compartidosRed = (int) $postsRed->sum('total_compartidos');
+                $republicadosRed = (int) $postsRed->sum('total_republicados');
+                $vistasRed = (int) $postsRed->sum('total_vistas');
+                $intRed = $likesRed + $comentariosRed + $compartidosRed + $republicadosRed;
 
-            $erRed = ($seguidoresActuales > 0 && $postsRed->count() > 0)
-                ? round((($intRed / $postsRed->count()) / $seguidoresActuales) * 100, 2)
-                : 0;
+                $seguidoresActuales = (int) $perfil->seguidores_actuales;
+                $seguidoresPuntoCero = (int) $perfil->seguidores_punto_cero;
+                $crecimientoSeguidores = $seguidoresActuales - $seguidoresPuntoCero;
+
+                $postsMes = $postsRed->filter(function ($p) use ($startOfMonth) {
+                    return $p->fecha_publicacion && $p->fecha_publicacion->greaterThanOrEqualTo($startOfMonth);
+                })->count();
+
+                $erRed = ($seguidoresActuales > 0 && $cantPosts > 0)
+                    ? round((($intRed / $cantPosts) / $seguidoresActuales) * 100, 2)
+                    : 0;
+
+                $estaActivo = (bool) $perfil->esta_activo;
+                $estaVerificado = (bool) $perfil->esta_verificado;
+
+                if ($estaVerificado) {
+                    $estado = 'verificado';
+                    $colorEstado = 'azul';
+                    $estadoTexto = 'Verificada';
+                } elseif ($estaActivo && ($cantPosts > 0 || $seguidoresActuales > 0)) {
+                    $estado = 'activo';
+                    $colorEstado = 'verde';
+                    $estadoTexto = 'Activa';
+                } else {
+                    $estado = 'inactivo';
+                    $colorEstado = 'rojo';
+                    $estadoTexto = 'Inactiva';
+                }
+
+                return [
+                    'id' => $perfil->id,
+                    'plataforma' => $perfil->plataforma,
+                    'handle_usuario' => $perfil->handle_usuario,
+                    'url_perfil' => $perfil->url_perfil,
+                    'esta_activo' => $estaActivo,
+                    'esta_verificado' => $estaVerificado,
+                    'estado' => $estado,
+                    'color_estado' => $colorEstado,
+                    'estado_texto' => $estadoTexto,
+                    'seguidores' => $seguidoresActuales,
+                    'seguidores_punto_cero' => $seguidoresPuntoCero,
+                    'crecimiento_neto_seguidores' => $crecimientoSeguidores,
+                    'publicaciones_count' => $cantPosts,
+                    'publicaciones_mes' => $postsMes,
+                    'vistas_acumuladas' => $vistasRed,
+                    'likes_acumulados' => $likesRed,
+                    'comentarios_acumulados' => $comentariosRed,
+                    'interacciones_acumuladas' => $intRed,
+                    'tasa_engagement' => $erRed,
+                    'color' => $plataformasColores[$plat] ?? '#06b6d4',
+                ];
+            }
 
             return [
-                'id' => $perfil->id,
-                'plataforma' => $perfil->plataforma,
-                'handle_usuario' => $perfil->handle_usuario,
-                'url_perfil' => $perfil->url_perfil,
-                'esta_activo' => (bool) $perfil->esta_activo,
-                'esta_verificado' => (bool) $perfil->esta_verificado,
-                'seguidores' => $seguidoresActuales,
-                'seguidores_punto_cero' => $seguidoresPuntoCero,
-                'crecimiento_neto_seguidores' => $crecimientoSeguidores,
-                'publicaciones_count' => $postsRed->count(),
-                'publicaciones_mes' => $postsMes,
-                'vistas_acumuladas' => $vistasRed,
-                'likes_acumulados' => $likesRed,
-                'comentarios_acumulados' => $comentariosRed,
-                'interacciones_acumuladas' => $intRed,
-                'tasa_engagement' => $erRed,
-                'color' => $plataformasColores[$perfil->plataforma] ?? '#06b6d4',
+                'id' => $perfil?->id,
+                'plataforma' => $plat,
+                'handle_usuario' => null,
+                'url_perfil' => null,
+                'esta_activo' => false,
+                'esta_verificado' => false,
+                'estado' => 'sin_configurar',
+                'color_estado' => 'gris',
+                'estado_texto' => 'Configurar',
+                'seguidores' => 0,
+                'seguidores_punto_cero' => 0,
+                'crecimiento_neto_seguidores' => 0,
+                'publicaciones_count' => 0,
+                'publicaciones_mes' => 0,
+                'vistas_acumuladas' => 0,
+                'likes_acumulados' => 0,
+                'comentarios_acumulados' => 0,
+                'interacciones_acumuladas' => 0,
+                'tasa_engagement' => 0,
+                'color' => $plataformasColores[$plat] ?? '#06b6d4',
             ];
         })->values();
 
