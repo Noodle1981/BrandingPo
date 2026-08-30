@@ -416,9 +416,12 @@ const calculatedSocialThermometer = computed(() => {
 });
 
 const submitCreatePost = () => {
+  createForm.clearErrors();
+
   // Asegurar que valores numéricos y relacionales se envíen limpios
   const payload = {
     ...createForm.data(),
+    candidato_id: createForm.candidato_id ? Number(createForm.candidato_id) : null,
     perfil_social_id: createForm.perfil_social_id ? Number(createForm.perfil_social_id) : null,
     eje_tematico_id: createForm.eje_tematico_id ? Number(createForm.eje_tematico_id) : null,
     total_likes: Number(createForm.total_likes || 0),
@@ -445,6 +448,9 @@ const submitCreatePost = () => {
     onSuccess: () => {
       showCreateModal.value = false;
       createForm.reset();
+    },
+    onError: (errors) => {
+      console.warn('Errores de validación al guardar publicación:', errors);
     }
   });
 };
@@ -691,523 +697,560 @@ const formatCurrency = (amount) => {
     <!-- MODAL DE CARGA INTELIGENTE DE PUBLICACIÓN (+ AUTOCOMPLETAR 1 CLIC) -->
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto"
+      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-hidden"
     >
-      <div class="relative w-full max-w-2xl my-8 p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-5">
+      <div class="relative w-full max-w-5xl max-h-[90vh] sm:max-h-[86vh] flex flex-col rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
         
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div class="flex items-center gap-2">
-            <Sparkles class="w-5 h-5 text-cyan-500" />
-            <h3 class="text-base font-extrabold text-slate-900 dark:text-slate-100">
-              Cargar Nueva Publicación en el Feed
-            </h3>
+        <!-- Modal Header (Fixed at top) -->
+        <div class="flex items-center justify-between px-6 py-3.5 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/70 dark:bg-slate-950/70">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
+              <Sparkles class="w-4 h-4 text-cyan-500" />
+            </div>
+            <div>
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                Cargar Nueva Publicación en el Feed
+              </h3>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                Pega el enlace para autocompletar con 1 clic o ingresa los datos de campaña manualmente.
+              </p>
+            </div>
           </div>
           <button
+            type="button"
             @click="showCreateModal = false"
             class="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+            title="Cerrar ventana"
           >
             <X class="w-5 h-5" />
           </button>
         </div>
 
-        <form @submit.prevent="submitCreatePost" class="space-y-4 text-xs font-sans">
-
-          <!-- Fila 1: Candidato y Perfil Social -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Candidato:</label>
-              <select
-                v-model="createForm.candidato_id"
-                @change="onCandidatoChange"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-bold"
-              >
-                <option v-for="cand in candidatos" :key="cand.id" :value="cand.id">
-                  {{ cand.es_propio ? '⭐ ' : '' }}{{ cand.nombre_completo }}
-                </option>
-              </select>
+        <!-- Modal Form (Scrollable Body + Sticky Footer) -->
+        <form @submit.prevent="submitCreatePost" class="flex flex-col flex-1 overflow-hidden">
+          
+          <!-- Scrollable Body Container -->
+          <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4 text-xs font-sans">
+            
+            <!-- Banner de Errores de Validación (Si hubo fallo al guardar) -->
+            <div
+              v-if="createForm.hasErrors"
+              class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 space-y-1.5 animate-shake"
+            >
+              <div class="flex items-center gap-2 font-bold text-xs">
+                <AlertCircle class="w-4 h-4 text-rose-500 shrink-0" />
+                <span>No se pudo guardar la publicación. Revisa los siguientes campos:</span>
+              </div>
+              <ul class="list-disc list-inside text-[11px] space-y-0.5 pl-1">
+                <li v-for="(errorMsg, fieldKey) in createForm.errors" :key="fieldKey">
+                  <strong class="capitalize">{{ fieldKey.replace('_', ' ') }}:</strong> {{ errorMsg }}
+                </li>
+              </ul>
             </div>
 
-            <div>
-              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Canal Social / Red:</label>
-              <select
-                v-model="createForm.perfil_social_id"
-                @change="onPerfilChange"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-bold"
-              >
-                <option v-for="p in perfilesCandidatoSeleccionado" :key="p.id" :value="p.id">
-                  {{ p.plataforma.toUpperCase() }} ({{ p.handle_usuario }})
-                </option>
-              </select>
+            <!-- Grilla 2 Columnas: Izquierda (Datos & Enlace) | Derecha (Métricas & Preview) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              
+              <!-- COLUMNA IZQUIERDA (7 cols): Metadatos, Scraper, Pauta y Copy -->
+              <div class="lg:col-span-7 space-y-3.5">
+                
+                <!-- Fila 1: Candidato y Red Social -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Candidato *</label>
+                    <select
+                      v-model="createForm.candidato_id"
+                      @change="onCandidatoChange"
+                      class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-bold focus:ring-2 focus:ring-cyan-500"
+                      :class="createForm.errors.candidato_id ? 'border-rose-500 ring-1 ring-rose-500' : ''"
+                    >
+                      <option v-for="cand in candidatos" :key="cand.id" :value="cand.id">
+                        {{ cand.es_propio ? '⭐ ' : '' }}{{ cand.nombre_completo }}
+                      </option>
+                    </select>
+                    <span v-if="createForm.errors.candidato_id" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.candidato_id }}</span>
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Canal Social / Red *</label>
+                    <select
+                      v-model="createForm.perfil_social_id"
+                      @change="onPerfilChange"
+                      class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-bold focus:ring-2 focus:ring-cyan-500"
+                      :class="createForm.errors.perfil_social_id ? 'border-rose-500 ring-1 ring-rose-500' : ''"
+                    >
+                      <option v-for="p in perfilesCandidatoSeleccionado" :key="p.id" :value="p.id">
+                        {{ p.plataforma.toUpperCase() }} ({{ p.handle_usuario }})
+                      </option>
+                    </select>
+                    <span v-if="createForm.errors.perfil_social_id" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.perfil_social_id }}</span>
+                  </div>
+                </div>
+
+                <!-- Fila 2: URL del Post + Botón Scraper 1 Clic -->
+                <div class="p-3.5 rounded-2xl bg-cyan-500/5 dark:bg-cyan-500/10 border border-cyan-500/20 space-y-2">
+                  <label class="block font-bold text-slate-800 dark:text-slate-200">
+                    🔗 Enlace del Post (Instagram, TikTok, Facebook, X, etc.):
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <input
+                      v-model="createForm.url_post"
+                      type="url"
+                      placeholder="https://www.instagram.com/p/... o https://x.com/..."
+                      class="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-cyan-500 font-mono"
+                      :class="createForm.errors.url_post ? 'border-rose-500 ring-1 ring-rose-500' : ''"
+                    />
+                    <button
+                      type="button"
+                      @click="autocompletarScrape"
+                      :disabled="isScraping"
+                      class="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs hover:scale-102 disabled:opacity-50 cursor-pointer shrink-0"
+                    >
+                      <RefreshCw class="w-3.5 h-3.5" :class="isScraping ? 'animate-spin' : ''" />
+                      <span>{{ isScraping ? 'Leyendo...' : '⚡ Autocompletar (1 Clic)' }}</span>
+                    </button>
+                  </div>
+
+                  <!-- Mensajes de Autocompletar / Errores URL -->
+                  <div v-if="scrapeSuccessMsg" class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 class="w-3.5 h-3.5 shrink-0" />
+                    <span>{{ scrapeSuccessMsg }}</span>
+                  </div>
+                  <div v-if="scrapeErrorMsg" class="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <AlertCircle class="w-3.5 h-3.5 shrink-0" />
+                    <span>{{ scrapeErrorMsg }}</span>
+                  </div>
+                  <div v-if="createForm.errors.url_post" class="text-[11px] font-bold text-rose-500 flex items-center gap-1">
+                    <AlertCircle class="w-3.5 h-3.5 shrink-0" />
+                    <span>{{ createForm.errors.url_post }}</span>
+                  </div>
+                </div>
+
+                <!-- Fila 3: Eje Temático, Formato y Fecha -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Eje Temático</label>
+                    <select
+                      v-model="createForm.eje_tematico_id"
+                      class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-semibold"
+                    >
+                      <option value="">-- Sin Eje Temático --</option>
+                      <optgroup v-for="(ejesInGroup, pilar) in groupedEjes" :key="pilar" :label="pilar">
+                        <option v-for="e in ejesInGroup" :key="e.id" :value="e.id">
+                          • {{ e.nombre }}
+                        </option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Formato *</label>
+                    <select
+                      v-model="createForm.tipo_formato"
+                      class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800"
+                    >
+                      <option value="Reel">Reel / Short / TikTok</option>
+                      <option value="Video">Video Largo</option>
+                      <option value="Foto">Foto Única</option>
+                      <option value="Carrusel">Carrusel / Álbum</option>
+                      <option value="Historia">Historia / Story</option>
+                      <option value="Tweet">Post Texto / Tweet</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Fecha & Hora *</label>
+                    <input
+                      v-model="createForm.fecha_publicacion"
+                      type="datetime-local"
+                      required
+                      class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono"
+                      :class="createForm.errors.fecha_publicacion ? 'border-rose-500 ring-1 ring-rose-500' : ''"
+                    />
+                    <span v-if="createForm.errors.fecha_publicacion" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.fecha_publicacion }}</span>
+                  </div>
+                </div>
+
+                <!-- Fila 4: Tipo de Pauta y Monto Invertido -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <div>
+                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tipo de Pauta *</label>
+                    <select
+                      v-model="createForm.tipo_pauta"
+                      class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-semibold"
+                    >
+                      <option value="organico">Orgánica Pura ($0)</option>
+                      <option value="organico_impulsado">Orgánica Impulsada (Boost)</option>
+                      <option value="pauta_paga">Anuncio Directo / Dark Post</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Inversión Publicitaria (ARS):</label>
+                    <input
+                      v-model.number="createForm.monto_invertido_pauta"
+                      type="number"
+                      min="0"
+                      step="500"
+                      :disabled="createForm.tipo_pauta === 'organico'"
+                      placeholder="$0"
+                      class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
+                <!-- Fila 5: Resumen del Contenido / Copy -->
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="block font-bold text-slate-700 dark:text-slate-300">Texto / Copy del Post *</label>
+                    <span class="text-[11px] text-slate-400 font-mono">{{ createForm.contenido_resumen?.length || 0 }} caracteres</span>
+                  </div>
+                  <textarea
+                    v-model="createForm.contenido_resumen"
+                    rows="3"
+                    required
+                    placeholder="Escribe o pega aquí el texto completo o resumen de la publicación..."
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 leading-relaxed text-xs focus:ring-2 focus:ring-cyan-500"
+                    :class="createForm.errors.contenido_resumen ? 'border-rose-500 ring-1 ring-rose-500' : ''"
+                  ></textarea>
+                  <span v-if="createForm.errors.contenido_resumen" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.contenido_resumen }}</span>
+                </div>
+
+              </div>
+
+              <!-- COLUMNA DERECHA (5 cols): Preview Multimedia y Métricas Adaptativas -->
+              <div class="lg:col-span-5 space-y-3.5">
+                
+                <!-- Preview de Imagen / Portada detectada -->
+                <div v-if="createForm.media_url" class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">🖼️ Portada / Imagen Detectada</span>
+                    <button
+                      type="button"
+                      @click="createForm.media_url = ''"
+                      class="text-[10px] text-slate-400 hover:text-rose-500 cursor-pointer"
+                    >
+                      Quitar (✕)
+                    </button>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <img
+                      :src="createForm.media_url"
+                      alt="Vista previa de imagen"
+                      referrerpolicy="no-referrer"
+                      class="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs shrink-0"
+                    />
+                    <input
+                      v-model="createForm.media_url"
+                      type="url"
+                      placeholder="https://..."
+                      class="flex-1 px-2.5 py-1.5 text-[11px] font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 truncate"
+                    />
+                  </div>
+                </div>
+
+                <!-- Métricas e Interacciones Adaptativas según Red -->
+                
+                <!-- CASO 1: INSTAGRAM (❤️ Corazones, 💬 Comentarios, 🔁 Republicar, ✈️ Compartidos, 🔖 Guardado Propio) -->
+                <div v-if="createForm.plataforma === 'instagram'" class="p-4 rounded-2xl bg-gradient-to-r from-[#E4405F]/10 via-[#F77737]/5 to-transparent border border-[#E4405F]/20 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <Heart class="w-4 h-4 text-[#E4405F] fill-[#E4405F]" />
+                      <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas de Instagram</span>
+                    </div>
+                    <span class="text-[10px] font-mono text-[#E4405F] font-bold uppercase">Interacciones</span>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2 font-mono text-center">
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-[#E4405F]/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-rose-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Heart class="w-3 h-3 fill-rose-500" />
+                        <span>Me gusta (❤️)</span>
+                      </label>
+                      <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-blue-500 mb-0.5 flex items-center justify-center gap-1">
+                        <MessageCircle class="w-3 h-3" />
+                        <span>Comentarios (💬)</span>
+                      </label>
+                      <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Repeat class="w-3 h-3" />
+                        <span>Republicar (🔁)</span>
+                      </label>
+                      <input v-model.number="createForm.total_republicados" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Send class="w-3 h-3" />
+                        <span>Compartidos (✈️)</span>
+                      </label>
+                      <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2 font-mono text-center">
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-0.5 flex items-center justify-center gap-1">
+                        <Eye class="w-3 h-3" />
+                        <span>Vistas / Plays</span>
+                      </label>
+                      <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-amber-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Bookmark class="w-3 h-3 fill-amber-500" />
+                        <span>Guardados (🔖)</span>
+                      </label>
+                      <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-600 dark:text-amber-400" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CASO 2: FACEBOOK (MULTI-EMOJI 👍 ❤️ 🥰 😂 😮 😢 😡) -->
+                <div v-else-if="createForm.plataforma === 'facebook'" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Sparkles class="w-3.5 h-3.5 text-blue-500" />
+                      <span>Reacciones Facebook</span>
+                    </span>
+                    <span class="font-mono text-cyan-500 font-bold text-xs">Aprobación: {{ netApproval }}%</span>
+                  </div>
+
+                  <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 text-center font-mono">
+                    <div>
+                      <span class="text-xs">👍</span>
+                      <input v-model.number="createForm.reacciones_detalladas.like" type="number" min="0" class="w-full mt-0.5 p-1 text-center text-[11px] rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                    </div>
+                    <div>
+                      <span class="text-xs">❤️</span>
+                      <input v-model.number="createForm.reacciones_detalladas.love" type="number" min="0" class="w-full mt-0.5 p-1 text-center text-[11px] rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                    </div>
+                    <div>
+                      <span class="text-xs">🥰</span>
+                      <input v-model.number="createForm.reacciones_detalladas.care" type="number" min="0" class="w-full mt-0.5 p-1 text-center text-[11px] rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                    </div>
+                    <div>
+                      <span class="text-xs">😂</span>
+                      <input v-model.number="createForm.reacciones_detalladas.haha" type="number" min="0" class="w-full mt-0.5 p-1 text-center text-[11px] rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                    </div>
+                    <div>
+                      <span class="text-xs">😮</span>
+                      <input v-model.number="createForm.reacciones_detalladas.wow" type="number" min="0" class="w-full mt-0.5 p-1 text-center text-[11px] rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                    </div>
+                    <div>
+                      <span class="text-xs">😢</span>
+                      <input v-model.number="createForm.reacciones_detalladas.sad" type="number" min="0" class="w-full mt-0.5 p-1 text-center text-[11px] rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                    </div>
+                    <div>
+                      <span class="text-xs">😡</span>
+                      <input v-model.number="createForm.reacciones_detalladas.angry" type="number" min="0" class="w-full mt-0.5 p-1 text-center text-[11px] rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-3 gap-2 pt-1 font-mono text-center">
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-0.5">👁️ Vistas</label>
+                      <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <label class="block text-[10px] uppercase font-bold text-blue-500 mb-0.5">💬 Comentarios</label>
+                      <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-0.5">🔄 Shares</label>
+                      <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CASO 3: TIKTOK (❤️ Likes, 💬 Comentarios, 🔖 Favoritos/Guardados, 🔄 Compartidos, 👁️ Plays) -->
+                <div v-else-if="createForm.plataforma === 'tiktok'" class="p-4 rounded-2xl bg-gradient-to-r from-[#00F2FE]/10 via-[#FF004F]/5 to-transparent border border-[#00F2FE]/20 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-xs">🎵</span>
+                      <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas de TikTok</span>
+                    </div>
+                    <span class="text-[10px] font-mono text-[#00F2FE] font-bold uppercase">Video Corto</span>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2 font-mono text-center">
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-[#FF004F]/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-[#FF004F] mb-0.5 flex items-center justify-center gap-1">
+                        <Heart class="w-3 h-3 fill-[#FF004F]" />
+                        <span>Me gusta (❤️)</span>
+                      </label>
+                      <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-blue-500 mb-0.5 flex items-center justify-center gap-1">
+                        <MessageCircle class="w-3 h-3" />
+                        <span>Comentarios (💬)</span>
+                      </label>
+                      <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-amber-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Bookmark class="w-3 h-3 fill-amber-500" />
+                        <span>Favoritos (🔖)</span>
+                      </label>
+                      <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-600 dark:text-amber-400" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Send class="w-3 h-3" />
+                        <span>Compartidos (↗️)</span>
+                      </label>
+                      <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+                  </div>
+
+                  <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-[#00F2FE]/30 shadow-2xs text-center font-mono">
+                    <label class="block text-[10px] uppercase font-bold text-[#00F2FE] mb-0.5 flex items-center justify-center gap-1">
+                      <Eye class="w-3 h-3" />
+                      <span>Reproducciones / Plays</span>
+                    </label>
+                    <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                </div>
+
+                <!-- CASO 4: X / TWITTER Y THREADS -->
+                <div v-else-if="createForm.plataforma === 'x_twitter' || createForm.plataforma === 'twitter' || createForm.plataforma === 'threads'" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-black text-xs text-slate-100 font-mono">{{ createForm.plataforma === 'threads' ? '@' : '𝕏' }}</span>
+                      <span class="font-bold text-xs text-slate-800 dark:text-slate-200">{{ createForm.plataforma === 'threads' ? 'Métricas de Threads' : 'Métricas de X (Twitter)' }}</span>
+                    </div>
+                    <span class="text-[10px] font-mono text-cyan-400 font-bold uppercase">Timeline</span>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2 font-mono text-center">
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-rose-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-rose-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Heart class="w-3 h-3 fill-rose-500" />
+                        <span>Me gusta (❤️)</span>
+                      </label>
+                      <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-blue-500 mb-0.5 flex items-center justify-center gap-1">
+                        <MessageCircle class="w-3 h-3" />
+                        <span>Respuestas (💬)</span>
+                      </label>
+                      <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Repeat class="w-3 h-3" />
+                        <span>Reposts (🔁)</span>
+                      </label>
+                      <input v-model.number="createForm.total_republicados" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-amber-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Bookmark class="w-3 h-3 fill-amber-500" />
+                        <span>Guardados (🔖)</span>
+                      </label>
+                      <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-600 dark:text-amber-400" />
+                    </div>
+                  </div>
+
+                  <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center font-mono">
+                    <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-0.5 flex items-center justify-center gap-1">
+                      <Eye class="w-3 h-3" />
+                      <span>Impresiones / Vistas</span>
+                    </label>
+                    <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                </div>
+
+                <!-- CASO 5: OTRAS REDES (YOUTUBE, LINKEDIN) -->
+                <div v-else class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-xs text-slate-700 dark:text-slate-300">Métricas ({{ createForm.plataforma.toUpperCase() }}):</span>
+                    <span class="font-mono text-cyan-500 font-bold text-xs">Total</span>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2 font-mono text-center">
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-rose-500 mb-0.5">👍 Me gusta</label>
+                      <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-blue-500 mb-0.5">💬 Comentarios</label>
+                      <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-0.5">🔄 Shares</label>
+                      <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-amber-500 mb-0.5">🔖 Guardados</label>
+                      <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+                    </div>
+                  </div>
+
+                  <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center font-mono">
+                    <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-0.5 flex items-center justify-center gap-1">
+                      <Eye class="w-3 h-3" />
+                      <span>Reproducciones / Alcance</span>
+                    </label>
+                    <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                </div>
+
+              </div>
+
             </div>
+
           </div>
 
-          <!-- Fila 2: URL del Post + Botón Autocompletar (1 Clic) -->
-          <div class="p-4 rounded-2xl bg-cyan-500/5 dark:bg-cyan-500/10 border border-cyan-500/20 space-y-2">
-            <label class="block font-bold text-slate-800 dark:text-slate-200">
-              🔗 Enlace del Post (Instagram Reel, TikTok Video o Post de Facebook):
-            </label>
-            <div class="flex items-center gap-2">
-              <input
-                v-model="createForm.url_post"
-                type="url"
-                placeholder="https://www.instagram.com/reel/C.../"
-                class="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-cyan-500"
-              />
+          <!-- Modal Sticky Footer (Always Visible and Clickable on Laptops/Notebooks) -->
+          <div class="flex items-center justify-between px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-md shrink-0 sticky bottom-0 z-20">
+            <div>
+              <span v-if="createForm.hasErrors" class="text-xs font-bold text-rose-500 flex items-center gap-1.5">
+                <AlertCircle class="w-4 h-4 text-rose-500 animate-bounce" />
+                <span>Corrige los errores antes de guardar</span>
+              </span>
+              <span v-else class="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Sparkles class="w-3.5 h-3.5 text-cyan-500" />
+                <span>Canal: <strong class="text-slate-800 dark:text-slate-200 uppercase">{{ createForm.plataforma }}</strong></span>
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2.5">
               <button
                 type="button"
-                @click="autocompletarScrape"
-                :disabled="isScraping"
-                class="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs hover:scale-102 disabled:opacity-50 cursor-pointer shrink-0"
+                @click="showCreateModal = false"
+                class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-all cursor-pointer text-xs"
               >
-                <RefreshCw class="w-3.5 h-3.5" :class="isScraping ? 'animate-spin' : ''" />
-                <span>{{ isScraping ? 'Leyendo...' : '⚡ Autocompletar (1 Clic)' }}</span>
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                :disabled="createForm.processing"
+                class="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-1.5 hover:scale-102 transition-all"
+              >
+                <RefreshCw v-if="createForm.processing" class="w-3.5 h-3.5 animate-spin" />
+                <span>{{ createForm.processing ? 'Guardando en Feed...' : 'Publicar en Feed' }}</span>
               </button>
             </div>
-
-            <div v-if="scrapeSuccessMsg" class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              <CheckCircle2 class="w-3.5 h-3.5" />
-              <span>{{ scrapeSuccessMsg }}</span>
-            </div>
-            <div v-if="scrapeErrorMsg" class="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
-              <AlertCircle class="w-3.5 h-3.5" />
-              <span>{{ scrapeErrorMsg }}</span>
-            </div>
-
-            <!-- Preview miniatura de la imagen extraída o URL manual -->
-            <div v-if="createForm.media_url" class="pt-2 border-t border-cyan-500/20 flex items-center gap-3">
-              <img
-                :src="createForm.media_url"
-                alt="Vista previa de imagen"
-                referrerpolicy="no-referrer"
-                class="w-14 h-14 object-cover rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs"
-              />
-              <div class="flex-1 min-w-0">
-                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">🖼️ Imagen / Portada detectada:</span>
-                <input
-                  v-model="createForm.media_url"
-                  type="url"
-                  placeholder="https://..."
-                  class="w-full mt-1 px-2.5 py-1 text-[11px] font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 truncate"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Fila 3: Eje Temático, Formato y Fecha -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Eje Temático (5 Pilares):</label>
-              <select
-                v-model="createForm.eje_tematico_id"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-semibold"
-              >
-                <option value="">-- Seleccionar Eje Temático --</option>
-                <optgroup v-for="(ejesInGroup, pilar) in groupedEjes" :key="pilar" :label="pilar">
-                  <option v-for="e in ejesInGroup" :key="e.id" :value="e.id">
-                    • {{ e.nombre }}
-                  </option>
-                </optgroup>
-              </select>
-            </div>
-
-            <div>
-              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Formato:</label>
-              <select
-                v-model="createForm.tipo_formato"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800"
-              >
-                <option value="Reel">Reel / Short / TikTok</option>
-                <option value="Video">Video Largo</option>
-                <option value="Foto">Foto Única</option>
-                <option value="Carrusel">Carrusel / Álbum</option>
-                <option value="Historia">Historia / Story</option>
-                <option value="Tweet">Post Texto / Tweet</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Fecha & Hora:</label>
-              <input
-                v-model="createForm.fecha_publicacion"
-                type="datetime-local"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800"
-              />
-            </div>
-          </div>
-
-          <!-- Fila 4: Tipo de Pauta y Monto Invertido -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-            <div>
-              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tipo de Pauta:</label>
-              <select
-                v-model="createForm.tipo_pauta"
-                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
-              >
-                <option value="organico">Orgánica Pura ($0)</option>
-                <option value="organico_impulsado">Orgánica Impulsada (Boost)</option>
-                <option value="pauta_paga">Anuncio Directo / Dark Post</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Monto Invertido (ARS):</label>
-              <input
-                v-model.number="createForm.monto_invertido_pauta"
-                type="number"
-                min="0"
-                step="500"
-                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono"
-              />
-            </div>
-          </div>
-
-          <!-- Fila 5: Resumen del Contenido -->
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Texto / Copy del Post:</label>
-            <textarea
-              v-model="createForm.contenido_resumen"
-              rows="2"
-              placeholder="Escribe o pega aquí el resumen o texto del post..."
-              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800"
-            ></textarea>
-          </div>
-
-          <!-- Fila 6: Métricas e Interacciones Adaptativas por Red Social -->
-          
-          <!-- CASO 1: INSTAGRAM (❤️ Corazones, 💬 Comentarios, 🔁 Republicar, ✈️ Compartidos, 🔖 Guardado Propio) -->
-          <div v-if="createForm.plataforma === 'instagram'" class="p-4 rounded-2xl bg-gradient-to-r from-[#E4405F]/10 via-[#F77737]/5 to-transparent border border-[#E4405F]/20 space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <Heart class="w-4 h-4 text-[#E4405F] fill-[#E4405F]" />
-                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas Públicas de Instagram</span>
-              </div>
-              <span class="text-[11px] font-mono text-[#E4405F] font-bold">Interacciones Nativas</span>
-            </div>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-              Instagram audita Corazones Me gusta (❤️), Comentarios (💬), Republicaciones (🔁) y Compartidos (✈️).
-            </p>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#E4405F]/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-rose-500 mb-1 flex items-center justify-center gap-1">
-                  <Heart class="w-3 h-3 fill-rose-500" />
-                  <span>Me gusta (❤️)</span>
-                </label>
-                <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-blue-500/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1 flex items-center justify-center gap-1">
-                  <MessageCircle class="w-3 h-3" />
-                  <span>Comentarios (💬)</span>
-                </label>
-                <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-1 flex items-center justify-center gap-1">
-                  <Repeat class="w-3 h-3" />
-                  <span>Republicar (🔁)</span>
-                </label>
-                <input v-model.number="createForm.total_republicados" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-1 flex items-center justify-center gap-1">
-                  <Send class="w-3 h-3" />
-                  <span>Compartidos (✈️)</span>
-                </label>
-                <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-mono">
-              <!-- Reproducciones / Vistas Orgánicas -->
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center">
-                <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1 flex items-center justify-center gap-1">
-                  <Eye class="w-3 h-3" />
-                  <span>Reproducciones / Vistas</span>
-                </label>
-                <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
-              </div>
-
-              <!-- Item Propio de Auditoría: Guardados -->
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs text-center">
-                <label class="block text-[10px] uppercase font-bold text-amber-500 mb-1 flex items-center justify-center gap-1" title="Métrica privada / seguimiento interno de la campaña">
-                  <Bookmark class="w-3 h-3 fill-amber-500" />
-                  <span>Guardado Propio (Auditoría)</span>
-                </label>
-                <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-600 dark:text-amber-400" />
-              </div>
-            </div>
-          </div>
-
-          <!-- CASO 2: FACEBOOK (MULTI-EMOJI 👍 ❤️ 🥰 😂 😮 😢 😡) -->
-          <div v-else-if="createForm.plataforma === 'facebook'" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Sparkles class="w-4 h-4 text-blue-500" />
-                <span>Desglose de Emojis / Reacciones Facebook</span>
-              </span>
-              <span class="font-mono text-cyan-500 font-bold">Aprobación Neta: {{ netApproval }}%</span>
-            </div>
-
-            <!-- Aviso Táctico de Carga -->
-            <div class="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-800 dark:text-blue-200 text-xs flex items-start gap-2">
-              <AlertCircle class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-              <div class="leading-snug">
-                <span class="font-bold">⚠️ Importante para Facebook:</span>
-                Como Facebook no expone su conteo individual de emojis públicamente, <strong>completa o verifica las cantidades observadas en la publicación antes de guardar</strong> para calcular con exactitud la Aprobación Neta y el Sentimiento.
-              </div>
-            </div>
-
-            <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 text-center font-mono">
-              <div>
-                <span class="text-sm">👍</span>
-                <input v-model.number="createForm.reacciones_detalladas.like" type="number" min="0" class="w-full mt-1 p-1 text-center text-xs rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
-              </div>
-              <div>
-                <span class="text-sm">❤️</span>
-                <input v-model.number="createForm.reacciones_detalladas.love" type="number" min="0" class="w-full mt-1 p-1 text-center text-xs rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
-              </div>
-              <div>
-                <span class="text-sm">🥰</span>
-                <input v-model.number="createForm.reacciones_detalladas.care" type="number" min="0" class="w-full mt-1 p-1 text-center text-xs rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
-              </div>
-              <div>
-                <span class="text-sm">😂</span>
-                <input v-model.number="createForm.reacciones_detalladas.haha" type="number" min="0" class="w-full mt-1 p-1 text-center text-xs rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
-              </div>
-              <div>
-                <span class="text-sm">😮</span>
-                <input v-model.number="createForm.reacciones_detalladas.wow" type="number" min="0" class="w-full mt-1 p-1 text-center text-xs rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
-              </div>
-              <div>
-                <span class="text-sm">😢</span>
-                <input v-model.number="createForm.reacciones_detalladas.sad" type="number" min="0" class="w-full mt-1 p-1 text-center text-xs rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
-              </div>
-              <div>
-                <span class="text-sm">😡</span>
-                <input v-model.number="createForm.reacciones_detalladas.angry" type="number" min="0" class="w-full mt-1 p-1 text-center text-xs rounded-lg border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800" />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2 pt-2">
-              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center font-mono">
-                <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1">👁️ Plays / Vistas</label>
-                <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold" />
-              </div>
-              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center font-mono">
-                <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1">💬 Comentarios</label>
-                <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold" />
-              </div>
-              <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center font-mono">
-                <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-1">🔄 Shares</label>
-                <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold" />
-              </div>
-            </div>
-          </div>
-
-          <!-- CASO 3: TIKTOK (❤️ Likes, 💬 Comentarios, 🔖 Favoritos/Guardados, 🔄 Compartidos, 👁️ Plays) -->
-          <div v-else-if="createForm.plataforma === 'tiktok'" class="p-4 rounded-2xl bg-gradient-to-r from-[#00F2FE]/10 via-[#FF004F]/5 to-transparent border border-[#00F2FE]/20 space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="text-sm">🎵</span>
-                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas Nativas de TikTok</span>
-              </div>
-              <span class="text-[11px] font-mono text-[#00F2FE] dark:text-[#00F2FE] font-bold">Video Corto</span>
-            </div>
-
-            <!-- Aviso Táctico TikTok -->
-            <div class="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-800 dark:text-cyan-200 text-xs flex items-start gap-2">
-              <AlertCircle class="w-4 h-4 text-cyan-500 shrink-0 mt-0.5" />
-              <div class="leading-snug">
-                <span class="font-bold">⚠️ Métricas de TikTok:</span>
-                Verifica o ingresa las cantidades de <strong>Me gusta (❤️), Comentarios (💬), Favoritos (🔖) y Compartidos (↗️)</strong> observadas en la app antes de guardar.
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#FF004F]/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-[#FF004F] mb-1 flex items-center justify-center gap-1">
-                  <Heart class="w-3 h-3 fill-[#FF004F]" />
-                  <span>Me gusta (❤️)</span>
-                </label>
-                <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-blue-500/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1 flex items-center justify-center gap-1">
-                  <MessageCircle class="w-3 h-3" />
-                  <span>Comentarios (💬)</span>
-                </label>
-                <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-amber-500 mb-1 flex items-center justify-center gap-1">
-                  <Bookmark class="w-3 h-3 fill-amber-500" />
-                  <span>Favoritos (🔖)</span>
-                </label>
-                <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-600 dark:text-amber-400" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-1 flex items-center justify-center gap-1">
-                  <Send class="w-3 h-3" />
-                  <span>Compartidos (↗️)</span>
-                </label>
-                <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-            </div>
-
-            <!-- Vistas / Plays TikTok -->
-            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-[#00F2FE]/30 shadow-2xs text-center font-mono">
-              <label class="block text-[10px] uppercase font-bold text-[#00F2FE] mb-1 flex items-center justify-center gap-1">
-                <Eye class="w-3 h-3" />
-                <span>Visualizaciones (Reproducciones / Plays)</span>
-              </label>
-              <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
-            </div>
-          </div>
-
-          <!-- CASO 4: X / TWITTER Y THREADS (❤️ Likes, 💬 Respuestas, 🔁 Reposts/Retweets, ↗️ Compartidos, 🔖 Guardados, 👁️ Impresiones) -->
-          <div v-else-if="createForm.plataforma === 'x_twitter' || createForm.plataforma === 'twitter' || createForm.plataforma === 'threads'" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="font-black text-sm text-slate-100 font-mono">{{ createForm.plataforma === 'threads' ? '@' : '𝕏' }}</span>
-                <span class="font-bold text-xs text-slate-800 dark:text-slate-200">{{ createForm.plataforma === 'threads' ? 'Métricas Nativas de Threads' : 'Métricas Nativas de X (Twitter)' }}</span>
-              </div>
-              <span class="text-[11px] font-mono text-cyan-400 font-bold">{{ createForm.plataforma === 'threads' ? 'Feed de Conversación' : 'Timeline Político' }}</span>
-            </div>
-
-            <!-- Aviso Táctico X / Threads -->
-            <div class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 text-xs flex items-start gap-2">
-              <AlertCircle class="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-              <div class="leading-snug">
-                <span class="font-bold text-cyan-400">⚠️ Métricas de {{ createForm.plataforma === 'threads' ? 'Threads' : 'X' }}:</span>
-                Ingresa o verifica las cantidades de <strong>Me gusta (❤️), Respuestas (💬), Reposts (🔁) y Guardados (🔖)</strong> observadas en la publicación antes de guardar.
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-rose-500/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-rose-500 mb-1 flex items-center justify-center gap-1">
-                  <Heart class="w-3 h-3 fill-rose-500" />
-                  <span>Me gusta (❤️)</span>
-                </label>
-                <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-blue-500/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1 flex items-center justify-center gap-1">
-                  <MessageCircle class="w-3 h-3" />
-                  <span>Respuestas (💬)</span>
-                </label>
-                <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-1 flex items-center justify-center gap-1">
-                  <Repeat class="w-3 h-3" />
-                  <span>Reposts (🔁)</span>
-                </label>
-                <input v-model.number="createForm.total_republicados" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-amber-500 mb-1 flex items-center justify-center gap-1">
-                  <Bookmark class="w-3 h-3 fill-amber-500" />
-                  <span>Guardados (🔖)</span>
-                </label>
-                <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-600 dark:text-amber-400" />
-              </div>
-            </div>
-
-            <!-- Vistas / Impresiones X -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-mono">
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center font-mono">
-                <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1 flex items-center justify-center gap-1">
-                  <Eye class="w-3 h-3" />
-                  <span>Visualizaciones / Impresiones</span>
-                </label>
-                <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs text-center font-mono">
-                <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-1 flex items-center justify-center gap-1">
-                  <Send class="w-3 h-3" />
-                  <span>Compartidos / DM (↗️)</span>
-                </label>
-                <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-            </div>
-          </div>
-
-          <!-- CASO 5: OTRAS REDES (YOUTUBE, LINKEDIN) -->
-          <div v-else class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-xs text-slate-700 dark:text-slate-300">Métricas Principales ({{ createForm.plataforma.toUpperCase() }}):</span>
-              <span class="font-mono text-cyan-500 font-bold">Interacciones Totales</span>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-rose-500 mb-1">
-                  {{ createForm.plataforma === 'youtube' || createForm.plataforma === 'linkedin' ? '👍 Likes' : '❤️ Likes' }}
-                </label>
-                <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1">
-                  💬 Comentarios
-                </label>
-                <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-1">
-                  🔄 Compartidos
-                </label>
-                <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
-                <label class="block text-[10px] uppercase font-bold text-amber-500 mb-1">
-                  🔖 Guardados
-                </label>
-                <input v-model.number="createForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
-              </div>
-            </div>
-
-            <!-- Vistas -->
-            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center font-mono">
-              <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1 flex items-center justify-center gap-1">
-                <Eye class="w-3 h-3" />
-                <span>Reproducciones / Alcance Estimado</span>
-              </label>
-              <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
-            </div>
-          </div>
-
-          <!-- Botones de Acción Modal -->
-          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <button
-              type="button"
-              @click="showCreateModal = false"
-              class="px-4 py-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              :disabled="createForm.processing"
-              class="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold shadow-md shadow-cyan-500/20 disabled:opacity-50 cursor-pointer"
-            >
-              {{ createForm.processing ? 'Guardando...' : 'Publicar en Feed' }}
-            </button>
           </div>
 
         </form>
