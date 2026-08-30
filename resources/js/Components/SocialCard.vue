@@ -334,110 +334,109 @@ const tiposPauta = [
 <template>
   <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:shadow-md dark:shadow-none hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 relative">
     <!-- Header -->
-    <div class="p-4 sm:p-5 flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80">
-      <!-- Left: Avatar + Author Info -->
-      <div class="flex items-center gap-3 min-w-0">
-        <!-- Avatar -->
-        <div class="relative shrink-0">
-          <img
-            :src="post.candidato?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.candidato?.nombre_completo || 'Candidato')}&background=0f172a&color=06b6d4`"
-            :alt="post.candidato?.nombre_completo"
-            class="w-10 h-10 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700 shadow-xs"
-          />
-          <div
-            v-if="post.candidato?.es_propio"
-            class="absolute -bottom-1 -right-1 bg-cyan-500 text-slate-950 p-0.5 rounded-full ring-2 ring-white dark:ring-slate-900"
-            title="Candidato Propio"
-          >
-            <Sparkles class="w-2.5 h-2.5 fill-current" />
+    <div class="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800/80 space-y-2.5">
+      <!-- Fila 1: Autor (Avatar + Nombre + Handle) | Badges de Red & Acciones -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <!-- Avatar -->
+          <div class="relative shrink-0">
+            <img
+              :src="post.candidato?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.candidato?.nombre_completo || 'Candidato')}&background=0f172a&color=06b6d4`"
+              :alt="post.candidato?.nombre_completo"
+              class="w-10 h-10 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700 shadow-xs"
+            />
+            <div
+              v-if="post.candidato?.es_propio"
+              class="absolute -bottom-1 -right-1 bg-cyan-500 text-slate-950 p-0.5 rounded-full ring-2 ring-white dark:ring-slate-900"
+              title="Candidato Propio"
+            >
+              <Sparkles class="w-2.5 h-2.5 fill-current" />
+            </div>
           </div>
-        </div>
 
-        <!-- Account Handle + Subtitle Details -->
-        <div class="min-w-0">
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="font-extrabold text-slate-900 dark:text-slate-100 text-sm leading-tight truncate">
+          <!-- Nombre y Handle -->
+          <div class="min-w-0">
+            <h4 class="font-extrabold text-slate-900 dark:text-slate-100 text-sm leading-tight truncate" :title="post.candidato?.nombre_completo">
               {{ post.candidato?.nombre_completo || 'Candidato' }}
-            </span>
-            <span class="font-mono text-xs text-slate-500 dark:text-slate-400">
+            </h4>
+            <p class="font-mono text-xs text-slate-500 dark:text-slate-400 truncate">
               {{ post.perfil_social?.handle_usuario || '@cuenta' }}
-            </span>
-          </div>
-
-          <!-- Fecha de Origen de la Publicación (Estilo Facebook) & Estado de Sincronización -->
-          <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1 flex-wrap">
-            <span
-              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700/60 shadow-2xs"
-              :title="`Fecha y hora exacta de Facebook: ${post.fecha_publicacion}`"
-            >
-              <Calendar class="w-3.5 h-3.5 text-cyan-500 shrink-0" />
-              <span>{{ post.fecha_publicacion_humana || post.fecha_publicacion }}</span>
-            </span>
-
-            <span v-if="post.fecha_relativa" class="text-[11px] text-slate-400 font-sans">
-              ({{ post.fecha_relativa }})
-            </span>
-
-            <span
-              v-if="isPostInActiveWindow"
-              class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold"
-              title="En ventana de sincronización activa (menos de 15 días)"
-            >
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>En vivo (15d)</span>
-            </span>
-            <span
-              v-else
-              class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px]"
-              title="Métrica histórica consolidada"
-            >
-              <span>🔒 Consolidado</span>
-            </span>
+            </p>
           </div>
         </div>
-      </div>
 
-      <!-- Right: Social Network, Pauta Badges & Actions -->
-      <div class="flex items-center gap-2 shrink-0">
-        <div class="flex items-center gap-1.5">
+        <!-- Badges de Red Social, Pauta & Acciones -->
+        <div class="flex items-center gap-1.5 shrink-0">
           <Badge :variant="post.plataforma || post.perfil_social?.plataforma || 'facebook'" size="sm" />
           <Badge
             variant="pauta"
             :value="post.tipo_pauta || 'organico'"
             size="sm"
           />
+
+          <!-- Botones de Acción -->
+          <div class="flex items-center gap-0.5 ml-1 pl-1 border-l border-slate-200 dark:border-slate-800">
+            <a
+              v-if="post.url_post"
+              :href="post.url_post"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="p-1 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Abrir publicación original en Facebook / Red Social"
+            >
+              <ExternalLink class="w-3.5 h-3.5" />
+            </a>
+            <button
+              v-if="canWrite"
+              type="button"
+              @click="openEditModal"
+              class="p-1 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Editar publicación y métricas"
+            >
+              <Edit3 class="w-3.5 h-3.5" />
+            </button>
+            <button
+              v-if="canWrite"
+              type="button"
+              @click="deletePost"
+              class="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Eliminar publicación"
+            >
+              <Trash2 class="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila 2: Tira Metadatos de Fecha de Origen (Espaciosa y Clara estilo Facebook) -->
+      <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/60 text-xs">
+        <div class="flex items-center gap-1.5 min-w-0 text-slate-700 dark:text-slate-300">
+          <Calendar class="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+          <span class="font-bold truncate text-[11px] sm:text-xs">
+            {{ post.fecha_publicacion_humana || post.fecha_publicacion }}
+          </span>
+          <span v-if="post.fecha_relativa" class="text-[10px] text-slate-400 font-normal shrink-0">
+            ({{ post.fecha_relativa }})
+          </span>
         </div>
 
-        <!-- External Link, Edit & Delete Buttons -->
-        <div class="flex items-center gap-0.5 ml-1 pl-1 border-l border-slate-200 dark:border-slate-800">
-          <a
-            v-if="post.url_post"
-            :href="post.url_post"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Abrir publicación original en la red social"
+        <!-- Estado de Sincronización -->
+        <div class="shrink-0 font-mono">
+          <span
+            v-if="isPostInActiveWindow"
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold"
+            title="En ventana de sincronización activa (menos de 15 días)"
           >
-            <ExternalLink class="w-4 h-4" />
-          </a>
-          <button
-            v-if="canWrite"
-            type="button"
-            @click="openEditModal"
-            class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Editar publicación y métricas"
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>En vivo (15d)</span>
+          </span>
+          <span
+            v-else
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px]"
+            title="Métrica histórica consolidada"
           >
-            <Edit3 class="w-4 h-4" />
-          </button>
-          <button
-            v-if="canWrite"
-            type="button"
-            @click="deletePost"
-            class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Eliminar publicación"
-          >
-            <Trash2 class="w-4 h-4" />
-          </button>
+            <span>🔒 Histórico</span>
+          </span>
         </div>
       </div>
     </div>
