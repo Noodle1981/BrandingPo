@@ -854,8 +854,8 @@ const formatCurrency = (amount) => {
                   <div class="text-[11px] leading-tight flex-1 min-w-0">
                     <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">
                       <span>Último post en {{ (createForm.plataforma || 'red').toUpperCase() }}:</span>
-                      <span class="font-mono text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded-md font-bold">
-                        🗓️ {{ ultimaPublicacionRegistrada.fecha_publicacion }}
+                      <span class="text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md font-bold text-xs">
+                        🗓️ {{ ultimaPublicacionRegistrada.fecha_publicacion_humana || ultimaPublicacionRegistrada.fecha_publicacion }}
                       </span>
                       <span class="text-slate-400 font-normal">({{ ultimaPublicacionRegistrada.fecha_relativa }})</span>
                     </div>
@@ -956,12 +956,15 @@ const formatCurrency = (amount) => {
                   </div>
 
                   <div>
-                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Fecha & Hora *</label>
+                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                      <span>Fecha & Hora (según la red social) *</span>
+                      <span class="text-[10px] text-slate-400 font-normal">La que figura en el post</span>
+                    </label>
                     <input
                       v-model="createForm.fecha_publicacion"
                       type="datetime-local"
                       required
-                      class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono"
+                      class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-xs"
                       :class="createForm.errors.fecha_publicacion ? 'border-rose-500 ring-1 ring-rose-500' : ''"
                     />
                     <span v-if="createForm.errors.fecha_publicacion" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.fecha_publicacion }}</span>

@@ -364,17 +364,17 @@ const tiposPauta = [
             </span>
           </div>
 
-          <!-- Fecha de Origen de la Publicación & Estado de Sincronización -->
-          <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1 flex-wrap font-mono">
+          <!-- Fecha de Origen de la Publicación (Estilo Facebook) & Estado de Sincronización -->
+          <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1 flex-wrap">
             <span
-              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] border border-slate-200 dark:border-slate-700/60"
-              :title="`Fecha y hora de publicación original en la red: ${post.fecha_publicacion}`"
+              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700/60 shadow-2xs"
+              :title="`Fecha y hora exacta de Facebook: ${post.fecha_publicacion}`"
             >
-              <Calendar class="w-3 h-3 text-cyan-500" />
-              <span>{{ post.fecha_publicacion }}</span>
+              <Calendar class="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+              <span>{{ post.fecha_publicacion_humana || post.fecha_publicacion }}</span>
             </span>
 
-            <span v-if="post.fecha_relativa" class="text-[10px] text-slate-400 font-sans">
+            <span v-if="post.fecha_relativa" class="text-[11px] text-slate-400 font-sans">
               ({{ post.fecha_relativa }})
             </span>
 

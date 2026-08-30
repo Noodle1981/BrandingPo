@@ -336,6 +336,7 @@ class PublicacionController extends Controller
                 'plataforma' => $p->perfilSocial?->plataforma ?: 'facebook',
                 'fecha_publicacion' => $p->fecha_publicacion?->format('d/m/Y H:i'),
                 'fecha_publicacion_raw' => $p->fecha_publicacion?->format('Y-m-d\TH:i'),
+                'fecha_publicacion_humana' => $p->fecha_publicacion ? ($p->fecha_publicacion->year === (int) date('Y') ? $p->fecha_publicacion->locale('es')->isoFormat('D [de] MMMM [a las] HH:mm [hs]') : $p->fecha_publicacion->locale('es')->isoFormat('D [de] MMMM [de] YYYY [a las] HH:mm [hs]')) : null,
                 'fecha_relativa' => $p->fecha_publicacion?->diffForHumans(),
                 'tipo_formato' => $p->tipo_formato,
                 'tipo_pauta' => $p->tipo_pauta,
