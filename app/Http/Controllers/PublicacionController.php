@@ -197,10 +197,27 @@ class PublicacionController extends Controller
         $search = $request->input('search');
         $filtro = $request->input('filtro'); // 'propio' | 'oposicion'
 
-        // Obtener Años y Meses reales que existen en la base de datos para este workspace
-        $fechasPublicaciones = Publicacion::where('workspace_id', $workspace->id)
-            ->whereNotNull('fecha_publicacion')
-            ->pluck('fecha_publicacion');
+        // Obtener Años y Meses reales que existen en la base de datos para este workspace (fechas de origen fecha_publicacion)
+        $baseFechasQuery = Publicacion::where('workspace_id', $workspace->id)
+            ->whereNotNull('fecha_publicacion');
+
+        if ($filtro === 'propio') {
+            $baseFechasQuery->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
+        } elseif ($filtro === 'oposicion') {
+            $baseFechasQuery->whereHas('candidato', fn ($q) => $q->where('es_propio', false));
+        }
+
+        if ($candidatoId) {
+            $baseFechasQuery->where('candidato_id', $candidatoId);
+        }
+
+        if ($plataforma) {
+            $platforms = match ($plataforma) {
+                'x_twitter', 'twitter' => ['x_twitter', 'twitter'],
+                default => [$plataforma],
+            };
+            $baseFechasQuery->whereHas('perfilSocial', fn ($q) => $q->whereIn('plataforma', $platforms));
+        }
 
         $nombresMeses = [
             '01' => 'Enero', '02' => 'Febrero', '03' => 'Marzo', '04' => 'Abril',
@@ -208,19 +225,27 @@ class PublicacionController extends Controller
             '09' => 'Septiembre', '10' => 'Octubre', '11' => 'Noviembre', '12' => 'Diciembre',
         ];
 
-        $aniosDisponibles = $fechasPublicaciones->map(fn ($f) => \Carbon\Carbon::parse($f)->format('Y'))
+        $aniosDisponibles = (clone $baseFechasQuery)->pluck('fecha_publicacion')
+            ->map(fn ($f) => Carbon::parse($f)->format('Y'))
             ->unique()
             ->sortDesc()
             ->values();
 
-        $mesesDisponibles = $fechasPublicaciones->map(function ($f) use ($nombresMeses) {
-            $numMes = \Carbon\Carbon::parse($f)->format('m');
+        // Para los meses: si hay un año seleccionado, filtrar únicamente los meses con publicaciones de ese año
+        $fechasMesesQuery = clone $baseFechasQuery;
+        if ($anio) {
+            $fechasMesesQuery->whereYear('fecha_publicacion', $anio);
+        }
 
-            return [
-                'numero' => $numMes,
-                'nombre' => $nombresMeses[$numMes] ?? $numMes,
-            ];
-        })->unique('numero')->sortBy('numero')->values();
+        $mesesDisponibles = $fechasMesesQuery->pluck('fecha_publicacion')
+            ->map(function ($f) use ($nombresMeses) {
+                $numMes = Carbon::parse($f)->format('m');
+
+                return [
+                    'numero' => $numMes,
+                    'nombre' => $nombresMeses[$numMes] ?? $numMes,
+                ];
+            })->unique('numero')->sortBy('numero')->values();
 
         $query = Publicacion::where('workspace_id', $workspace->id)
             ->with(['candidato', 'perfilSocial', 'ejeTematico']);
@@ -253,21 +278,12 @@ class PublicacionController extends Controller
         }
 
         if ($anio && $mes) {
-            if (strlen($mes) > 2) {
-                $query->where('fecha_publicacion', 'like', "{$mes}%");
-            } else {
-                $mesFormatted = str_pad($mes, 2, '0', STR_PAD_LEFT);
-                $query->where('fecha_publicacion', 'like', "{$anio}-{$mesFormatted}%");
-            }
+            $query->whereYear('fecha_publicacion', $anio)
+                ->whereMonth('fecha_publicacion', (int) $mes);
         } elseif ($anio) {
-            $query->where('fecha_publicacion', 'like', "{$anio}%");
+            $query->whereYear('fecha_publicacion', $anio);
         } elseif ($mes) {
-            if (strlen($mes) > 2) {
-                $query->where('fecha_publicacion', 'like', "{$mes}%");
-            } else {
-                $mesFormatted = str_pad($mes, 2, '0', STR_PAD_LEFT);
-                $query->where('fecha_publicacion', 'like', "%-{$mesFormatted}-%");
-            }
+            $query->whereMonth('fecha_publicacion', (int) $mes);
         }
 
         $rangoAprobacion = $request->input('rango_aprobacion');

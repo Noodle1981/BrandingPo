@@ -137,6 +137,29 @@ const filterByPauta = (pautaKey) => {
   applyFilters();
 };
 
+const onAnioChange = () => {
+  // Al cambiar de año, si el mes seleccionado no existe en el nuevo año, se limpiará al recibir los nuevos meses
+  applyFilters();
+};
+
+watch(() => props.meses_disponibles, (newMeses) => {
+  if (selectedMes.value && Array.isArray(newMeses) && !newMeses.some(m => m.numero === selectedMes.value)) {
+    selectedMes.value = '';
+  }
+});
+
+watch(() => props.filtros, (newFiltros) => {
+  selectedAnio.value = newFiltros.anio || '';
+  selectedMes.value = newFiltros.mes || '';
+  selectedCandidato.value = newFiltros.candidato_id || '';
+  selectedPlataforma.value = newFiltros.plataforma || '';
+  selectedTipoPauta.value = newFiltros.tipo_pauta || '';
+  selectedEje.value = newFiltros.eje_tematico_id || '';
+  selectedRangoAprobacion.value = newFiltros.rango_aprobacion || '';
+  selectedOrden.value = newFiltros.orden || 'recientes';
+  searchQuery.value = newFiltros.search || '';
+}, { deep: true });
+
 const clearFilters = () => {
   selectedCandidato.value = '';
   selectedPlataforma.value = '';
@@ -505,7 +528,7 @@ const formatCurrency = (amount) => {
           </span>
 
           <button
-            v-if="selectedPlataforma || selectedTipoPauta || selectedCandidato || selectedEje || selectedMes || searchQuery"
+            v-if="selectedPlataforma || selectedTipoPauta || selectedCandidato || selectedEje || selectedAnio || selectedMes || selectedRangoAprobacion || searchQuery || (selectedOrden && selectedOrden !== 'recientes')"
             @click="clearFilters"
             class="text-xs font-mono font-bold text-rose-500 hover:text-rose-400 cursor-pointer"
           >
@@ -588,10 +611,10 @@ const formatCurrency = (amount) => {
             <option value="baja">🔴 Baja (&lt; 50%)</option>
           </select>
 
-          <!-- Selector de Año (Valores reales de la DB) -->
+          <!-- Selector de Año (Fechas de origen reales de las publicaciones) -->
           <select
             v-model="selectedAnio"
-            @change="applyFilters"
+            @change="onAnioChange"
             class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
           >
             <option value="">Año (Todos)</option>
@@ -604,7 +627,7 @@ const formatCurrency = (amount) => {
             </option>
           </select>
 
-          <!-- Selector de Mes (Valores reales de la DB) -->
+          <!-- Selector de Mes (Fechas de origen reales de las publicaciones) -->
           <select
             v-model="selectedMes"
             @change="applyFilters"
