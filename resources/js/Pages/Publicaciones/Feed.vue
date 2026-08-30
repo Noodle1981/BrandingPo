@@ -178,6 +178,7 @@ const showCreateModal = ref(false);
 const isScraping = ref(false);
 const scrapeSuccessMsg = ref('');
 const scrapeErrorMsg = ref('');
+const duplicateDetectedPost = ref(null);
 
 const createForm = useForm({
   candidato_id: props.filtros.candidato_id || (props.candidatos[0]?.id ?? ''),
@@ -217,7 +218,46 @@ const perfilesCandidatoSeleccionado = computed(() => {
   return c?.perfiles_sociales || c?.perfilesSociales || [];
 });
 
+// Detección local inmediata de duplicados según URL ingresada
+const localDuplicatePost = computed(() => {
+  if (!createForm.url_post || createForm.url_post.trim().length < 10) return null;
+  const cleanUrl = createForm.url_post.trim().toLowerCase().replace(/\?.*$/, '').replace(/\/+$/, '');
+  return props.publicaciones.find(p => {
+    if (!p.url_post) return false;
+    const pClean = p.url_post.trim().toLowerCase().replace(/\?.*$/, '').replace(/\/+$/, '');
+    return pClean === cleanUrl;
+  });
+});
+
+// Alerta unificada de duplicado (Local o devuelta por el servidor)
+const duplicateAlert = computed(() => {
+  return localDuplicatePost.value || duplicateDetectedPost.value;
+});
+
+// Última publicación registrada en el sistema para el candidato y red seleccionados
+const ultimaPublicacionRegistrada = computed(() => {
+  const cid = Number(createForm.candidato_id);
+  const plat = (createForm.plataforma || '').toLowerCase();
+
+  const matches = props.publicaciones.filter(p => {
+    const matchCand = !cid || p.candidato?.id === cid;
+    const matchPlat = !plat || (p.plataforma || p.perfil_social?.plataforma || '').toLowerCase() === plat;
+    return matchCand && matchPlat;
+  });
+
+  if (matches.length === 0) return null;
+
+  return [...matches].sort((a, b) => {
+    const dateA = new Date(a.fecha_publicacion_raw || a.fecha_publicacion || 0);
+    const dateB = new Date(b.fecha_publicacion_raw || b.fecha_publicacion || 0);
+    return dateB - dateA;
+  })[0];
+});
+
 const openCreateModal = () => {
+  duplicateDetectedPost.value = null;
+  scrapeSuccessMsg.value = '';
+  scrapeErrorMsg.value = '';
   // 1. Preseleccionar candidato según filtros activos
   if (selectedCandidato.value) {
     createForm.candidato_id = selectedCandidato.value;
@@ -365,6 +405,9 @@ const autocompletarScrape = async () => {
 
       scrapeSuccessMsg.value = '✅ ¡Datos, texto e imagen extraídos exitosamente!';
     } else {
+      if (data.ya_registrada) {
+        duplicateDetectedPost.value = data;
+      }
       scrapeErrorMsg.value = data.error || data.mensaje || 'No se pudieron extraer los datos automáticamente. Puedes completarlos a mano.';
     }
   } catch (err) {
@@ -663,6 +706,19 @@ const formatCurrency = (amount) => {
         </div>
       </div>
 
+      <!-- Indicador de Orden Cronológico y Total de Posts -->
+      <div v-if="publicaciones.length > 0" class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-xs font-mono text-slate-500 dark:text-slate-400">
+        <div class="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+          <Calendar class="w-3.5 h-3.5 text-cyan-500" />
+          <span>Línea de tiempo cronológica por Fecha de Origen (Más recientes arriba)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-0.5 rounded-lg text-[11px] font-bold border border-slate-200 dark:border-slate-700">
+            {{ publicaciones.length }} {{ publicaciones.length === 1 ? 'publicación' : 'publicaciones' }}
+          </span>
+        </div>
+      </div>
+
       <!-- Muro de Publicaciones (Social Cards) -->
       <div v-if="publicaciones.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <SocialCard
@@ -787,6 +843,47 @@ const formatCurrency = (amount) => {
                   </div>
                 </div>
 
+                <!-- Tarjeta Auxiliar: Última publicación registrada en esta red -->
+                <div
+                  v-if="ultimaPublicacionRegistrada"
+                  class="p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 flex items-start gap-2.5"
+                >
+                  <div class="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5">
+                    <Calendar class="w-3.5 h-3.5" />
+                  </div>
+                  <div class="text-[11px] leading-tight flex-1 min-w-0">
+                    <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">
+                      <span>Último post en {{ (createForm.plataforma || 'red').toUpperCase() }}:</span>
+                      <span class="font-mono text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded-md font-bold">
+                        🗓️ {{ ultimaPublicacionRegistrada.fecha_publicacion }}
+                      </span>
+                      <span class="text-slate-400 font-normal">({{ ultimaPublicacionRegistrada.fecha_relativa }})</span>
+                    </div>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1 truncate italic">
+                      "{{ ultimaPublicacionRegistrada.contenido_resumen }}"
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Alerta Inmediata si se detecta URL duplicada -->
+                <div
+                  v-if="duplicateAlert"
+                  class="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-900 dark:text-amber-200 space-y-1 animate-fade-in"
+                >
+                  <div class="flex items-center gap-1.5 font-bold text-xs">
+                    <AlertCircle class="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>⚠️ Esta publicación ya está registrada en el sistema</span>
+                  </div>
+                  <p class="text-[11px] text-amber-800 dark:text-amber-300 font-mono">
+                    <strong>ID:</strong> #{{ duplicateAlert.id || duplicateAlert.publicacion_id }} • 
+                    <strong>Fecha de Origen:</strong> {{ duplicateAlert.fecha_publicacion }} • 
+                    <strong>Autor:</strong> {{ duplicateAlert.autor || duplicateAlert.candidato?.nombre_completo }}
+                  </p>
+                  <p v-if="duplicateAlert.contenido_resumen" class="text-[11px] text-slate-500 dark:text-slate-400 italic truncate">
+                    "{{ duplicateAlert.contenido_resumen }}"
+                  </p>
+                </div>
+
                 <!-- Fila 2: URL del Post + Botón Scraper 1 Clic -->
                 <div class="p-3.5 rounded-2xl bg-cyan-500/5 dark:bg-cyan-500/10 border border-cyan-500/20 space-y-2">
                   <label class="block font-bold text-slate-800 dark:text-slate-200">
@@ -798,7 +895,7 @@ const formatCurrency = (amount) => {
                       type="url"
                       placeholder="https://www.instagram.com/p/... o https://x.com/..."
                       class="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-cyan-500 font-mono"
-                      :class="createForm.errors.url_post ? 'border-rose-500 ring-1 ring-rose-500' : ''"
+                      :class="(createForm.errors.url_post || duplicateAlert) ? 'border-amber-500 ring-1 ring-amber-500' : ''"
                     />
                     <button
                       type="button"

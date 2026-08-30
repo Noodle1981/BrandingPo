@@ -21,7 +21,8 @@ import {
   Heart,
   Repeat,
   Send,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from '@lucide/vue';
 import Badge from './Badge.vue';
 import MediaEmbed from './MediaEmbed.vue';
@@ -354,24 +355,41 @@ const tiposPauta = [
 
         <!-- Account Handle + Subtitle Details -->
         <div class="min-w-0">
-          <h4 class="font-extrabold font-mono text-slate-900 dark:text-slate-100 text-sm sm:text-base leading-tight truncate">
-            {{ post.perfil_social?.handle_usuario || '@cuenta' }}
-          </h4>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="font-extrabold text-slate-900 dark:text-slate-100 text-sm leading-tight truncate">
+              {{ post.candidato?.nombre_completo || 'Candidato' }}
+            </span>
+            <span class="font-mono text-xs text-slate-500 dark:text-slate-400">
+              {{ post.perfil_social?.handle_usuario || '@cuenta' }}
+            </span>
+          </div>
 
-          <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
-            <span class="font-sans">{{ post.fecha_relativa || post.fecha_publicacion }}</span>
+          <!-- Fecha de Origen de la Publicación & Estado de Sincronización -->
+          <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1 flex-wrap font-mono">
+            <span
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] border border-slate-200 dark:border-slate-700/60"
+              :title="`Fecha y hora de publicación original en la red: ${post.fecha_publicacion}`"
+            >
+              <Calendar class="w-3 h-3 text-cyan-500" />
+              <span>{{ post.fecha_publicacion }}</span>
+            </span>
+
+            <span v-if="post.fecha_relativa" class="text-[10px] text-slate-400 font-sans">
+              ({{ post.fecha_relativa }})
+            </span>
+
             <span
               v-if="isPostInActiveWindow"
-              class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold"
+              class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold"
               title="En ventana de sincronización activa (menos de 15 días)"
             >
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Activo (15d)</span>
+              <span>En vivo (15d)</span>
             </span>
             <span
               v-else
-              class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-mono"
-              title="Métrica histórica consolidada."
+              class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px]"
+              title="Métrica histórica consolidada"
             >
               <span>🔒 Consolidado</span>
             </span>
@@ -390,9 +408,20 @@ const tiposPauta = [
           />
         </div>
 
-        <!-- Edit & Delete Buttons -->
-        <div v-if="canWrite" class="flex items-center gap-0.5 ml-1 pl-1 border-l border-slate-200 dark:border-slate-800">
+        <!-- External Link, Edit & Delete Buttons -->
+        <div class="flex items-center gap-0.5 ml-1 pl-1 border-l border-slate-200 dark:border-slate-800">
+          <a
+            v-if="post.url_post"
+            :href="post.url_post"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Abrir publicación original en la red social"
+          >
+            <ExternalLink class="w-4 h-4" />
+          </a>
           <button
+            v-if="canWrite"
             type="button"
             @click="openEditModal"
             class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
@@ -401,6 +430,7 @@ const tiposPauta = [
             <Edit3 class="w-4 h-4" />
           </button>
           <button
+            v-if="canWrite"
             type="button"
             @click="deletePost"
             class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
