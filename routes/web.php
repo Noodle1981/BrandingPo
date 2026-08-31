@@ -79,6 +79,7 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
         Route::post('/publicaciones/{publicacion}/sincronizar', [PublicacionController::class, 'sincronizarIndividual'])->name('publicaciones.sincronizar');
         Route::post('/perfiles-sociales/{perfilSocial}/sincronizar-recientes', [PublicacionController::class, 'sincronizarRecientes'])->name('perfiles-sociales.sincronizar-recientes');
         Route::put('/publicaciones/{publicacion}', [PublicacionController::class, 'update'])->name('publicaciones.update');
+        Route::patch('/publicaciones/{publicacion}/fecha', [PublicacionController::class, 'actualizarFecha'])->name('publicaciones.fecha');
         Route::delete('/publicaciones/{publicacion}', [PublicacionController::class, 'destroy'])->name('publicaciones.destroy');
     });
 

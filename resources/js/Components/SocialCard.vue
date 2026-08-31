@@ -64,6 +64,9 @@ const groupedEjes = computed(() => {
 
 const showComments = ref(false);
 const isEditing = ref(false);
+const editandoFecha = ref(false);
+const fechaEditada = ref('');
+const guardandoFecha = ref(false);
 
 const platform = computed(() => (props.post.plataforma || props.post.perfil_social?.plataforma || 'instagram').toLowerCase());
 const isInstagram = computed(() => platform.value === 'instagram');
@@ -73,6 +76,43 @@ const isTikTok = computed(() => platform.value === 'tiktok');
 const isTwitter = computed(() => platform.value === 'x_twitter' || platform.value === 'twitter');
 const isYouTube = computed(() => platform.value === 'youtube');
 const isLinkedIn = computed(() => platform.value === 'linkedin');
+
+// Detectar si la fecha de publicación coincide con la fecha en que se cargó al sistema
+// (significa que nunca se confirmó la fecha real de la red social)
+const esFechaSinConfirmar = computed(() => {
+  if (!props.post.fecha_publicacion_raw || !props.post.fecha_carga) return false;
+  const fechaPub = props.post.fecha_publicacion_raw.slice(0, 10); // YYYY-MM-DD
+  return fechaPub === props.post.fecha_carga;
+});
+
+const abrirEdicionFecha = () => {
+  fechaEditada.value = props.post.fecha_publicacion_raw?.slice(0, 10) || '';
+  editandoFecha.value = true;
+};
+
+const cancelarEdicionFecha = () => {
+  editandoFecha.value = false;
+  fechaEditada.value = '';
+};
+
+const confirmarFecha = () => {
+  if (!fechaEditada.value) return;
+  guardandoFecha.value = true;
+  router.patch(
+    `/publicaciones/${props.post.id}/fecha`,
+    { fecha_publicacion: fechaEditada.value },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        editandoFecha.value = false;
+        guardandoFecha.value = false;
+      },
+      onError: () => {
+        guardandoFecha.value = false;
+      },
+    }
+  );
+};
 
 const formatDateForInput = (d, raw) => {
   if (raw && typeof raw === 'string' && raw.length >= 10) {
@@ -408,22 +448,78 @@ const tiposPauta = [
         </div>
       </div>
 
-      <!-- Fila 2: Tira Metadatos de Fecha de Origen (Espaciosa y Clara estilo Facebook) -->
+      <!-- Fila 2: Fecha de Origen con Semáforo de Confirmación -->
       <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/60 text-xs">
-        <div class="flex items-center gap-1.5 min-w-0 text-slate-700 dark:text-slate-300">
-          <Calendar class="w-3.5 h-3.5 text-cyan-500 shrink-0" />
-          <span class="font-bold truncate text-[11px] sm:text-xs">
+
+        <!-- MODO VISUALIZACIÓN: Fecha con semáforo -->
+        <div v-if="!editandoFecha" class="flex items-center gap-1.5 min-w-0 flex-1">
+          <Calendar class="w-3.5 h-3.5 shrink-0" :class="esFechaSinConfirmar ? 'text-rose-500' : 'text-emerald-500'" />
+
+          <!-- Badge de fecha: ROJO si sin confirmar, VERDE si confirmada -->
+          <button
+            v-if="canWrite"
+            type="button"
+            @click="abrirEdicionFecha"
+            :title="esFechaSinConfirmar ? '⚠️ Fecha pendiente de confirmar — Hacer clic para corregirla' : '✅ Fecha confirmada — Hacer clic para cambiarla'"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[11px] sm:text-xs border transition-all cursor-pointer hover:opacity-80"
+            :class="esFechaSinConfirmar
+              ? 'bg-rose-500/10 border-rose-400/40 text-rose-700 dark:text-rose-300 animate-pulse'
+              : 'bg-emerald-500/10 border-emerald-400/40 text-emerald-700 dark:text-emerald-300'"
+          >
+            <span>{{ post.fecha_publicacion_humana || post.fecha_publicacion }}</span>
+            <span v-if="esFechaSinConfirmar" class="text-rose-400 font-bold">⚠️</span>
+            <span v-else class="text-emerald-400">✓</span>
+          </button>
+
+          <!-- Solo texto para visualizadores -->
+          <span v-else class="font-bold text-[11px] sm:text-xs truncate"
+            :class="esFechaSinConfirmar ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-300'">
             {{ post.fecha_publicacion_humana || post.fecha_publicacion }}
           </span>
+
           <span v-if="post.fecha_relativa" class="text-[10px] text-slate-400 font-normal shrink-0">
             ({{ post.fecha_relativa }})
           </span>
         </div>
 
-        <!-- Estado de Sincronización -->
+        <!-- MODO EDICIÓN INLINE: input de fecha -->
+        <div v-else class="flex items-center gap-1.5 flex-1 min-w-0">
+          <Calendar class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+          <input
+            v-model="fechaEditada"
+            type="date"
+            class="flex-1 min-w-0 px-2 py-0.5 text-[11px] font-mono rounded-lg border border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-amber-400 focus:outline-none"
+            :max="new Date().toISOString().slice(0, 10)"
+          />
+          <button
+            type="button"
+            @click="confirmarFecha"
+            :disabled="guardandoFecha || !fechaEditada"
+            class="p-1 rounded-md bg-emerald-500 text-white hover:bg-emerald-400 disabled:opacity-50 transition-all cursor-pointer shrink-0"
+            title="Confirmar fecha"
+          >
+            <Check class="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            @click="cancelarEdicionFecha"
+            class="p-1 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-all cursor-pointer shrink-0"
+            title="Cancelar"
+          >
+            <X class="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <!-- Estado de Sincronización (derecha) -->
         <div class="shrink-0 font-mono">
           <span
-            v-if="isPostInActiveWindow"
+            v-if="esFechaSinConfirmar"
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold"
+          >
+            <span>⚠️ Por confirmar</span>
+          </span>
+          <span
+            v-else-if="isPostInActiveWindow"
             class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold"
             title="En ventana de sincronización activa (menos de 15 días)"
           >
