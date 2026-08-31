@@ -190,7 +190,7 @@ const createForm = useForm({
   tipo_formato: 'Reel',
   tipo_pauta: 'organico',
   monto_invertido_pauta: 0,
-  fecha_publicacion: new Date().toISOString().slice(0, 16),
+  fecha_publicacion: '',
   vistas_organicas: 0,
   vistas_pagadas: 0,
   total_likes: 0,
@@ -956,18 +956,31 @@ const formatCurrency = (amount) => {
                   </div>
 
                   <div>
-                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                      <span>Fecha & Hora (según la red social) *</span>
+                    <label class="block font-bold mb-1 flex items-center justify-between"
+                      :class="!createForm.fecha_publicacion ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'"
+                    >
+                      <span class="flex items-center gap-1">
+                        📅 Fecha (según la red social)
+                        <span v-if="!createForm.fecha_publicacion" class="text-amber-500 animate-pulse">← Obligatorio</span>
+                        <span v-else class="text-emerald-500 font-normal text-[10px]">✓</span>
+                      </span>
                       <span class="text-[10px] text-slate-400 font-normal">La que figura en el post</span>
                     </label>
                     <input
                       v-model="createForm.fecha_publicacion"
                       type="datetime-local"
                       required
-                      class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-xs"
-                      :class="createForm.errors.fecha_publicacion ? 'border-rose-500 ring-1 ring-rose-500' : ''"
+                      class="w-full px-3 py-2 rounded-xl font-mono text-xs transition-all"
+                      :class="[
+                        createForm.errors.fecha_publicacion ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50 dark:bg-rose-950/30 border' :
+                        !createForm.fecha_publicacion ? 'border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-300' :
+                        'bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800'
+                      ]"
                     />
                     <span v-if="createForm.errors.fecha_publicacion" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.fecha_publicacion }}</span>
+                    <p v-else-if="!createForm.fecha_publicacion" class="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                      ⚠️ Ingresá la fecha y hora tal como aparece en Facebook, Instagram, etc.
+                    </p>
                   </div>
                 </div>
 
