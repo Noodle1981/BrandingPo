@@ -67,6 +67,9 @@ const isEditing = ref(false);
 const editandoFecha = ref(false);
 const fechaEditada = ref('');
 const guardandoFecha = ref(false);
+// Override local para el estado del semáforo (evita esperar al reload de Inertia)
+const fechaConfirmadaLocalmente = ref(false);
+const fechaHumanaLocal = ref(null); // Fecha humanizada actualizada localmente tras confirmar
 
 const platform = computed(() => (props.post.plataforma || props.post.perfil_social?.plataforma || 'instagram').toLowerCase());
 const isInstagram = computed(() => platform.value === 'instagram');
@@ -80,10 +83,33 @@ const isLinkedIn = computed(() => platform.value === 'linkedin');
 // Detectar si la fecha de publicación coincide con la fecha en que se cargó al sistema
 // (significa que nunca se confirmó la fecha real de la red social)
 const esFechaSinConfirmar = computed(() => {
+  // Si ya fue confirmada en esta sesión, mostrar verde directamente
+  if (fechaConfirmadaLocalmente.value) return false;
   if (!props.post.fecha_publicacion_raw || !props.post.fecha_carga) return false;
   const fechaPub = props.post.fecha_publicacion_raw.slice(0, 10); // YYYY-MM-DD
   return fechaPub === props.post.fecha_carga;
 });
+
+// Fecha humanizada: priorizar la actualizada localmente
+const fechaHumanaVisible = computed(() => {
+  return fechaHumanaLocal.value || props.post.fecha_publicacion_humana || props.post.fecha_publicacion;
+});
+
+// Formatear una fecha YYYY-MM-DD al formato legible estilo Facebook en español
+const formatearFechaHumana = (fechaStr) => {
+  if (!fechaStr) return '';
+  try {
+    const d = new Date(fechaStr + 'T12:00:00'); // mediodía para evitar problemas de timezone
+    const anioActual = new Date().getFullYear();
+    const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const dia = d.getDate();
+    const mes = meses[d.getMonth()];
+    const anio = d.getFullYear();
+    return anio === anioActual ? `${dia} de ${mes}` : `${dia} de ${mes} de ${anio}`;
+  } catch (e) {
+    return fechaStr;
+  }
+};
 
 const abrirEdicionFecha = () => {
   fechaEditada.value = props.post.fecha_publicacion_raw?.slice(0, 10) || '';
@@ -103,9 +129,13 @@ const confirmarFecha = () => {
     { fecha_publicacion: fechaEditada.value },
     {
       preserveScroll: true,
+      preserveState: true,
       onSuccess: () => {
         editandoFecha.value = false;
         guardandoFecha.value = false;
+        // Actualizar estado visual inmediatamente sin esperar al reload de Inertia
+        fechaConfirmadaLocalmente.value = true;
+        fechaHumanaLocal.value = formatearFechaHumana(fechaEditada.value);
       },
       onError: () => {
         guardandoFecha.value = false;
@@ -466,7 +496,7 @@ const tiposPauta = [
               ? 'bg-rose-500/10 border-rose-400/40 text-rose-700 dark:text-rose-300 animate-pulse'
               : 'bg-emerald-500/10 border-emerald-400/40 text-emerald-700 dark:text-emerald-300'"
           >
-            <span>{{ post.fecha_publicacion_humana || post.fecha_publicacion }}</span>
+            <span>{{ fechaHumanaVisible }}</span>
             <span v-if="esFechaSinConfirmar" class="text-rose-400 font-bold">⚠️</span>
             <span v-else class="text-emerald-400">✓</span>
           </button>
@@ -474,7 +504,7 @@ const tiposPauta = [
           <!-- Solo texto para visualizadores -->
           <span v-else class="font-bold text-[11px] sm:text-xs truncate"
             :class="esFechaSinConfirmar ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-300'">
-            {{ post.fecha_publicacion_humana || post.fecha_publicacion }}
+            {{ fechaHumanaVisible }}
           </span>
 
           <span v-if="post.fecha_relativa" class="text-[10px] text-slate-400 font-normal shrink-0">
