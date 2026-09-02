@@ -74,7 +74,9 @@ const fechaHumanaLocal = ref(null); // Fecha humanizada actualizada localmente t
 const isTextExpanded = ref(false);
 const isLongText = computed(() => {
   const txt = (props.post.contenido_resumen || '').trim();
-  return txt.length > 130 || (txt.match(/\n/g) || []).length >= 2;
+  // Estándar de tamaño ideal: posts de hasta ~420 caracteres u 8 renglones/saltos no necesitan 'Ver más'
+  const saltosDeLinea = (txt.match(/\n/g) || []).length;
+  return txt.length > 420 || saltosDeLinea > 8;
 });
 
 const platform = computed(() => (props.post.plataforma || props.post.perfil_social?.plataforma || 'instagram').toLowerCase());
@@ -602,7 +604,7 @@ const tiposPauta = [
         <div class="space-y-1">
           <p
             class="text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-relaxed whitespace-pre-line transition-all"
-            :class="{ 'line-clamp-3': !isTextExpanded }"
+            :class="{ 'line-clamp-8': !isTextExpanded && isLongText }"
           >
             {{ post.contenido_resumen }}
           </p>
