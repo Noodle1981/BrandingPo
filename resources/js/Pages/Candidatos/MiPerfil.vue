@@ -891,6 +891,7 @@ const refrescarCanal = () => {
               referrerpolicy="no-referrer"
               class="w-20 h-20 rounded-2xl object-cover border-2 shadow-md"
               :style="{ borderColor: candidato.color_hex || '#06b6d4' }"
+              @error="$event.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(candidato.nombre_completo)}&background=0f172a&color=06b6d4&size=256&bold=true`"
             />
           </div>
 

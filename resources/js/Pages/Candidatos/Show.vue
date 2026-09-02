@@ -360,8 +360,10 @@ const getHandlePlaceholder = (key) => {
             <img
               :src="candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(candidato.nombre_completo)}&background=1e1b4b&color=a855f7`"
               :alt="candidato.nombre_completo"
+              referrerpolicy="no-referrer"
               class="w-20 h-20 rounded-2xl object-cover border-2 shadow-md"
               :style="{ borderColor: candidato.color_hex || '#8b5cf6' }"
+              @error="$event.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(candidato.nombre_completo)}&background=1e1b4b&color=a855f7&size=256&bold=true`"
             />
             <div class="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-purple-600 text-white font-extrabold text-[10px] uppercase font-mono tracking-wider shadow-sm">
               RIVAL OPOSITOR
