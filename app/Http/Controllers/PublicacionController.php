@@ -95,6 +95,8 @@ class PublicacionController extends Controller
         $plataforma = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
         $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes, $plataforma);
 
+        $freshVistas = (int) ($scraped['total_vistas'] ?? $publicacion->total_vistas);
+
         $updateFields = [
             'total_likes' => $freshLikes,
             'total_comentarios' => $freshComments,
@@ -102,6 +104,10 @@ class PublicacionController extends Controller
             'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
             'termometro_humor_social' => $aiEmocional['termometro_humor_social'],
         ];
+
+        if ($freshVistas > 0) {
+            $updateFields['total_vistas'] = $freshVistas;
+        }
 
         // Guardar o actualizar la imagen descargándola localmente
         if (! empty($scraped['media_url'])) {

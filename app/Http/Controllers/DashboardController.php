@@ -357,6 +357,43 @@ class DashboardController extends Controller
             ];
         })->values()->sortByDesc('total_interacciones')->values();
 
+        // 3.B. Matriz Cruzada: Formato utilizado por cada Red Social Activa
+        $todosFormatos = $publicaciones->pluck('tipo_formato')->filter()->unique()->values();
+        $formatosPorRed = $candidato->perfilesSociales
+            ->filter(fn ($p) => (bool) $p->esta_activo || (int) $p->seguidores_actuales > 0 || $publicaciones->where('perfil_social_id', $p->id)->count() > 0)
+            ->map(function ($perfil) use ($publicaciones, $todosFormatos) {
+                $postsRed = $publicaciones->where('perfil_social_id', $perfil->id);
+                $desglose = [];
+                foreach ($todosFormatos as $fmt) {
+                    $postsFmt = $postsRed->where('tipo_formato', $fmt);
+                    $cant = $postsFmt->count();
+                    if ($cant > 0) {
+                        $vistas = (int) $postsFmt->sum('total_vistas');
+                        $score = (int) $postsFmt->sum(fn ($p) => ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10));
+                        $desglose[] = [
+                            'formato' => $fmt,
+                            'cantidad' => $cant,
+                            'vistas' => $vistas,
+                            'score' => $score,
+                        ];
+                    }
+                }
+                usort($desglose, fn ($a, $b) => $b['cantidad'] <=> $a['cantidad']);
+                $formatoTop = ! empty($desglose) ? $desglose[0]['formato'] : 'Sin publicaciones';
+
+                return [
+                    'id' => $perfil->id,
+                    'plataforma' => $perfil->plataforma,
+                    'handle_usuario' => $perfil->handle_usuario,
+                    'url_perfil' => $perfil->url_perfil,
+                    'total_posts' => $postsRed->count(),
+                    'total_vistas' => (int) $postsRed->sum('total_vistas'),
+                    'total_score' => (int) $postsRed->sum(fn ($p) => ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10)),
+                    'formato_top' => $formatoTop,
+                    'formatos' => $desglose,
+                ];
+            })->values();
+
         // 4. Gráfico de Ejes Temáticos
         $distribucionEjes = $ejes->map(function ($eje) use ($publicaciones) {
             $postsEje = $publicaciones->where('eje_tematico_id', $eje->id);
@@ -424,6 +461,15 @@ class DashboardController extends Controller
                 $totalVistasDia = 0;
                 $totalInteraccionesDia = 0;
 
+                // Publicaciones acumuladas hasta esta fecha
+                $postsHastaFecha = $publicaciones->filter(function ($p) use ($fechaStr) {
+                    return $p->fecha_publicacion && $p->fecha_publicacion->format('Y-m-d') <= $fechaStr;
+                });
+                $totalPuntosDia = (int) $postsHastaFecha->sum(function ($p) {
+                    return ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10);
+                });
+                $vistasPostsHastaFecha = (int) $postsHastaFecha->sum('total_vistas');
+
                 foreach ($perfilesActivos as $perfil) {
                     $pid = $perfil->id;
                     $medsPerfil = $medicionesPorPerfil->get($pid, collect());
@@ -435,25 +481,33 @@ class DashboardController extends Controller
                         $ultimoValorInteracciones[$pid] = (int) ($medFecha->interacciones_totales ?? $medFecha->me_gusta_totales ?? 0);
                     }
 
+                    $postsRedHastaFecha = $postsHastaFecha->where('perfil_social_id', $pid);
+                    $scoreRed = (int) $postsRedHastaFecha->sum(function ($p) {
+                        return ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10);
+                    });
+                    $vistasRed = (int) $postsRedHastaFecha->sum('total_vistas');
+
                     $seriesPorRed[$perfil->plataforma]['puntos'][] = [
                         'fecha' => $fechaLabel,
                         'fecha_raw' => $fechaStr,
                         'seguidores' => $ultimoValorSeguidores[$pid],
-                        'vistas' => $ultimoValorVistas[$pid],
-                        'interacciones' => $ultimoValorInteracciones[$pid],
+                        'vistas' => $ultimoValorVistas[$pid] > 0 ? $ultimoValorVistas[$pid] : $vistasRed,
+                        'interacciones' => $ultimoValorInteracciones[$pid] > 0 ? $ultimoValorInteracciones[$pid] : $scoreRed,
+                        'puntos' => $scoreRed,
                     ];
 
                     $totalSeguidoresDia += $ultimoValorSeguidores[$pid];
-                    $totalVistasDia += $ultimoValorVistas[$pid];
-                    $totalInteraccionesDia += $ultimoValorInteracciones[$pid];
+                    $totalVistasDia += $ultimoValorVistas[$pid] > 0 ? $ultimoValorVistas[$pid] : $vistasRed;
+                    $totalInteraccionesDia += $ultimoValorInteracciones[$pid] > 0 ? $ultimoValorInteracciones[$pid] : $scoreRed;
                 }
 
                 $historicoAgrupado[] = [
                     'fecha' => $fechaLabel,
                     'fecha_raw' => $fechaStr,
                     'seguidores' => $totalSeguidoresDia,
-                    'vistas' => $totalVistasDia,
+                    'vistas' => $totalVistasDia > 0 ? $totalVistasDia : $vistasPostsHastaFecha,
                     'interacciones' => $totalInteraccionesDia,
+                    'puntos' => $totalPuntosDia,
                 ];
             }
         } else {
@@ -466,6 +520,7 @@ class DashboardController extends Controller
                 $segStep = (int) ($totalSeguidoresPuntoCero + ($crecimientoNetoTotalSeguidores * $prog));
                 $vistasStep = (int) ($totalVistas * $prog * 0.85);
                 $intStep = (int) ($interaccionesTotales * $prog * 0.85);
+                $puntosStep = (int) ($scoreImpactoTotal * $prog * 0.85);
 
                 $fechaLabel = $f->format('d/m');
                 $historicoAgrupado[] = [
@@ -474,6 +529,7 @@ class DashboardController extends Controller
                     'seguidores' => $segStep,
                     'vistas' => $vistasStep,
                     'interacciones' => $intStep,
+                    'puntos' => $puntosStep,
                 ];
 
                 foreach ($perfilesActivos as $perfil) {
@@ -482,8 +538,9 @@ class DashboardController extends Controller
                         'fecha' => $fechaLabel,
                         'fecha_raw' => $f->format('Y-m-d'),
                         'seguidores' => $segPerfilStep,
-                        'vistas' => 0,
-                        'interacciones' => 0,
+                        'vistas' => (int) ($vistasStep / max(1, $perfilesActivos->count())),
+                        'interacciones' => (int) ($intStep / max(1, $perfilesActivos->count())),
+                        'puntos' => (int) ($puntosStep / max(1, $perfilesActivos->count())),
                     ];
                 }
             }
@@ -632,6 +689,23 @@ class DashboardController extends Controller
             ? round(($totalVistas / $totalVistasEcosistema) * 100, 1)
             : 0;
 
+        // 8. Hitos de Pauta / Booster para la Línea de Tiempo del Gráfico
+        $hitosBooster = $publicaciones->filter(function ($p) {
+            return in_array($p->tipo_pauta, Publicacion::TIPOS_CON_INVERSION) && (float) $p->monto_invertido_pauta > 0;
+        })->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'fecha' => $p->fecha_publicacion ? $p->fecha_publicacion->format('d/m') : '',
+                'fecha_raw' => $p->fecha_publicacion ? $p->fecha_publicacion->format('Y-m-d') : '',
+                'tipo_pauta' => $p->tipo_pauta,
+                'monto_invertido' => (float) $p->monto_invertido_pauta,
+                'monto_formateado' => '$' . number_format((float) $p->monto_invertido_pauta, 0, ',', '.'),
+                'plataforma' => $p->plataforma ?: $p->perfilSocial?->plataforma ?: 'instagram',
+                'titulo' => mb_substr($p->contenido_resumen ?: 'Post Impulsado', 0, 45) . '...',
+                'score_impacto' => ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10),
+            ];
+        })->values();
+
         return Inertia::render('Dashboard', [
             'candidato' => [
                 'id' => $candidato->id,
@@ -680,9 +754,11 @@ class DashboardController extends Controller
             'redes_desglose' => $redesDesglose,
             'distribucion_plataformas' => $distribucionPlataformas,
             'rendimiento_por_formato' => $rendimientoPorFormato,
+            'formatos_por_red' => $formatosPorRed,
             'distribucion_ejes' => $distribucionEjes,
             'historico_mediciones' => $historicoAgrupado,
             'series_por_red' => $seriesPorRed,
+            'hitos_booster' => $hitosBooster,
             'organico_vs_pauta' => $organicoVsPauta,
             'top_publicaciones' => $topPublicaciones,
             'ultimas_publicaciones' => $ultimasPublicaciones,

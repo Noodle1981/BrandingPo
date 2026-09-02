@@ -4,9 +4,11 @@ namespace Database\Seeders;
 
 use App\Models\Candidato;
 use App\Models\CicloCampana;
+use App\Models\EjeTematico;
 use App\Models\EventoCalendario;
 use App\Models\InformeEjecutivo;
 use App\Models\PresupuestoPartida;
+use App\Models\Workspace;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
@@ -17,73 +19,136 @@ class CalendarioAndBriefingSeeder extends Seeder
      */
     public function run(): void
     {
+        $workspace = Workspace::first();
         $ciclo = CicloCampana::where('es_activo', true)->first() ?? CicloCampana::first();
         $candidatos = Candidato::all()->keyBy('nombre_completo');
-        $propio = $candidatos->get('Martín Rodríguez');
-        $rival = $candidatos->get('Carlos Morales');
+        $propio = $candidatos->get('Martín Rodríguez') ?? Candidato::where('es_propio', true)->first();
+        $rival = $candidatos->get('Carlos Morales') ?? Candidato::where('es_propio', false)->first();
+
+        $ejes = EjeTematico::all()->keyBy('slug');
+        $ejeObras = $ejes->get('obras-publicas-e-infraestructura') ?? $ejes->first();
+        $ejeSeguridad = $ejes->get('seguridad-ciudadana-y-prevencion') ?? $ejes->skip(1)->first();
+        $ejeSalud = $ejes->get('salud-y-deportes') ?? $ejes->skip(2)->first();
+        $ejeJuventud = $ejes->get('juventud') ?? $ejes->skip(3)->first();
+        $ejeEconomia = $ejes->get('desarrollo-economico-y-empleo') ?? $ejes->skip(4)->first();
+        $ejeEducacion = $ejes->get('educacion-e-innovacion') ?? $ejes->skip(5)->first();
 
         $now = Carbon::now();
 
-        if (! $ciclo) {
+        if (! $ciclo || ! $workspace) {
             return;
         }
 
-        // 1. Eventos del Calendario / Agenda de Campaña
+        // Limpiar eventos previos para re-seed limpio
+        EventoCalendario::where('workspace_id', $workspace->id)->delete();
+
+        // 1. Eventos del Calendario / Agenda de Campaña centrados en Ejes Temáticos
         $eventos = [
+            // Publicación Planificada de Eje (Contenido Digital Estratégico)
             [
+                'workspace_id' => $workspace->id,
                 'ciclo_campana_id' => $ciclo->id,
                 'candidato_id' => $propio?->id,
-                'titulo' => 'Acto Central de Cierre de Campaña Barrial',
+                'eje_tematico_id' => $ejeSeguridad?->id,
+                'titulo' => 'Lanzamiento Reel: Presentación de Cámaras y Anillo Digital',
+                'fecha_inicio' => $now->copy()->addDays(1)->setTime(19, 0),
+                'fecha_fin' => $now->copy()->addDays(1)->setTime(20, 0),
+                'tipo_evento' => 'publicacion_eje',
+                'lugar' => 'Instagram & TikTok Feed',
+                'estado' => 'programado',
+                'notas' => 'Video dinámico con dron y testimonios de comerciantes sobre botón antipánico. Impulsar con micro-pauta.',
+            ],
+            [
+                'workspace_id' => $workspace->id,
+                'ciclo_campana_id' => $ciclo->id,
+                'candidato_id' => $propio?->id,
+                'eje_tematico_id' => $ejeSalud?->id,
+                'titulo' => 'Carrusel Multired: Plan Salitas 24 Horas y Vacunación Barrial',
+                'fecha_inicio' => $now->copy()->addDays(3)->setTime(12, 30),
+                'fecha_fin' => $now->copy()->addDays(3)->setTime(13, 30),
+                'tipo_evento' => 'publicacion_eje',
+                'lugar' => 'Facebook & Instagram',
+                'estado' => 'programado',
+                'notas' => 'Eje con déficit en el feed: publicar infografía de 5 placas con puntos de atención primaria.',
+            ],
+            [
+                'workspace_id' => $workspace->id,
+                'ciclo_campana_id' => $ciclo->id,
+                'candidato_id' => $propio?->id,
+                'eje_tematico_id' => $ejeJuventud?->id,
+                'titulo' => 'TikTok Live & Story: Mano a Mano sobre Primer Empleo y Becas',
+                'fecha_inicio' => $now->copy()->addDays(4)->setTime(20, 30),
+                'fecha_fin' => $now->copy()->addDays(4)->setTime(21, 30),
+                'tipo_evento' => 'publicacion_eje',
+                'lugar' => 'TikTok & Instagram Live',
+                'estado' => 'programado',
+                'notas' => 'Preguntas y respuestas directas con jóvenes de entre 16 y 24 años sin libreto.',
+            ],
+            // Actos Territoriales con Cobertura Digital
+            [
+                'workspace_id' => $workspace->id,
+                'ciclo_campana_id' => $ciclo->id,
+                'candidato_id' => $propio?->id,
+                'eje_tematico_id' => $ejeObras?->id,
+                'titulo' => 'Acto Central de Cierre de Campaña Barrial & Alumbrado',
                 'fecha_inicio' => $now->copy()->addDays(5)->setTime(18, 30),
                 'fecha_fin' => $now->copy()->addDays(5)->setTime(21, 30),
                 'tipo_evento' => 'acto',
                 'lugar' => 'Plaza Central San Martín',
                 'estado' => 'programado',
-                'notas' => 'Convocatoria masiva de centros vecinales y organizaciones sociales. Transmisión multired en vivo.',
+                'notas' => 'Convocatoria masiva de centros vecinales. Transmisión multired en vivo y generación de 3 Reels post-evento.',
             ],
             [
+                'workspace_id' => $workspace->id,
                 'ciclo_campana_id' => $ciclo->id,
                 'candidato_id' => $propio?->id,
-                'titulo' => 'Gran Debate de Candidatos a Intendente',
+                'eje_tematico_id' => $ejeSeguridad?->id,
+                'titulo' => 'Gran Debate de Candidatos: Eje Seguridad y Modernización',
                 'fecha_inicio' => $now->copy()->addDays(8)->setTime(21, 0),
                 'fecha_fin' => $now->copy()->addDays(8)->setTime(23, 0),
                 'tipo_evento' => 'debate',
                 'lugar' => 'Estudios Canal 12 (El Doce TV)',
                 'estado' => 'programado',
-                'notas' => 'Preparación de ejes: Seguridad, Transporte, Obras y Alivio Fiscal. Monitoreo en vivo de reacciones en redes.',
+                'notas' => 'Monitoreo de social listening en tiempo real. Equipo de Fast-Flow listo para subir cortes clave en Twitter y TikTok.',
             ],
             [
+                'workspace_id' => $workspace->id,
                 'ciclo_campana_id' => $ciclo->id,
                 'candidato_id' => $propio?->id,
-                'titulo' => 'Vencimiento y Rotación de Pauta en Meta & TikTok',
+                'eje_tematico_id' => $ejeEconomia?->id,
+                'titulo' => 'Vencimiento y Rotación de Pauta: Microcréditos y Emprendedores',
                 'fecha_inicio' => $now->copy()->addDays(2)->setTime(10, 0),
                 'fecha_fin' => $now->copy()->addDays(2)->setTime(12, 0),
                 'tipo_evento' => 'pauta_vencimiento',
                 'lugar' => 'War Room / Consola Ads',
                 'estado' => 'programado',
-                'notas' => 'Cierre de la campaña de luminarias barriales y reasignación de $80.000 a nuevos Reels de juventud.',
+                'notas' => 'Cierre de la campaña de luminarias barriales y reasignación de $80.000 a nuevos anuncios de fomento productivo.',
             ],
             [
+                'workspace_id' => $workspace->id,
                 'ciclo_campana_id' => $ciclo->id,
                 'candidato_id' => $propio?->id,
-                'titulo' => 'Caravana Vecinal por Distritos Sur y Oeste',
+                'eje_tematico_id' => $ejeEducacion?->id,
+                'titulo' => 'Caravana y Encuentro en Polo Tecnológico Comunitario',
                 'fecha_inicio' => $now->copy()->addDays(12)->setTime(15, 0),
                 'fecha_fin' => $now->copy()->addDays(12)->setTime(19, 0),
                 'tipo_evento' => 'caravana',
                 'lugar' => 'Avenida de Mayo y Rotonda Sur',
                 'estado' => 'programado',
-                'notas' => 'Recorrido en camioneta abierta con paradas en 4 clubes barriales.',
+                'notas' => 'Recorrido con paradas en 4 clubes barriales y transmisión de cobertura en Stories.',
             ],
             [
+                'workspace_id' => $workspace->id,
                 'ciclo_campana_id' => $ciclo->id,
                 'candidato_id' => $rival?->id,
+                'eje_tematico_id' => $ejeEconomia?->id,
                 'titulo' => 'Conferencia de Prensa del Bloque Opositor',
                 'fecha_inicio' => $now->copy()->addDays(3)->setTime(11, 0),
                 'fecha_fin' => $now->copy()->addDays(3)->setTime(12, 30),
                 'tipo_evento' => 'rueda_prensa',
                 'lugar' => 'Hotel Boulevard',
                 'estado' => 'programado',
-                'notas' => 'Carlos Morales presentará balance crítico sobre presupuesto municipal.',
+                'notas' => 'Carlos Morales presentará balance crítico sobre presupuesto municipal. Preparar informe de réplica inmediata.',
             ],
         ];
 

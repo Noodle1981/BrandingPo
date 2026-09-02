@@ -165,6 +165,17 @@ class MediosAndCrisisSeeder extends Seeder
         if ($propio) {
             EventoCrisis::create([
                 'candidato_id' => $propio->id,
+                'titulo' => 'Filtración de audio manipulado con IA atribuido al equipo de campaña',
+                'fecha_evento' => $now->copy()->subHours(2),
+                'nivel_gravedad' => 'critico',
+                'minutos_tiempo_respuesta' => 15,
+                'estrategia_contencion' => 'Desmentida inmediata con comunicado técnico pericial y denuncia ante fiscalía de ciberdelitos.',
+                'estado' => 'activo',
+                'impacto_estimado' => 'Alto',
+            ]);
+
+            EventoCrisis::create([
+                'candidato_id' => $propio->id,
                 'titulo' => 'Ataque coordinado en redes por interrupción momentánea de línea de trolebuses',
                 'fecha_evento' => $now->copy()->subDays(3),
                 'nivel_gravedad' => 'moderado',

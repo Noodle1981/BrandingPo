@@ -16,6 +16,7 @@ class EventoCalendario extends Model
         'workspace_id',
         'ciclo_campana_id',
         'candidato_id',
+        'eje_tematico_id',
         'titulo',
         'fecha_inicio',
         'fecha_fin',
@@ -43,5 +44,10 @@ class EventoCalendario extends Model
     public function candidato(): BelongsTo
     {
         return $this->belongsTo(Candidato::class);
+    }
+
+    public function ejeTematico(): BelongsTo
+    {
+        return $this->belongsTo(EjeTematico::class, 'eje_tematico_id');
     }
 }

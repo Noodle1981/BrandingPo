@@ -595,6 +595,7 @@ class CandidatoController extends Controller
         SocialProfileScraperService $scraper,
         MediaStorageService $mediaStorage
     ): JsonResponse {
+        @set_time_limit(180);
         $resultadoCanal = [
             'success' => true,
             'plataforma' => $perfilSocial->plataforma,

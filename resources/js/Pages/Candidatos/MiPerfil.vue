@@ -18,6 +18,7 @@ import {
   Vote,
   TrendingUp,
   TrendingDown,
+  Minus,
   RefreshCw,
   Zap,
   Image as ImageIcon,
@@ -639,9 +640,10 @@ const sincronizarCanalCompleto = async () => {
   isSyncModalOpen.value = true;
   syncCanalSummary.value = null;
 
+  const activePosts = postsInActiveWindow.value;
   syncProgress.value = {
     current: 0,
-    total: postsInActiveWindow.value.length,
+    total: activePosts.length,
     currentUrl: '',
     currentTitle: 'Iniciando Sincronización Maestra del Canal...',
     isFinished: false,
@@ -651,24 +653,85 @@ const sincronizarCanalCompleto = async () => {
   };
   syncLogs.value = [];
 
-  try {
-    const res = await window.axios.post(`/perfiles-sociales/${currentRed.value.perfil_id}/sincronizar-canal`);
-    if (res.data && res.data.success) {
-      syncCanalSummary.value = res.data;
-      syncProgress.value.seguidoresInfo = res.data.mensaje_seguidores;
-      syncProgress.value.totalNewLikes = Number(res.data.nuevos_likes || 0);
-      syncProgress.value.totalNewComments = Number(res.data.nuevos_comentarios || 0);
-      syncProgress.value.current = Number(res.data.posts_actualizados || 0);
-      syncProgress.value.total = Number(res.data.posts_total || 0);
-      syncLogs.value = res.data.logs || [];
+  // PASO 1: Sincronizar Seguidores del Perfil Social (si tiene URL de perfil)
+  if (currentRed.value.url_perfil) {
+    try {
+      const resPerfil = await window.axios.post(`/perfiles-sociales/${currentRed.value.perfil_id}/refrescar`, {}, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (resPerfil.data && resPerfil.data.success) {
+        syncProgress.value.seguidoresInfo = resPerfil.data.mensaje;
+      } else {
+        syncProgress.value.seguidoresInfo = resPerfil.data?.mensaje || 'Seguidores verificados';
+      }
+    } catch (err) {
+      console.warn('Error al sincronizar seguidores:', err);
+      syncProgress.value.seguidoresInfo = 'No se pudo leer seguidores en vivo (se conservan los actuales).';
     }
-  } catch (err) {
-    console.error('Error al sincronizar canal:', err);
-    syncProgress.value.seguidoresInfo = 'Error al conectar con el servidor para sincronizar.';
-  } finally {
-    syncProgress.value.isFinished = true;
-    isSyncingCanal.value = false;
-    isSyncingRecientes.value = false;
+  } else {
+    syncProgress.value.seguidoresInfo = 'Canal sin URL de perfil configurada.';
+  }
+
+  // PASO 2: Sincronizar Publicaciones de a una con feedback reactivo en vivo
+  if (activePosts.length === 0) {
+    syncProgress.value.currentTitle = 'No hay publicaciones en ventana activa (≤ 15 días).';
+  } else {
+    for (let i = 0; i < activePosts.length; i++) {
+      const post = activePosts[i];
+      syncProgress.value.currentUrl = post.url_post;
+      syncProgress.value.currentTitle = `Leyendo publicación ${i + 1} de ${activePosts.length}...`;
+
+      try {
+        const resPost = await window.axios.post(`/publicaciones/${post.id}/sincronizar`, {}, {
+          headers: { 'Accept': 'application/json' }
+        });
+        const data = resPost.data;
+        if (data && data.success) {
+          syncProgress.value.totalNewLikes += Number(data.delta_likes || 0);
+          syncProgress.value.totalNewComments += Number(data.delta_comentarios || 0);
+          syncLogs.value.unshift({
+            status: 'success',
+            url: post.url_post,
+            resumen: data.resumen || post.contenido_resumen,
+            likes: data.total_likes,
+            deltaLikes: data.delta_likes,
+            comments: data.total_comentarios,
+            deltaComments: data.delta_comentarios,
+            fecha: data.fecha,
+          });
+        } else {
+          syncLogs.value.unshift({
+            status: 'warning',
+            url: post.url_post,
+            resumen: post.contenido_resumen,
+            error: data?.mensaje || 'Protegido por la red social',
+          });
+        }
+      } catch (postErr) {
+        console.warn(`Error al sincronizar post ${post.id}:`, postErr);
+        syncLogs.value.unshift({
+          status: 'warning',
+          url: post.url_post,
+          resumen: post.contenido_resumen,
+          error: 'No se pudo conectar para leer este post',
+        });
+      }
+
+      syncProgress.value.current = i + 1;
+    }
+  }
+
+  // Finalización
+  syncProgress.value.isFinished = true;
+  syncProgress.value.currentUrl = '';
+  syncProgress.value.currentTitle = '¡Sincronización completada!';
+  isSyncingCanal.value = false;
+  isSyncingRecientes.value = false;
+};
+
+const cerrarSyncModal = () => {
+  isSyncModalOpen.value = false;
+  if (syncProgress.value.isFinished) {
     router.reload({ preserveScroll: true });
   }
 };
@@ -1130,196 +1193,368 @@ const refrescarCanal = () => {
           class="grid gap-4 font-mono"
           :class="currentRed.key === 'facebook' ? 'grid-cols-1 sm:grid-cols-3' : (currentRed.key === 'tiktok' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4')"
         >
-          <!-- Seguidores / Suscriptores / Contactos -->
-          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
-              <span>👥 {{ currentRed.key === 'youtube' ? 'Suscriptores' : (currentRed.key === 'linkedin' ? 'Contactos / Red' : 'Seguidores') }}</span>
-              <!-- Mini-métrica de Crecimiento / Pérdida del Día -->
-              <span
-                v-if="currentRed.delta_seguidores_hoy > 0"
-                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 inline-flex items-center gap-0.5"
-                title="Variación respecto a la última medición"
-              >
-                <TrendingUp class="w-3 h-3" />
-                +{{ Number(currentRed.delta_seguidores_hoy).toLocaleString('es-AR') }} hoy
+          <!-- 1. SEGUIDORES / SUSCRIPTORES / CONTACTOS -->
+          <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-3 relative overflow-hidden group hover:border-cyan-500/40 transition-all">
+            <!-- Header con icono y nombre de la métrica -->
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1.5">
+                <span>👥 {{ currentRed.key === 'youtube' ? 'Suscriptores' : (currentRed.key === 'linkedin' ? 'Contactos / Red' : 'Seguidores') }}</span>
               </span>
-              <span
-                v-else-if="currentRed.delta_seguidores_hoy < 0"
-                class="text-rose-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-500/10 inline-flex items-center gap-0.5"
-                title="Pérdida respecto a la última medición"
-              >
-                <TrendingDown class="w-3 h-3" />
-                {{ Number(currentRed.delta_seguidores_hoy).toLocaleString('es-AR') }} hoy
-              </span>
-              <span
-                v-else
-                class="text-slate-400 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-500/10"
-              >
-                0 hoy
-              </span>
-            </span>
-            <div class="text-2xl font-extrabold text-cyan-600 dark:text-cyan-400">
-              {{ Number(currentRed.seguidores_actuales || 0).toLocaleString('es-AR') }}
+              <span class="text-[10px] font-mono text-slate-400 uppercase">Métrica Canal</span>
             </div>
-            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300">{{ Number(currentRed.seguidores_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
+
+            <!-- Cuerpo Central: Número Grande a la izquierda + Elemento Variación HOY Grande a la derecha -->
+            <div class="flex items-center justify-between gap-3 my-0.5">
+              <div class="space-y-0.5 min-w-0">
+                <div class="text-2xl sm:text-3xl font-black text-cyan-600 dark:text-cyan-400 tracking-tight truncate font-mono">
+                  {{ Number(currentRed.seguidores_actuales || 0).toLocaleString('es-AR') }}
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  Total comunidad
+                </div>
+              </div>
+
+              <!-- Elemento Variación HOY con su icono que sube / baja / neutro -->
+              <div class="shrink-0">
+                <!-- Subida -->
+                <span
+                  v-if="currentRed.delta_seguidores_hoy > 0"
+                  class="text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 inline-flex items-center gap-1.5 shadow-xs"
+                  title="Crecimiento registrado hoy respecto a la medición anterior"
+                >
+                  <TrendingUp class="w-4 h-4 stroke-[2.5]" />
+                  <span>+{{ Number(currentRed.delta_seguidores_hoy).toLocaleString('es-AR') }} hoy</span>
+                </span>
+
+                <!-- Bajada -->
+                <span
+                  v-else-if="currentRed.delta_seguidores_hoy < 0"
+                  class="text-rose-600 dark:text-rose-400 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 inline-flex items-center gap-1.5 shadow-xs"
+                  title="Pérdida registrada hoy respecto a la medición anterior"
+                >
+                  <TrendingDown class="w-4 h-4 stroke-[2.5]" />
+                  <span>{{ Number(currentRed.delta_seguidores_hoy).toLocaleString('es-AR') }} hoy</span>
+                </span>
+
+                <!-- Sin subida ni bajada -->
+                <span
+                  v-else
+                  class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 inline-flex items-center gap-1.5 shadow-xs"
+                  title="Sin variación registrada hoy"
+                >
+                  <Minus class="w-4 h-4 stroke-[2.5]" />
+                  <span>0 hoy</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Footer: Punto Alfa y Neto -->
+            <div class="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 font-mono">
+              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300 font-semibold">{{ Number(currentRed.seguidores_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
               <span
-                :class="currentRed.crecimiento_neto_seguidores >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'"
+                :class="currentRed.crecimiento_neto_seguidores >= 0 ? 'text-emerald-500 font-extrabold' : 'text-rose-500 font-extrabold'"
               >
                 {{ currentRed.crecimiento_neto_seguidores >= 0 ? '+' : '' }}{{ Number(currentRed.crecimiento_neto_seguidores).toLocaleString('es-AR') }} neto
               </span>
             </div>
           </div>
 
-          <!-- Cuentas Seguidas (Oculto en YouTube) -->
+          <!-- 2. CUENTAS SEGUIDAS (Oculto en YouTube) -->
           <div
             v-if="currentRed.key !== 'youtube'"
-            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1"
+            class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-3 relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition-all"
           >
-            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
-              <span>🔄 Seguidos</span>
-              <span
-                v-if="currentRed.delta_seguidos_hoy > 0"
-                class="text-cyan-600 dark:text-cyan-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-500/10 inline-flex items-center gap-0.5"
-              >
-                <TrendingUp class="w-3 h-3" />
-                +{{ Number(currentRed.delta_seguidos_hoy).toLocaleString('es-AR') }} hoy
+            <!-- Header -->
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1.5">
+                <span>🔄 Seguidos</span>
               </span>
-              <span
-                v-else-if="currentRed.delta_seguidos_hoy < 0"
-                class="text-amber-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 inline-flex items-center gap-0.5"
-              >
-                <TrendingDown class="w-3 h-3" />
-                {{ Number(currentRed.delta_seguidos_hoy).toLocaleString('es-AR') }} hoy
-              </span>
-              <span
-                v-else
-                class="text-slate-400 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-500/10"
-              >
-                0 hoy
-              </span>
-            </span>
-            <div class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">
-              {{ Number(currentRed.seguidos_actuales || 0).toLocaleString('es-AR') }}
+              <span class="text-[10px] font-mono text-slate-400 uppercase">Métrica Canal</span>
             </div>
-            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-              <span>Punto Alfa (Inicio):</span>
-              <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(currentRed.seguidos_punto_cero || 0).toLocaleString('es-AR') }}</span>
+
+            <!-- Cuerpo Central -->
+            <div class="flex items-center justify-between gap-3 my-0.5">
+              <div class="space-y-0.5 min-w-0">
+                <div class="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight truncate font-mono">
+                  {{ Number(currentRed.seguidos_actuales || 0).toLocaleString('es-AR') }}
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  Cuentas seguidas
+                </div>
+              </div>
+
+              <!-- Elemento Variación HOY -->
+              <div class="shrink-0">
+                <!-- Subida -->
+                <span
+                  v-if="currentRed.delta_seguidos_hoy > 0"
+                  class="text-cyan-600 dark:text-cyan-400 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <TrendingUp class="w-4 h-4 stroke-[2.5]" />
+                  <span>+{{ Number(currentRed.delta_seguidos_hoy).toLocaleString('es-AR') }} hoy</span>
+                </span>
+
+                <!-- Bajada -->
+                <span
+                  v-else-if="currentRed.delta_seguidos_hoy < 0"
+                  class="text-amber-500 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <TrendingDown class="w-4 h-4 stroke-[2.5]" />
+                  <span>{{ Number(currentRed.delta_seguidos_hoy).toLocaleString('es-AR') }} hoy</span>
+                </span>
+
+                <!-- Sin subida ni bajada -->
+                <span
+                  v-else
+                  class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <Minus class="w-4 h-4 stroke-[2.5]" />
+                  <span>0 hoy</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 font-mono">
+              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300 font-semibold">{{ Number(currentRed.seguidos_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
+              <span class="text-slate-600 dark:text-slate-300 font-bold">
+                {{ (currentRed.seguidos_actuales - currentRed.seguidos_punto_cero) >= 0 ? '+' : '' }}{{ Number(currentRed.seguidos_actuales - currentRed.seguidos_punto_cero).toLocaleString('es-AR') }} neto
+              </span>
             </div>
           </div>
 
-          <!-- Me Gusta Acumulados (Específico Cabecera TikTok) -->
+          <!-- 3. ME GUSTA ACUMULADOS (Específico Cabecera TikTok) -->
           <div
             v-if="currentRed.key === 'tiktok'"
-            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-rose-500/30 space-y-1"
+            class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-rose-500/30 shadow-xs flex flex-col justify-between space-y-3 relative overflow-hidden group hover:border-rose-500/50 transition-all"
           >
-            <span class="text-[11px] uppercase tracking-wider text-rose-500 font-bold block flex items-center justify-between">
-              <span>❤️ Me Gusta</span>
-              <span
-                v-if="currentRed.delta_me_gusta_hoy > 0"
-                class="text-rose-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-500/10 inline-flex items-center gap-0.5"
-              >
-                <TrendingUp class="w-3 h-3" />
-                +{{ Number(currentRed.delta_me_gusta_hoy).toLocaleString('es-AR') }} hoy
+            <!-- Header -->
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] uppercase tracking-wider text-rose-500 font-bold flex items-center gap-1.5">
+                <span>❤️ Me Gusta</span>
               </span>
-              <span
-                v-else
-                class="text-slate-400 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-500/10"
-              >
-                0 hoy
-              </span>
-            </span>
-            <div class="text-2xl font-extrabold text-rose-600 dark:text-rose-400">
-              {{ Number(currentRed.me_gusta_totales || 0).toLocaleString('es-AR') }}
+              <span class="text-[10px] font-mono text-slate-400 uppercase">Métrica TikTok</span>
             </div>
-            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300">{{ Number(currentRed.me_gusta_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
-              <span class="text-emerald-500 font-bold">
+
+            <!-- Cuerpo Central -->
+            <div class="flex items-center justify-between gap-3 my-0.5">
+              <div class="space-y-0.5 min-w-0">
+                <div class="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400 tracking-tight truncate font-mono">
+                  {{ Number(currentRed.me_gusta_totales || 0).toLocaleString('es-AR') }}
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  Likes públicos TikTok
+                </div>
+              </div>
+
+              <!-- Elemento Variación HOY -->
+              <div class="shrink-0">
+                <!-- Subida -->
+                <span
+                  v-if="currentRed.delta_me_gusta_hoy > 0"
+                  class="text-rose-600 dark:text-rose-400 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <TrendingUp class="w-4 h-4 stroke-[2.5]" />
+                  <span>+{{ Number(currentRed.delta_me_gusta_hoy).toLocaleString('es-AR') }} hoy</span>
+                </span>
+
+                <!-- Bajada -->
+                <span
+                  v-else-if="currentRed.delta_me_gusta_hoy < 0"
+                  class="text-rose-600 dark:text-rose-400 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <TrendingDown class="w-4 h-4 stroke-[2.5]" />
+                  <span>{{ Number(currentRed.delta_me_gusta_hoy).toLocaleString('es-AR') }} hoy</span>
+                </span>
+
+                <!-- Sin subida ni bajada -->
+                <span
+                  v-else
+                  class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <Minus class="w-4 h-4 stroke-[2.5]" />
+                  <span>0 hoy</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 font-mono">
+              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300 font-semibold">{{ Number(currentRed.me_gusta_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
+              <span class="text-emerald-500 font-extrabold">
                 +{{ Number(currentRed.crecimiento_neto_me_gusta).toLocaleString('es-AR') }} neto
               </span>
             </div>
           </div>
 
-          <!-- Publicaciones / Videos Totales (Oculto en Facebook) -->
+          <!-- 4. PUBLICACIONES / VIDEOS TOTALES (Oculto en Facebook) -->
           <div
             v-if="currentRed.key !== 'facebook'"
-            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1"
+            class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-3 relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition-all"
           >
-            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
-              <span>{{ currentRed.key === 'tiktok' || currentRed.key === 'youtube' ? '🎬 Videos' : (currentRed.key === 'linkedin' ? '📝 Posts / Artículos' : '📄 Publicaciones') }}</span>
-              <span
-                v-if="currentRed.delta_posts_hoy > 0"
-                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 inline-flex items-center gap-0.5"
-              >
-                <TrendingUp class="w-3 h-3" />
-                +{{ Number(currentRed.delta_posts_hoy).toLocaleString('es-AR') }} hoy
+            <!-- Header -->
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1.5">
+                <span>{{ currentRed.key === 'tiktok' || currentRed.key === 'youtube' ? '🎬 Videos' : (currentRed.key === 'linkedin' ? '📝 Posts / Artículos' : '📄 Publicaciones') }}</span>
               </span>
-              <span
-                v-else
-                class="text-slate-400 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-500/10"
-              >
-                0 hoy
-              </span>
-            </span>
-            <div class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">
-              {{ Number(currentRed.publicaciones_totales || 0).toLocaleString('es-AR') }}
+              <span class="text-[10px] font-mono text-slate-400 uppercase">Métrica Canal</span>
             </div>
-            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300">{{ Number(currentRed.publicaciones_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
-              <span class="text-emerald-500 font-bold">
+
+            <!-- Cuerpo Central -->
+            <div class="flex items-center justify-between gap-3 my-0.5">
+              <div class="space-y-0.5 min-w-0">
+                <div class="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight truncate font-mono">
+                  {{ Number(currentRed.publicaciones_totales || 0).toLocaleString('es-AR') }}
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  Posts en feed
+                </div>
+              </div>
+
+              <!-- Elemento Variación HOY -->
+              <div class="shrink-0">
+                <!-- Subida -->
+                <span
+                  v-if="currentRed.delta_posts_hoy > 0"
+                  class="text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <TrendingUp class="w-4 h-4 stroke-[2.5]" />
+                  <span>+{{ Number(currentRed.delta_posts_hoy).toLocaleString('es-AR') }} hoy</span>
+                </span>
+
+                <!-- Bajada -->
+                <span
+                  v-else-if="currentRed.delta_posts_hoy < 0"
+                  class="text-rose-600 dark:text-rose-400 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <TrendingDown class="w-4 h-4 stroke-[2.5]" />
+                  <span>{{ Number(currentRed.delta_posts_hoy).toLocaleString('es-AR') }} hoy</span>
+                </span>
+
+                <!-- Sin subida ni bajada -->
+                <span
+                  v-else
+                  class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <Minus class="w-4 h-4 stroke-[2.5]" />
+                  <span>0 hoy</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 font-mono">
+              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300 font-semibold">{{ Number(currentRed.publicaciones_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
+              <span class="text-emerald-500 font-extrabold">
                 +{{ Number(currentRed.crecimiento_neto_posts).toLocaleString('es-AR') }} neto
               </span>
             </div>
           </div>
 
-          <!-- Visualizaciones Totales (Específico Cabecera YouTube) -->
+          <!-- 5. VISUALIZACIONES TOTALES (Específico Cabecera YouTube) -->
           <div
             v-if="currentRed.key === 'youtube'"
-            class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-red-500/30 space-y-1"
+            class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-red-500/30 shadow-xs flex flex-col justify-between space-y-3 relative overflow-hidden group hover:border-red-500/50 transition-all"
           >
-            <span class="text-[11px] uppercase tracking-wider text-red-500 font-bold block flex items-center justify-between">
-              <span>👁️ Visualizaciones</span>
-              <span
-                v-if="currentRed.delta_views_hoy > 0"
-                class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 inline-flex items-center gap-0.5"
-              >
-                <TrendingUp class="w-3 h-3" />
-                +{{ Number(currentRed.delta_views_hoy).toLocaleString('es-AR') }} hoy
+            <!-- Header -->
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] uppercase tracking-wider text-red-500 font-bold flex items-center gap-1.5">
+                <span>👁️ Visualizaciones</span>
               </span>
-              <span
-                v-else
-                class="text-slate-400 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-500/10"
-              >
-                0 hoy
-              </span>
-            </span>
-            <div class="text-2xl font-extrabold text-red-600 dark:text-red-400">
-              {{ Number(currentRed.visualizaciones_totales || 0).toLocaleString('es-AR') }}
+              <span class="text-[10px] font-mono text-slate-400 uppercase">Métrica YouTube</span>
             </div>
-            <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300">{{ Number(currentRed.visualizaciones_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
-              <span class="text-emerald-500 font-bold">
+
+            <!-- Cuerpo Central -->
+            <div class="flex items-center justify-between gap-3 my-0.5">
+              <div class="space-y-0.5 min-w-0">
+                <div class="text-2xl sm:text-3xl font-black text-red-600 dark:text-red-400 tracking-tight truncate font-mono">
+                  {{ Number(currentRed.visualizaciones_totales || 0).toLocaleString('es-AR') }}
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  Reproducciones YouTube
+                </div>
+              </div>
+
+              <!-- Elemento Variación HOY -->
+              <div class="shrink-0">
+                <!-- Subida -->
+                <span
+                  v-if="currentRed.delta_views_hoy > 0"
+                  class="text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <TrendingUp class="w-4 h-4 stroke-[2.5]" />
+                  <span>+{{ Number(currentRed.delta_views_hoy).toLocaleString('es-AR') }} hoy</span>
+                </span>
+
+                <!-- Bajada -->
+                <span
+                  v-else-if="currentRed.delta_views_hoy < 0"
+                  class="text-rose-600 dark:text-rose-400 text-xs sm:text-sm font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <TrendingDown class="w-4 h-4 stroke-[2.5]" />
+                  <span>{{ Number(currentRed.delta_views_hoy).toLocaleString('es-AR') }} hoy</span>
+                </span>
+
+                <!-- Sin subida ni bajada -->
+                <span
+                  v-else
+                  class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <Minus class="w-4 h-4 stroke-[2.5]" />
+                  <span>0 hoy</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 font-mono">
+              <span>Punto Alfa: <strong class="text-slate-700 dark:text-slate-300 font-semibold">{{ Number(currentRed.visualizaciones_punto_cero || 0).toLocaleString('es-AR') }}</strong></span>
+              <span class="text-emerald-500 font-extrabold">
                 +{{ Number(currentRed.crecimiento_neto_visualizaciones).toLocaleString('es-AR') }} neto
               </span>
             </div>
           </div>
 
-          <!-- Fecha Punto Cero & Sincronización 24h -->
-          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
-              <span>📅 Punto Cero & 24h</span>
-              <span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-cyan-500/10 text-cyan-500">
-                Auto-Cron
+          <!-- 6. FECHA PUNTO CERO & AUDITORÍA 24H -->
+          <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-3 relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+            <!-- Header -->
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1.5">
+                <span>📅 Punto Cero & 24h</span>
               </span>
-            </span>
-            <div class="text-xs font-bold text-slate-800 dark:text-slate-200 pt-1">
-              Inicio: <span class="font-mono text-cyan-600 dark:text-cyan-400">{{ currentRed.fecha_punto_cero || 'No registrada' }}</span>
+
+              <span class="text-[10px] px-2 py-0.5 rounded-lg font-mono font-extrabold bg-cyan-500/10 border border-cyan-500/25 text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse"></span>
+                <span>Auto-Cron</span>
+              </span>
             </div>
-            <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between">
-              <span>Lectura 24h:</span>
+
+            <!-- Cuerpo Central -->
+            <div class="flex items-center justify-between gap-3 my-0.5">
+              <div class="space-y-0.5 min-w-0">
+                <div class="text-lg sm:text-xl font-black font-mono text-cyan-600 dark:text-cyan-400 tracking-tight truncate">
+                  {{ currentRed.fecha_punto_cero || 'No registrada' }}
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  Inicio de auditoría
+                </div>
+              </div>
+
+              <!-- Badge Lectura Activa -->
+              <div class="shrink-0">
+                <span class="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 text-xs sm:text-sm font-bold font-mono inline-flex items-center gap-1.5 shadow-xs">
+                  <Clock class="w-4 h-4 stroke-[2.5]" />
+                  <span>{{ currentRed.ultima_auditoria_at || 'Hoy' }}</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-[11px] text-slate-400 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 font-mono">
+              <span>Auditoría 24h:</span>
               <span class="font-bold text-emerald-500 flex items-center gap-1">
-                <Clock class="w-3 h-3" />
-                {{ currentRed.ultima_auditoria_at || 'Hoy' }}
+                <CheckCircle class="w-3.5 h-3.5" />
+                Sincronizada
               </span>
             </div>
           </div>
@@ -2439,7 +2674,7 @@ const refrescarCanal = () => {
           <button
             v-if="!isSyncingCanal"
             type="button"
-            @click="isSyncModalOpen = false"
+            @click="cerrarSyncModal"
             class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
           >
             <X class="w-5 h-5" />
@@ -2506,7 +2741,7 @@ const refrescarCanal = () => {
           </div>
           <button
             type="button"
-            @click="isSyncModalOpen = false"
+            @click="cerrarSyncModal"
             class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-xs cursor-pointer"
           >
             Aceptar

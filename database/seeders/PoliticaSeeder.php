@@ -324,6 +324,24 @@ class PoliticaSeeder extends Seeder
             ]
         );
 
+        $rival = Candidato::updateOrCreate(
+            [
+                'nombre_completo' => 'Carlos Morales',
+                'workspace_id' => $workspace->id,
+            ],
+            [
+                'ciclo_campana_id' => $ciclo2025->id,
+                'territorio_id' => $albardon->id,
+                'partido_coalicion' => 'Frente Opositor',
+                'cargo_aspirado' => 'Candidato a Intendente',
+                'estado_politico' => 'opositor',
+                'color_hex' => '#8b5cf6',
+                'es_propio' => false,
+                'avatar_url' => 'https://ui-avatars.com/api/?name=Carlos+Morales&background=8b5cf6&color=fff',
+                'bio_resumen' => 'Concejal y candidato opositor.',
+            ]
+        );
+
         $demografiaInstagram = [
             'fuente_datos' => 'meta_graph_api',
             'genero' => [

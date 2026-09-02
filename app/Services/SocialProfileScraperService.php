@@ -1062,6 +1062,14 @@ class SocialProfileScraperService
             curl_close($ch);
 
             if (! empty($html)) {
+                // Verificar si TikTok indica explícitamente que el video no existe o fue borrado
+                if (str_contains($html, 'Video currently unavailable') || str_contains($html, 'video-unavailable') || str_contains($html, 'Couldn\'t find this video')) {
+                    $result['success'] = false;
+                    $result['mensaje'] = 'El video no está disponible o fue eliminado en TikTok.';
+
+                    return $result;
+                }
+
                 if (empty($result['media_url']) && preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]*)"/i', $html, $mImg)) {
                     $result['media_url'] = html_entity_decode($mImg[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 }
@@ -1104,7 +1112,16 @@ class SocialProfileScraperService
         $result['success'] = ! empty($result['contenido_resumen']) || ! empty($result['media_url']) || $result['total_likes'] > 0;
         $result['mensaje'] = $result['success']
             ? '¡Video de TikTok extraído exitosamente!'
-            : 'TikTok protegió la lectura. Puedes completar los datos manualmente.';
+            : 'TikTok protegió la lectura o el video no está disponible. Puedes completar los datos manualmente.';
+
+        // Advertencia si la publicación es anterior al inicio de auditoría de Julio
+        if ($result['success'] && ! empty($result['fecha_publicacion'])) {
+            $timePub = strtotime($result['fecha_publicacion']);
+            $timeCorte = strtotime('2026-07-01');
+            if ($timePub && $timePub < $timeCorte) {
+                $result['mensaje'] .= ' (Nota: La fecha detectada es anterior al período de auditoría de Julio).';
+            }
+        }
 
         return $result;
     }

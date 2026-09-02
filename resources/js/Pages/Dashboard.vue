@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import WarRoomLayout from '../Layouts/WarRoomLayout.vue';
 import MetricCard from '../Components/MetricCard.vue';
@@ -37,7 +37,11 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Film,
+  Rocket,
+  Maximize2,
+  X
 } from '@lucide/vue';
 
 // Chart.js & vue-chartjs
@@ -158,6 +162,14 @@ const props = defineProps({
   ultimas_notas_prensa: {
     type: Array,
     default: () => []
+  },
+  hitos_booster: {
+    type: Array,
+    default: () => []
+  },
+  formatos_por_red: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -232,68 +244,83 @@ const getSocialMeta = (key) => {
   }
 };
 
-// 1. Gráfico de Evolución Temporal (Line Chart Multired y por Canal)
-const chartTimeMetric = ref('seguidores'); // 'seguidores' | 'vistas'
-const selectedTimePlatform = ref('todas'); // 'todas' | 'facebook' | 'instagram' | ...
-
-// Redes con cuenta configurada o activas del candidato
+// Redes con cuenta configurada o activas del candidato para los filtros de las gráficas
 const redesDisponiblesTimeline = computed(() => {
   return props.redes_desglose.filter(r => r.handle_usuario || r.esta_activo || r.seguidores > 0);
 });
 
-const activeTimelineSeries = computed(() => {
-  if (selectedTimePlatform.value !== 'todas' && props.series_por_red && props.series_por_red[selectedTimePlatform.value]) {
-    const s = props.series_por_red[selectedTimePlatform.value];
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. GRÁFICA TEMPORAL: COMUNIDAD (SEGUIDORES NETOS) CON HITOS DE BOOSTER 🚀
+// ─────────────────────────────────────────────────────────────────────────────
+const selectedComunidadPlatform = ref('todas');
+
+const activeComunidadSeries = computed(() => {
+  if (selectedComunidadPlatform.value !== 'todas' && props.series_por_red && props.series_por_red[selectedComunidadPlatform.value]) {
+    const s = props.series_por_red[selectedComunidadPlatform.value];
     return {
-      plataforma: selectedTimePlatform.value,
       nombre: s.nombre,
-      handle: s.handle,
-      color: s.color || getSocialMeta(selectedTimePlatform.value).color,
+      color: s.color || getSocialMeta(selectedComunidadPlatform.value).color,
       puntos: s.puntos || [],
       esIndividual: true,
     };
   }
-
   return {
-    plataforma: 'todas',
     nombre: 'Comunidad Total Multired',
-    handle: 'Todas las redes activas',
-    color: chartTimeMetric.value === 'seguidores' ? '#06b6d4' : '#10b981',
+    color: '#06b6d4',
     puntos: props.historico_mediciones || [],
     esIndividual: false,
   };
 });
 
-const timelineChartData = computed(() => {
-  const current = activeTimelineSeries.value;
+const comunidadChartData = computed(() => {
+  const current = activeComunidadSeries.value;
   const labels = current.puntos.map(m => m.fecha);
-  const data = chartTimeMetric.value === 'seguidores'
-    ? current.puntos.map(m => m.seguidores)
-    : current.puntos.map(m => m.vistas);
-
-  const isFollowers = chartTimeMetric.value === 'seguidores';
+  const data = current.puntos.map(m => m.seguidores);
   const colorHex = current.color;
+
+  const hitos = props.hitos_booster || [];
+  const pointRadiuses = [];
+  const pointHoverRadiuses = [];
+  const pointBackgroundColors = [];
+  const pointBorderColors = [];
+
+  current.puntos.forEach(p => {
+    const tieneBooster = hitos.some(h => 
+      (h.fecha_raw && p.fecha_raw && h.fecha_raw === p.fecha_raw) || 
+      (h.fecha && p.fecha && h.fecha === p.fecha)
+    );
+    if (tieneBooster) {
+      pointRadiuses.push(7);
+      pointHoverRadiuses.push(9);
+      pointBackgroundColors.push('#f43f5e'); // Rojo Fuego para Booster
+      pointBorderColors.push('#ffffff');
+    } else {
+      pointRadiuses.push(3);
+      pointHoverRadiuses.push(5);
+      pointBackgroundColors.push(colorHex);
+      pointBorderColors.push('#ffffff');
+    }
+  });
 
   return {
     labels,
-    datasets: [
-      {
-        label: isFollowers ? `${current.nombre} (Seguidores)` : `${current.nombre} (Visualizaciones)`,
-        data,
-        borderColor: colorHex,
-        backgroundColor: `${colorHex}1f`,
-        fill: true,
-        tension: 0.35,
-        pointBackgroundColor: colorHex,
-        pointBorderColor: '#ffffff',
-        pointHoverRadius: 6,
-        borderWidth: 2.5,
-      }
-    ]
+    datasets: [{
+      label: `${current.nombre} (Seguidores)`,
+      data,
+      borderColor: colorHex,
+      backgroundColor: `${colorHex}18`,
+      fill: true,
+      tension: 0.35,
+      pointRadius: pointRadiuses,
+      pointHoverRadius: pointHoverRadiuses,
+      pointBackgroundColor: pointBackgroundColors,
+      pointBorderColor: pointBorderColors,
+      borderWidth: 2.5,
+    }]
   };
 });
 
-const timelineChartOptions = {
+const comunidadChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -304,28 +331,175 @@ const timelineChartOptions = {
       bodyColor: '#f8fafc',
       padding: 10,
       cornerRadius: 8,
+      borderColor: 'rgba(148, 163, 184, 0.2)',
+      borderWidth: 1,
       callbacks: {
-        label: function(context) {
-          return `${context.dataset.label}: ${Number(context.raw).toLocaleString('es-AR')}`;
+        label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString('es-AR')}`,
+        afterLabel: (ctx) => {
+          const idx = ctx.dataIndex;
+          const current = activeComunidadSeries.value;
+          const punto = current.puntos ? current.puntos[idx] : null;
+          if (!punto) return '';
+          const hitos = (props.hitos_booster || []).filter(h => 
+            (h.fecha_raw && punto.fecha_raw && h.fecha_raw === punto.fecha_raw) || 
+            (h.fecha && punto.fecha && h.fecha === punto.fecha)
+          );
+          if (hitos.length > 0) {
+            const h = hitos[0];
+            return `🚀 BOOSTER ACTIVO: ${h.monto_formateado} (${h.plataforma.toUpperCase()})\n📌 ${h.titulo}`;
+          }
+          return '';
         }
       }
     }
   },
   scales: {
-    x: {
-      grid: { display: false },
-      ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } }
-    },
-    y: {
-      grid: { color: 'rgba(148, 163, 184, 0.1)' },
-      ticks: {
-        color: '#94a3b8',
-        font: { size: 10, family: 'monospace' },
-        callback: (value) => formatNumber(value)
+    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
+    y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
+  }
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. GRÁFICA TEMPORAL: TRACCIÓN / SCORE DE IMPACTO PONDERADO (PUNTOS 🔥)
+// ─────────────────────────────────────────────────────────────────────────────
+const selectedScorePlatform = ref('todas');
+
+const activeScoreSeries = computed(() => {
+  if (selectedScorePlatform.value !== 'todas' && props.series_por_red && props.series_por_red[selectedScorePlatform.value]) {
+    const s = props.series_por_red[selectedScorePlatform.value];
+    return {
+      nombre: s.nombre,
+      color: '#f59e0b',
+      puntos: s.puntos || [],
+      esIndividual: true,
+    };
+  }
+  return {
+    nombre: 'Tracción Total (Score)',
+    color: '#f59e0b',
+    puntos: props.historico_mediciones || [],
+    esIndividual: false,
+  };
+});
+
+const scoreChartData = computed(() => {
+  const current = activeScoreSeries.value;
+  const labels = current.puntos.map(m => m.fecha);
+  const data = current.puntos.map(m => m.puntos || 0);
+  const colorHex = '#f59e0b';
+
+  return {
+    labels,
+    datasets: [{
+      label: `${current.nombre} (Puntos)`,
+      data,
+      borderColor: colorHex,
+      backgroundColor: `${colorHex}18`,
+      fill: true,
+      tension: 0.35,
+      pointRadius: 3,
+      pointHoverRadius: 6,
+      pointBackgroundColor: colorHex,
+      pointBorderColor: '#ffffff',
+      borderWidth: 2.5,
+    }]
+  };
+});
+
+const scoreChartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#0f172a',
+      titleColor: '#f59e0b',
+      bodyColor: '#f8fafc',
+      padding: 10,
+      cornerRadius: 8,
+      borderColor: 'rgba(245, 158, 11, 0.3)',
+      borderWidth: 1,
+      callbacks: {
+        label: (ctx) => `Score Acumulado: ${Number(ctx.raw).toLocaleString('es-AR')} pts`
       }
     }
+  },
+  scales: {
+    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
+    y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
   }
-};
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. GRÁFICA TEMPORAL: REPRODUCCIONES (VISUALIZACIONES / FACEBOOK REELS 👁️)
+// ─────────────────────────────────────────────────────────────────────────────
+const selectedVistasPlatform = ref('todas');
+
+const activeVistasSeries = computed(() => {
+  if (selectedVistasPlatform.value !== 'todas' && props.series_por_red && props.series_por_red[selectedVistasPlatform.value]) {
+    const s = props.series_por_red[selectedVistasPlatform.value];
+    return {
+      nombre: s.nombre,
+      color: '#10b981',
+      puntos: s.puntos || [],
+      esIndividual: true,
+    };
+  }
+  return {
+    nombre: 'Reproducciones Totales',
+    color: '#10b981',
+    puntos: props.historico_mediciones || [],
+    esIndividual: false,
+  };
+});
+
+const vistasChartData = computed(() => {
+  const current = activeVistasSeries.value;
+  const labels = current.puntos.map(m => m.fecha);
+  const data = current.puntos.map(m => m.vistas || 0);
+  const colorHex = '#10b981';
+
+  return {
+    labels,
+    datasets: [{
+      label: `${current.nombre} (Vistas)`,
+      data,
+      borderColor: colorHex,
+      backgroundColor: `${colorHex}18`,
+      fill: true,
+      tension: 0.35,
+      pointRadius: 3,
+      pointHoverRadius: 6,
+      pointBackgroundColor: colorHex,
+      pointBorderColor: '#ffffff',
+      borderWidth: 2.5,
+    }]
+  };
+});
+
+const vistasChartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#0f172a',
+      titleColor: '#10b981',
+      bodyColor: '#f8fafc',
+      padding: 10,
+      cornerRadius: 8,
+      borderColor: 'rgba(16, 185, 129, 0.3)',
+      borderWidth: 1,
+      callbacks: {
+        label: (ctx) => `Reproducciones: ${Number(ctx.raw).toLocaleString('es-AR')}`
+      }
+    }
+  },
+  scales: {
+    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
+    y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
+  }
+}));
 
 // 2. Gráfico Donut de Participación por Red Social
 const doughnutChartData = computed(() => {
@@ -486,6 +660,155 @@ const ejesBarChartOptions = {
     }
   }
 };
+
+// 4.B. Gráfico Horizontal de Volumen de Publicaciones por Eje Temático
+const ejesVolumenBarChartData = computed(() => {
+  const labels = props.distribucion_ejes.map(e => e.nombre);
+  const data = props.distribucion_ejes.map(e => e.posts_count);
+  const colors = props.distribucion_ejes.map(e => e.color_badge || '#3b82f6');
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Publicaciones Emitidas',
+        data,
+        backgroundColor: colors,
+        borderRadius: 6,
+      }
+    ]
+  };
+});
+
+const ejesVolumenBarChartOptions = {
+  indexAxis: 'y',
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#0f172a',
+      titleColor: '#38bdf8',
+      bodyColor: '#f8fafc',
+      padding: 10,
+      cornerRadius: 8,
+      callbacks: {
+        label: (ctx) => ` Publicaciones: ${ctx.raw} posts`
+      }
+    }
+  },
+  scales: {
+    x: {
+      grid: { color: 'rgba(148, 163, 184, 0.1)' },
+      ticks: {
+        color: '#94a3b8',
+        font: { size: 10, family: 'monospace' },
+        precision: 0,
+      }
+    },
+    y: {
+      grid: { display: false },
+      ticks: { color: '#94a3b8', font: { size: 11, weight: 'bold' } }
+    }
+  }
+};
+
+// 5. Gráfico de Barras Apiladas: Matriz de Formatos por Red Social Activa
+const formatColorsMap = {
+  'Reel': '#f43f5e',
+  'Foto': '#06b6d4',
+  'Video': '#8b5cf6',
+  'Carrusel': '#f59e0b',
+  'Texto': '#10b981',
+  'Historia': '#ec4899',
+  'Enlace': '#3b82f6',
+};
+
+const matrizFormatosBarChartData = computed(() => {
+  const redes = (props.formatos_por_red || []).filter(r => r.total_posts > 0);
+  const labels = redes.map(r => r.plataforma.toUpperCase());
+
+  const formatosSet = new Set();
+  redes.forEach(r => {
+    (r.formatos || []).forEach(f => formatosSet.add(f.formato));
+  });
+  const formatosUnicos = Array.from(formatosSet);
+
+  const datasets = formatosUnicos.map(fmt => {
+    const color = formatColorsMap[fmt] || '#64748b';
+    return {
+      label: fmt,
+      data: redes.map(r => {
+        const item = (r.formatos || []).find(f => f.formato === fmt);
+        return item ? item.cantidad : 0;
+      }),
+      backgroundColor: color,
+      borderRadius: 6,
+    };
+  });
+
+  return {
+    labels,
+    datasets,
+  };
+});
+
+const matrizFormatosBarChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'top',
+      labels: { boxWidth: 10, padding: 8, color: '#94a3b8', font: { size: 10 } }
+    },
+    tooltip: {
+      backgroundColor: '#0f172a',
+      bodyColor: '#f8fafc',
+      padding: 10,
+      cornerRadius: 8,
+      callbacks: {
+        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw} publicaciones`
+      }
+    }
+  },
+  scales: {
+    x: {
+      stacked: true,
+      grid: { display: false },
+      ticks: { color: '#94a3b8', font: { size: 10, weight: 'bold' } }
+    },
+    y: {
+      stacked: true,
+      grid: { color: 'rgba(148, 163, 184, 0.1)' },
+      ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, precision: 0 }
+    }
+  }
+};
+
+// 6. Modal para Ampliación de Gráficos a Pantalla Completa / HD
+const modalGraficoActivo = ref(null);
+
+const abrirModalGrafico = (tipo) => {
+  modalGraficoActivo.value = tipo;
+};
+
+const cerrarModalGrafico = () => {
+  modalGraficoActivo.value = null;
+};
+
+const handleKeyDown = (e) => {
+  if (e.key === 'Escape' && modalGraficoActivo.value) {
+    cerrarModalGrafico();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+});
 </script>
 
 <template>
@@ -739,153 +1062,354 @@ const ejesBarChartOptions = {
       </div>
     </div>
 
-    <!-- 3. CENTRO DE ANALÍTICA VISUAL (4 GRÁFICOS INTERACTIVOS CHART.JS) -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-      <!-- Gráfico 1 (7 cols): Tendencia Temporal Multired / Por Canal -->
-      <div class="lg:col-span-7 p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <!-- 3. CENTRO DE ANALÍTICA VISUAL (WAR ROOM) -->
+    <div class="space-y-6">
+      
+      <!-- 1. TRILOGÍA DE EVOLUCIÓN TEMPORAL (3 GRÁFICAS PARALELAS INDEPENDIENTES) -->
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        
+        <!-- GRÁFICA 1: COMUNIDAD (SEGUIDORES NETOS) CON HITOS DE BOOSTER 🚀 -->
+        <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5 flex flex-col justify-between">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center">
+                  <Users class="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100">Evolución de Comunidad</h3>
+                  <p class="text-[11px] text-slate-400">Seguidores netos acumulados</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <!-- Selector Red -->
+                <select
+                  v-model="selectedComunidadPlatform"
+                  class="px-2 py-1 text-xs font-mono font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                >
+                  <option value="todas">🌐 Todas (Total)</option>
+                  <option v-for="red in redesDisponiblesTimeline" :key="red.plataforma" :value="red.plataforma">
+                    {{ red.plataforma.toUpperCase() }}
+                  </option>
+                </select>
+
+                <!-- Botón Ampliar -->
+                <button
+                  type="button"
+                  @click="abrirModalGrafico('comunidad')"
+                  class="px-2 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer"
+                  title="Ampliar gráfico"
+                >
+                  <Maximize2 class="w-3.5 h-3.5" />
+                  <span class="text-[11px]">Ampliar</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Banner Hitos Booster -->
+            <div v-if="hitos_booster && hitos_booster.length > 0" class="flex items-center gap-1.5 text-[11px] text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20">
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+              <span class="font-bold flex items-center gap-1"><Rocket class="w-3 h-3" /> Hitos Booster:</span>
+              <span class="truncate">Nodos rojos = Pauta activa</span>
+            </div>
+          </div>
+
+          <div class="h-60 w-full">
+            <Line :data="comunidadChartData" :options="comunidadChartOptions" />
+          </div>
+        </div>
+
+        <!-- GRÁFICA 2: TRACCIÓN / SCORE DE IMPACTO PONDERADO (PUNTOS 🔥) -->
+        <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5 flex flex-col justify-between">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                  <Flame class="w-4 h-4 fill-current" />
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100">Tracción (Score / Puntos)</h3>
+                  <p class="text-[11px] text-slate-400">Likes (1), Comments (3), Shares (5), Reposts (10)</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <!-- Selector Red -->
+                <select
+                  v-model="selectedScorePlatform"
+                  class="px-2 py-1 text-xs font-mono font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                >
+                  <option value="todas">🌐 Todas (Total)</option>
+                  <option v-for="red in redesDisponiblesTimeline" :key="red.plataforma" :value="red.plataforma">
+                    {{ red.plataforma.toUpperCase() }}
+                  </option>
+                </select>
+
+                <!-- Botón Ampliar -->
+                <button
+                  type="button"
+                  @click="abrirModalGrafico('score')"
+                  class="px-2 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer"
+                  title="Ampliar gráfico"
+                >
+                  <Maximize2 class="w-3.5 h-3.5" />
+                  <span class="text-[11px]">Ampliar</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
+              <span class="font-bold">Métrica Universal:</span>
+              <span class="truncate">Mide engagement real sin ceros</span>
+            </div>
+          </div>
+
+          <div class="h-60 w-full">
+            <Line :data="scoreChartData" :options="scoreChartOptions" />
+          </div>
+        </div>
+
+        <!-- GRÁFICA 3: REPRODUCCIONES / VIDEO & FACEBOOK REELS 👁️ -->
+        <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5 flex flex-col justify-between">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                  <Eye class="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100">Visualizaciones / Reels</h3>
+                  <p class="text-[11px] text-slate-400">Reproducciones de video multired</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <!-- Selector Red -->
+                <select
+                  v-model="selectedVistasPlatform"
+                  class="px-2 py-1 text-xs font-mono font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="todas">🌐 Todas (Total)</option>
+                  <option v-for="red in redesDisponiblesTimeline" :key="red.plataforma" :value="red.plataforma">
+                    {{ red.plataforma.toUpperCase() }}
+                  </option>
+                </select>
+
+                <!-- Botón Ampliar -->
+                <button
+                  type="button"
+                  @click="abrirModalGrafico('vistas')"
+                  class="px-2 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer"
+                  title="Ampliar gráfico"
+                >
+                  <Maximize2 class="w-3.5 h-3.5" />
+                  <span class="text-[11px]">Ampliar</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+              <span class="font-bold">Facebook Reels:</span>
+              <span class="truncate">Métrica pública de vistos en Reels</span>
+            </div>
+          </div>
+
+          <div class="h-60 w-full">
+            <Line :data="vistasChartData" :options="vistasChartOptions" />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 2. CUOTA DE ATENCIÓN POR RED (5 COLS) + RENDIMIENTO POR FORMATO (7 COLS) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Gráfico Donut (5 cols): Cuota de Atención por Red Social -->
+        <div class="lg:col-span-5 p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 flex flex-col justify-between">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <div class="flex items-center gap-2">
+                <PieChart class="w-4 h-4 text-violet-500" />
+                <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">
+                  <span>Cuota de Interacción por Red</span>
+                </h2>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Distribución de likes, comentarios y compartidos</p>
+            </div>
+
+            <button
+              type="button"
+              @click="abrirModalGrafico('cuota')"
+              class="px-2 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+              title="Ampliar gráfico"
+            >
+              <Maximize2 class="w-3.5 h-3.5" />
+              <span class="text-[11px]">Ampliar</span>
+            </button>
+          </div>
+
+          <div class="h-56 w-full relative flex items-center justify-center">
+            <Doughnut :data="doughnutChartData" :options="doughnutChartOptions" />
+          </div>
+
+          <!-- Tarjetas de desglose de todas las redes activas/configuradas -->
+          <div v-if="distribucion_plataformas.length > 0" class="flex flex-wrap items-stretch justify-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800/80 font-mono">
+            <div
+              v-for="red in distribucion_plataformas"
+              :key="red.plataforma"
+              class="flex-1 min-w-[95px] max-w-[150px] p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 flex flex-col justify-between"
+            >
+              <div class="flex items-center justify-between gap-1 mb-1">
+                <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold truncate flex items-center gap-1">
+                  <SocialPlatformIcon :platform="red.plataforma" size="xs" />
+                  {{ red.nombre }}
+                </span>
+                <span class="w-1.5 h-1.5 rounded-full shrink-0" :style="{ backgroundColor: red.color }"></span>
+              </div>
+              <div class="flex items-baseline justify-between gap-1">
+                <span class="text-xs sm:text-sm font-extrabold tracking-tight" :style="{ color: red.color }">
+                  {{ red.porcentaje }}%
+                </span>
+                <span class="text-[9px] text-slate-400 truncate" :title="`${red.interacciones} interacciones totales`">
+                  {{ formatNumber(red.interacciones) }} int.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráfico Bar (7 cols): Rendimiento por Formato -->
+        <div class="lg:col-span-7 p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <BarChart3 class="w-4 h-4 text-cyan-500" />
+                <span>Rendimiento por Formato</span>
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Efectividad promedio de Reels vs Fotos vs Videos vs Texto</p>
+            </div>
+
+            <button
+              type="button"
+              @click="abrirModalGrafico('formato')"
+              class="px-2 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+              title="Ampliar gráfico"
+            >
+              <Maximize2 class="w-3.5 h-3.5" />
+              <span class="text-[11px]">Ampliar</span>
+            </button>
+          </div>
+
+          <div class="h-64 w-full">
+            <Bar :data="formatBarChartData" :options="formatBarChartOptions" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. FILA DUAL: MATRIZ DE FORMATOS EN BARRAS (6 COLS) + IMPACTO POR EJE (6 COLS) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Matriz de Formatos por Red Social Activa (Gráfico de Barras Apiladas - 6 cols) -->
+        <div class="lg:col-span-6 p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Layers class="w-4 h-4 text-cyan-500" />
+                <span>Matriz de Formatos por Red Social Activa</span>
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Distribución de tipos de contenido desplegados en cada canal
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono text-slate-400 font-semibold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 shrink-0">
+                Barras Apiladas
+              </span>
+
+              <button
+                type="button"
+                @click="abrirModalGrafico('matriz_formatos')"
+                class="px-2 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                title="Ampliar gráfico"
+              >
+                <Maximize2 class="w-3.5 h-3.5" />
+                <span class="text-[11px]">Ampliar</span>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="formatos_por_red && formatos_por_red.length > 0" class="h-64 w-full">
+            <Bar :data="matrizFormatosBarChartData" :options="matrizFormatosBarChartOptions" />
+          </div>
+          <div v-else class="h-64 flex items-center justify-center text-xs text-slate-400">
+            No hay datos de formatos por red social registrados todavía.
+          </div>
+        </div>
+
+        <!-- Impacto por Eje Temático (Gráfico de Barras - 6 cols) -->
+        <div class="lg:col-span-6 p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Target class="w-4 h-4 text-amber-500" />
+                <span>Impacto por Eje Temático</span>
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Interacciones logradas por cada propuesta</p>
+            </div>
+
+            <button
+              type="button"
+              @click="abrirModalGrafico('ejes_impacto')"
+              class="px-2 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+              title="Ampliar gráfico"
+            >
+              <Maximize2 class="w-3.5 h-3.5" />
+              <span class="text-[11px]">Ampliar</span>
+            </button>
+          </div>
+
+          <div v-if="distribucion_ejes.length > 0" class="h-64 w-full">
+            <Bar :data="ejesBarChartData" :options="ejesBarChartOptions" />
+          </div>
+          <div v-else class="h-64 flex items-center justify-center text-xs text-slate-400">
+            No hay publicaciones clasificadas por ejes temáticos todavía.
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. FILA INFERIOR: VOLUMEN DE PUBLICACIONES POR EJE (OFICIAL) -->
+      <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+        <div class="flex items-center justify-between gap-3">
           <div>
             <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Activity class="w-4 h-4 text-cyan-500" />
-              <span>Evolución Temporal {{ selectedTimePlatform === 'todas' ? 'Multired' : activeTimelineSeries.nombre }}</span>
+              <Layers class="w-4 h-4 text-blue-500" />
+              <span>Volumen de Publicaciones por Eje</span>
             </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-              {{ selectedTimePlatform === 'todas' ? 'Progresión continua acumulada de todas las redes activas' : `Progreso individual de ${activeTimelineSeries.nombre} (${activeTimelineSeries.handle || '@canal'})` }}
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Cantidad de publicaciones emitidas para cada propuesta de campaña
             </p>
           </div>
 
-          <!-- Selector de Métrica Temporal (Comunidad vs Visualizaciones) -->
-          <div class="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 shrink-0">
-            <button
-              @click="chartTimeMetric = 'seguidores'"
-              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
-              :class="chartTimeMetric === 'seguidores' ? 'bg-cyan-500 text-slate-950 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
-            >
-              Comunidad
-            </button>
-            <button
-              @click="chartTimeMetric = 'vistas'"
-              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
-              :class="chartTimeMetric === 'vistas' ? 'bg-emerald-500 text-slate-950 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
-            >
-              Visualizaciones
-            </button>
-          </div>
-        </div>
-
-        <!-- Filtro por Red Social Habilitada (Píldoras interactivas) -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100 dark:border-slate-800/80 scrollbar-none">
           <button
             type="button"
-            @click="selectedTimePlatform = 'todas'"
-            class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 shadow-2xs shrink-0"
-            :class="selectedTimePlatform === 'todas'
-              ? 'bg-cyan-500 text-slate-950 border-cyan-500 font-extrabold shadow-sm'
-              : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400'"
+            @click="abrirModalGrafico('ejes_volumen')"
+            class="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            title="Ampliar gráfico"
           >
-            <span>🌐 Todas (Total)</span>
+            <Maximize2 class="w-3.5 h-3.5" />
+            <span>Ampliar</span>
           </button>
-          
-          <button
-            v-for="red in redesDisponiblesTimeline"
-            :key="red.plataforma"
-            type="button"
-            @click="selectedTimePlatform = red.plataforma"
-            class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 shadow-2xs shrink-0"
-            :class="selectedTimePlatform === red.plataforma
-              ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-sm ring-2 ring-cyan-500/40'
-              : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400'"
-          >
-            <SocialPlatformIcon :platform="red.plataforma" size="xs" />
-            <span>{{ red.plataforma.toUpperCase() }}</span>
-            <span class="text-[10px] opacity-75 font-normal">({{ formatNumber(red.seguidores) }})</span>
-          </button>
-        </div>
-
-        <div class="h-64 sm:h-72 w-full">
-          <Line :data="timelineChartData" :options="timelineChartOptions" />
-        </div>
-      </div>
-
-      <!-- Gráfico 2 (5 cols): Donut de Cuota de Atención por Red Social -->
-      <div class="lg:col-span-5 p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 flex flex-col justify-between">
-        <div>
-          <div class="flex items-center justify-between">
-            <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <PieChart class="w-4 h-4 text-violet-500" />
-              <span>Cuota de Interacción por Red</span>
-            </h2>
-            <span class="text-xs font-mono text-slate-400 font-semibold">Share of Social</span>
-          </div>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Distribución de likes, comentarios y compartidos</p>
-        </div>
-
-        <div class="h-56 w-full relative flex items-center justify-center">
-          <Doughnut :data="doughnutChartData" :options="doughnutChartOptions" />
-        </div>
-
-        <!-- Tarjetas de desglose de todas las redes activas/configuradas -->
-        <div v-if="distribucion_plataformas.length > 0" class="flex flex-wrap items-stretch justify-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800/80 font-mono">
-          <div
-            v-for="red in distribucion_plataformas"
-            :key="red.plataforma"
-            class="flex-1 min-w-[95px] max-w-[150px] p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 flex flex-col justify-between"
-          >
-            <div class="flex items-center justify-between gap-1 mb-1">
-              <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold truncate flex items-center gap-1">
-                <SocialPlatformIcon :platform="red.plataforma" size="xs" />
-                {{ red.nombre }}
-              </span>
-              <span class="w-1.5 h-1.5 rounded-full shrink-0" :style="{ backgroundColor: red.color }"></span>
-            </div>
-            <div class="flex items-baseline justify-between gap-1">
-              <span class="text-xs sm:text-sm font-extrabold tracking-tight" :style="{ color: red.color }">
-                {{ red.porcentaje }}%
-              </span>
-              <span class="text-[9px] text-slate-400 truncate" :title="`${red.interacciones} interacciones totales`">
-                {{ formatNumber(red.interacciones) }} int.
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Gráfico 3 (6 cols): Rendimiento por Formato -->
-      <div class="lg:col-span-6 p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <BarChart3 class="w-4 h-4 text-cyan-500" />
-              <span>Rendimiento por Formato</span>
-            </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Reels vs Fotos vs Videos vs Texto</p>
-          </div>
-        </div>
-
-        <div class="h-60 w-full">
-          <Bar :data="formatBarChartData" :options="formatBarChartOptions" />
-        </div>
-      </div>
-
-      <!-- Gráfico 4 (6 cols): Ejes Temáticos de Campaña -->
-      <div class="lg:col-span-6 p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Target class="w-4 h-4 text-amber-500" />
-              <span>Cobertura de Ejes Temáticos</span>
-            </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Interacciones logradas por propuesta de campaña</p>
-          </div>
         </div>
 
         <div v-if="distribucion_ejes.length > 0" class="h-60 w-full">
-          <Bar :data="ejesBarChartData" :options="ejesBarChartOptions" />
+          <Bar :data="ejesVolumenBarChartData" :options="ejesVolumenBarChartOptions" />
         </div>
         <div v-else class="h-60 flex items-center justify-center text-xs text-slate-400">
           No hay publicaciones clasificadas por ejes temáticos todavía.
         </div>
       </div>
+
     </div>
 
     <!-- 4. MALLA DE CANALES SOCIALES (7 CANALES EN 1 SOLA FILA ESTILO MI-PERFIL) -->
@@ -1054,5 +1578,77 @@ const ejesBarChartOptions = {
         </div>
       </div>
     </div>
+
+    <!-- 6. MODAL DE AMPLIACIÓN DE GRÁFICO (WAR ROOM FULLSCREEN / HD) -->
+    <Teleport to="body">
+      <div
+        v-if="modalGraficoActivo"
+        class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md transition-all duration-200"
+        @click.self="cerrarModalGrafico"
+      >
+        <div class="w-full max-w-5xl max-h-[92vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <!-- Cabecera del Modal -->
+          <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-950/40 shrink-0">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center shrink-0">
+                <BarChart3 class="w-5 h-5" />
+              </div>
+              <div class="min-w-0">
+                <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 truncate">
+                  {{
+                    modalGraficoActivo === 'comunidad' ? 'Evolución de Comunidad (Seguidores Netos)' :
+                    modalGraficoActivo === 'score' ? 'Tracción Acumulada (Score / Puntos de Impacto)' :
+                    modalGraficoActivo === 'vistas' ? 'Visualizaciones Totales (Facebook Reels & Video)' :
+                    modalGraficoActivo === 'cuota' ? 'Cuota de Interacción por Red (Share of Social)' :
+                    modalGraficoActivo === 'formato' ? 'Rendimiento Promedio por Formato' :
+                    modalGraficoActivo === 'matriz_formatos' ? 'Matriz de Formatos por Red Social Activa' :
+                    modalGraficoActivo === 'ejes_impacto' ? 'Impacto por Eje Temático (Interacciones)' :
+                    'Volumen de Publicaciones por Eje Temático'
+                  }}
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  Visualización detallada de alta resolución
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              @click="cerrarModalGrafico"
+              class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer shrink-0"
+              title="Cerrar modal (Esc)"
+            >
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+
+          <!-- Contenido del Gráfico Ampliado -->
+          <div class="p-6 flex-1 overflow-y-auto min-h-[460px] flex flex-col justify-center">
+            <div class="h-[62vh] w-full">
+              <Line v-if="modalGraficoActivo === 'comunidad'" :data="comunidadChartData" :options="comunidadChartOptions" />
+              <Line v-else-if="modalGraficoActivo === 'score'" :data="scoreChartData" :options="scoreChartOptions" />
+              <Line v-else-if="modalGraficoActivo === 'vistas'" :data="vistasChartData" :options="vistasChartOptions" />
+              <Doughnut v-else-if="modalGraficoActivo === 'cuota'" :data="doughnutChartData" :options="doughnutChartOptions" />
+              <Bar v-else-if="modalGraficoActivo === 'formato'" :data="formatBarChartData" :options="formatBarChartOptions" />
+              <Bar v-else-if="modalGraficoActivo === 'matriz_formatos'" :data="matrizFormatosBarChartData" :options="matrizFormatosBarChartOptions" />
+              <Bar v-else-if="modalGraficoActivo === 'ejes_impacto'" :data="ejesBarChartData" :options="ejesBarChartOptions" />
+              <Bar v-else-if="modalGraficoActivo === 'ejes_volumen'" :data="ejesVolumenBarChartData" :options="ejesVolumenBarChartOptions" />
+            </div>
+          </div>
+
+          <!-- Pie del Modal -->
+          <div class="px-6 py-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 bg-slate-50/50 dark:bg-slate-950/40 shrink-0">
+            <span>Presiona ESC o haz clic fuera para cerrar</span>
+            <button
+              type="button"
+              @click="cerrarModalGrafico"
+              class="px-4 py-1.5 rounded-xl font-bold bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-all cursor-pointer"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </WarRoomLayout>
 </template>
