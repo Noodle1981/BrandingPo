@@ -7,6 +7,7 @@ use App\Models\Candidato;
 use App\Models\EjeTematico;
 use App\Models\PerfilSocial;
 use App\Models\Publicacion;
+use App\Services\MediaStorageService;
 use App\Services\SocialProfileScraperService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -62,7 +63,7 @@ class PublicacionController extends Controller
     /**
      * Sincronizar en vivo una publicación individual.
      */
-    public function sincronizarIndividual(Publicacion $publicacion, SocialProfileScraperService $scraper): JsonResponse
+    public function sincronizarIndividual(Publicacion $publicacion, SocialProfileScraperService $scraper, MediaStorageService $mediaStorage): JsonResponse
     {
         if (empty($publicacion->url_post)) {
             return response()->json(['success' => false, 'mensaje' => 'La publicación no tiene enlace URL.']);
@@ -84,13 +85,23 @@ class PublicacionController extends Controller
         $plataforma = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
         $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes, $plataforma);
 
-        $publicacion->update([
+        $updateFields = [
             'total_likes' => $freshLikes,
             'total_comentarios' => $freshComments,
             'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
             'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
             'termometro_humor_social' => $aiEmocional['termometro_humor_social'],
-        ]);
+        ];
+
+        // Guardar o actualizar la imagen descargándola localmente
+        if (! empty($scraped['media_url'])) {
+            $localMedia = $mediaStorage->guardarMediaLocal($scraped['media_url'], $publicacion->media_url);
+            if ($localMedia) {
+                $updateFields['media_url'] = $localMedia;
+            }
+        }
+
+        $publicacion->update($updateFields);
 
         return response()->json([
             'success' => true,
@@ -109,7 +120,7 @@ class PublicacionController extends Controller
      * Sincronizar en vivo métricas de publicaciones en la ventana activa de 15 días.
      * Si la publicación tiene >= 16 días, su métrica queda congelada como histórico consolidado.
      */
-    public function sincronizarRecientes(Request $request, PerfilSocial $perfilSocial, SocialProfileScraperService $scraper): RedirectResponse|JsonResponse
+    public function sincronizarRecientes(Request $request, PerfilSocial $perfilSocial, SocialProfileScraperService $scraper, MediaStorageService $mediaStorage): RedirectResponse|JsonResponse
     {
         $fechaLimite = Carbon::now()->subDays(15)->startOfDay();
 
@@ -141,7 +152,7 @@ class PublicacionController extends Controller
                 $freshComments = (int) ($scraped['total_comentarios'] ?? $oldComments);
 
                 // Si encontramos datos más frescos o mayores
-                if ($freshLikes > $oldLikes || $freshComments > $oldComments || $freshLikes > 0) {
+                if ($freshLikes > $oldLikes || $freshComments > $oldComments || $freshLikes > 0 || ! empty($scraped['media_url'])) {
                     $deltaLikes = max(0, $freshLikes - $oldLikes);
                     $deltaComments = max(0, $freshComments - $oldComments);
                     $nuevosLikes += $deltaLikes;
@@ -150,13 +161,23 @@ class PublicacionController extends Controller
                     // Recalcular reacciones emocionales con los nuevos likes
                     $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes, $perfilSocial->plataforma);
 
-                    $pub->update([
+                    $pubUpdate = [
                         'total_likes' => $freshLikes,
                         'total_comentarios' => $freshComments,
                         'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
                         'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
                         'termometro_humor_social' => $aiEmocional['termometro_humor_social'],
-                    ]);
+                    ];
+
+                    // Guardar o actualizar la imagen localmente
+                    if (! empty($scraped['media_url'])) {
+                        $localMedia = $mediaStorage->guardarMediaLocal($scraped['media_url'], $pub->media_url);
+                        if ($localMedia) {
+                            $pubUpdate['media_url'] = $localMedia;
+                        }
+                    }
+
+                    $pub->update($pubUpdate);
 
                     $actualizadas++;
                 }
@@ -411,7 +432,7 @@ class PublicacionController extends Controller
     /**
      * Guardar una nueva publicación.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, MediaStorageService $mediaStorage): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
 
@@ -431,8 +452,8 @@ class PublicacionController extends Controller
             'tipo_formato' => ['required', 'string'],
             'tipo_pauta' => ['required', 'string', 'in:organico,organico_impulsado,pauta_paga,colaboracion_pagada'],
             'monto_invertido_pauta' => ['nullable', 'numeric', 'min:0'],
-            'url_post' => ['nullable', 'url', 'max:1000'],
-            'media_url' => ['nullable', 'url', 'max:1000'],
+            'url_post' => ['nullable', 'string', 'max:1000'],
+            'media_url' => ['nullable', 'string', 'max:1000'],
             'vistas_organicas' => ['nullable', 'integer', 'min:0'],
             'vistas_pagadas' => ['nullable', 'integer', 'min:0'],
             'contenido_resumen' => ['required', 'string'],
@@ -449,8 +470,8 @@ class PublicacionController extends Controller
             'total_republicados' => ['nullable', 'integer', 'min:0'],
             'total_guardados' => ['nullable', 'integer', 'min:0'],
             'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
-            'comentario_destacado' => ['nullable', 'string'],
-            'figura_acompanante' => ['nullable', 'string'],
+            'comentario_destacado' => ['nullable', 'string', 'max:500'],
+            'figura_acompanante' => ['nullable', 'string', 'max:255'],
         ], [
             'candidato_id.required' => 'Debes seleccionar un candidato.',
             'contenido_resumen.required' => 'El texto o resumen del post es obligatorio.',
@@ -501,6 +522,11 @@ class PublicacionController extends Controller
             ? SocialProfileScraperService::canonicalizePostUrl($validated['url_post'])
             : null;
 
+        // Guardar copia local de la imagen para evitar enlaces vencidos
+        $mediaUrlLocal = ! empty($validated['media_url'])
+            ? $mediaStorage->guardarMediaLocal($validated['media_url'])
+            : null;
+
         // VERIFICAR UNICIDAD: Evitar publicaciones duplicadas en el workspace
         $duplicado = Publicacion::buscarDuplicado(
             $workspace->id,
@@ -542,7 +568,7 @@ class PublicacionController extends Controller
             'tipo_pauta' => $validated['tipo_pauta'],
             'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
             'url_post' => $canonicalUrl ?? $validated['url_post'] ?? null,
-            'media_url' => $validated['media_url'] ?? null,
+            'media_url' => $mediaUrlLocal,
             'vistas_organicas' => $vistasOrg,
             'vistas_pagadas' => $vistasPag,
             'contenido_resumen' => $validated['contenido_resumen'],
@@ -576,15 +602,15 @@ class PublicacionController extends Controller
     /**
      * Actualizar una publicación existente.
      */
-    public function update(Request $request, Publicacion $publicacion): RedirectResponse
+    public function update(Request $request, Publicacion $publicacion, MediaStorageService $mediaStorage): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
 
         $validated = $request->validate([
             'contenido_resumen' => ['required', 'string'],
             'fecha_publicacion' => ['nullable', 'date'],
-            'url_post' => ['nullable', 'url', 'max:1000'],
-            'media_url' => ['nullable', 'url', 'max:1000'],
+            'url_post' => ['nullable', 'string', 'max:1000'],
+            'media_url' => ['nullable', 'string', 'max:1000'],
             'tipo_formato' => ['required', 'string'],
             'tipo_pauta' => ['required', 'string', 'in:organico,organico_impulsado,pauta_paga,colaboracion_pagada'],
             'monto_invertido_pauta' => ['nullable', 'numeric', 'min:0'],
@@ -610,7 +636,7 @@ class PublicacionController extends Controller
         // Canonicalizar URL y validar unicidad
         $canonicalUrl = ! empty($validated['url_post'])
             ? SocialProfileScraperService::canonicalizePostUrl($validated['url_post'])
-            : null;
+            : $publicacion->url_post;
 
         if (! empty($canonicalUrl)) {
             $duplicado = Publicacion::buscarDuplicado(
@@ -630,6 +656,11 @@ class PublicacionController extends Controller
             }
         }
 
+        // Guardar o actualizar copia local de la imagen
+        $mediaUrlLocal = array_key_exists('media_url', $validated)
+            ? $mediaStorage->guardarMediaLocal($validated['media_url'], $publicacion->media_url)
+            : $publicacion->media_url;
+
         $plataformaResolvida = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
         $aiEmocional = $this->calcularInteligenciaEmocional(
             $validated,
@@ -640,7 +671,7 @@ class PublicacionController extends Controller
         $updateData = [
             'contenido_resumen' => $validated['contenido_resumen'],
             'url_post' => $canonicalUrl ?? $validated['url_post'] ?? null,
-            'media_url' => $validated['media_url'] ?? null,
+            'media_url' => $mediaUrlLocal,
             'tipo_formato' => $validated['tipo_formato'],
             'tipo_pauta' => $validated['tipo_pauta'],
             'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
