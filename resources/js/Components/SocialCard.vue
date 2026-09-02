@@ -71,6 +71,11 @@ const guardandoFecha = ref(false);
 // Override local para el estado del semáforo (evita esperar al reload de Inertia)
 const fechaConfirmadaLocalmente = ref(false);
 const fechaHumanaLocal = ref(null); // Fecha humanizada actualizada localmente tras confirmar
+const isTextExpanded = ref(false);
+const isLongText = computed(() => {
+  const txt = (props.post.contenido_resumen || '').trim();
+  return txt.length > 130 || (txt.match(/\n/g) || []).length >= 2;
+});
 
 const platform = computed(() => (props.post.plataforma || props.post.perfil_social?.plataforma || 'instagram').toLowerCase());
 const isInstagram = computed(() => platform.value === 'instagram');
@@ -406,9 +411,9 @@ const tiposPauta = [
 </script>
 
 <template>
-  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:shadow-md dark:shadow-none hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 relative">
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:shadow-md dark:shadow-none hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 relative flex flex-col justify-between h-full">
     <!-- Header -->
-    <div class="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800/80 space-y-2.5">
+    <div class="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800/80 space-y-2.5 shrink-0">
       <!-- Fila 1: Autor (Avatar + Nombre + Handle) | Badges de Red & Acciones -->
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2.5 min-w-0">
@@ -572,59 +577,79 @@ const tiposPauta = [
       </div>
     </div>
 
-    <!-- Post Content Body -->
-    <div class="p-4 sm:p-5 space-y-3">
-      <!-- Tag de Eje Temático y Pilar Estratégico (Destacado y Elegante) -->
-      <div v-if="post.eje_tematico" class="flex items-center gap-2 flex-wrap">
-        <span
-          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border transition-all"
-          :style="{
-            backgroundColor: `${post.eje_tematico.color_badge || '#06b6d4'}15`,
-            color: post.eje_tematico.color_badge || '#06b6d4',
-            borderColor: `${post.eje_tematico.color_badge || '#06b6d4'}35`,
-          }"
-        >
-          <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: post.eje_tematico.color_badge || '#06b6d4' }"></span>
-          <span v-if="post.eje_tematico.pilar_principal" class="text-[10px] font-mono uppercase tracking-wider opacity-80 border-r pr-1.5 mr-0.5 border-current/30">
-            {{ post.eje_tematico.pilar_principal.replace(/^\d+\.\s*/, '') }}
+    <!-- Post Content Body (Flex 1 para empujar footer al fondo y unificar alturas) -->
+    <div class="p-4 sm:p-5 space-y-3 flex-1 flex flex-col justify-between">
+      <div class="space-y-2.5">
+        <!-- Tag de Eje Temático y Pilar Estratégico (Destacado y Elegante) -->
+        <div v-if="post.eje_tematico" class="flex items-center gap-2 flex-wrap">
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border transition-all"
+            :style="{
+              backgroundColor: `${post.eje_tematico.color_badge || '#06b6d4'}15`,
+              color: post.eje_tematico.color_badge || '#06b6d4',
+              borderColor: `${post.eje_tematico.color_badge || '#06b6d4'}35`,
+            }"
+          >
+            <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: post.eje_tematico.color_badge || '#06b6d4' }"></span>
+            <span v-if="post.eje_tematico.pilar_principal" class="text-[10px] font-mono uppercase tracking-wider opacity-80 border-r pr-1.5 mr-0.5 border-current/30">
+              {{ post.eje_tematico.pilar_principal.replace(/^\d+\.\s*/, '') }}
+            </span>
+            <span>{{ post.eje_tematico.nombre }}</span>
           </span>
-          <span>{{ post.eje_tematico.nombre }}</span>
-        </span>
-      </div>
+        </div>
 
-      <p class="text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-relaxed whitespace-pre-line">
-        {{ post.contenido_resumen }}
-      </p>
+        <!-- Copy / Texto de Publicación con Truncamiento '... Ver más' -->
+        <div class="space-y-1">
+          <p
+            class="text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-relaxed whitespace-pre-line transition-all"
+            :class="{ 'line-clamp-3': !isTextExpanded }"
+          >
+            {{ post.contenido_resumen }}
+          </p>
 
-      <!-- Media Embed / Preview -->
-      <div class="mt-3.5 relative">
-        <MediaEmbed
-          :url="post.url_post"
-          :media-url="post.media_url"
-          :formato="post.tipo_formato || 'Post'"
-          :plataforma="post.plataforma || post.perfil_social?.plataforma || 'facebook'"
-        />
-
-        <!-- Paid Ads Overlay Tag if with budget -->
-        <div
-          v-if="['pauta_paga', 'organico_impulsado', 'colaboracion_pagada'].includes(post.tipo_pauta) && post.monto_invertido_pauta"
-          class="absolute top-2.5 right-2.5 bg-violet-600/90 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md z-10"
-        >
-          <DollarSign class="w-3.5 h-3.5" />
-          <span>Invertido: {{ formatCurrency(post.monto_invertido_pauta) }}</span>
+          <button
+            v-if="isLongText"
+            type="button"
+            @click="isTextExpanded = !isTextExpanded"
+            class="inline-flex items-center gap-1 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 hover:underline cursor-pointer pt-0.5 transition-colors"
+          >
+            <span>{{ isTextExpanded ? 'Ver menos ▲' : '... Ver más ▼' }}</span>
+          </button>
         </div>
       </div>
 
-      <!-- Accompanying Figures / Alliances -->
-      <div v-if="post.figuras_acompanantes && post.figuras_acompanantes.length" class="mt-3 flex items-center gap-1.5 flex-wrap">
-        <span class="text-xs text-slate-400 dark:text-slate-500">Con:</span>
-        <span
-          v-for="(figura, idx) in post.figuras_acompanantes"
-          :key="idx"
-          class="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-cyan-600 dark:text-cyan-400 border border-slate-200 dark:border-slate-700"
-        >
-          🤝 {{ figura }}
-        </span>
+      <!-- Zona Inferior del Body: Media Link Card + Figuras Acompañantes -->
+      <div class="space-y-3 pt-1">
+        <!-- Media Embed / Preview -->
+        <div class="relative">
+          <MediaEmbed
+            :url="post.url_post"
+            :media-url="post.media_url"
+            :formato="post.tipo_formato || 'Post'"
+            :plataforma="post.plataforma || post.perfil_social?.plataforma || 'facebook'"
+          />
+
+          <!-- Paid Ads Overlay Tag if with budget -->
+          <div
+            v-if="['pauta_paga', 'organico_impulsado', 'colaboracion_pagada'].includes(post.tipo_pauta) && post.monto_invertido_pauta"
+            class="absolute top-2.5 right-2.5 bg-violet-600/90 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md z-10"
+          >
+            <DollarSign class="w-3.5 h-3.5" />
+            <span>Invertido: {{ formatCurrency(post.monto_invertido_pauta) }}</span>
+          </div>
+        </div>
+
+        <!-- Accompanying Figures / Alliances -->
+        <div v-if="post.figuras_acompanantes && post.figuras_acompanantes.length" class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-xs text-slate-400 dark:text-slate-500">Con:</span>
+          <span
+            v-for="(figura, idx) in post.figuras_acompanantes"
+            :key="idx"
+            class="text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-cyan-600 dark:text-cyan-400 border border-slate-200 dark:border-slate-700"
+          >
+            🤝 {{ figura }}
+          </span>
+        </div>
       </div>
     </div>
 

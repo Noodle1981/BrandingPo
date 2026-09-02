@@ -807,7 +807,7 @@ const formatCurrency = (amount) => {
       </div>
 
       <!-- Muro de Publicaciones (Social Cards) -->
-      <div v-if="publicaciones.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-if="publicaciones.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
         <SocialCard
           v-for="post in publicaciones"
           :key="post.id"
