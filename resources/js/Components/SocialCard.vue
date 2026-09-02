@@ -88,6 +88,38 @@ const isTwitter = computed(() => platform.value === 'x_twitter' || platform.valu
 const isYouTube = computed(() => platform.value === 'youtube');
 const isLinkedIn = computed(() => platform.value === 'linkedin');
 
+// Estilos diferenciados de tarjeta según Estrategia de Difusión / Pauta (Orgánica permanece estándar)
+const cardPautaStyles = computed(() => {
+  const p = (props.post.tipo_pauta || 'organico').toLowerCase();
+  switch (p) {
+    case 'organico_impulsado':
+      return {
+        cardClass: 'border-cyan-500/60 dark:border-cyan-500/40 ring-1 ring-cyan-500/20 shadow-xs shadow-cyan-500/10 border-t-4 border-t-cyan-500',
+        headerTint: 'bg-gradient-to-b from-cyan-500/8 via-cyan-500/2 to-transparent',
+        budgetBadge: 'bg-cyan-500 text-slate-950 font-extrabold',
+      };
+    case 'pauta_paga':
+      return {
+        cardClass: 'border-violet-500/60 dark:border-violet-500/40 ring-1 ring-violet-500/20 shadow-xs shadow-violet-500/10 border-t-4 border-t-violet-500',
+        headerTint: 'bg-gradient-to-b from-violet-500/8 via-violet-500/2 to-transparent',
+        budgetBadge: 'bg-violet-600 text-white font-bold',
+      };
+    case 'colaboracion_pagada':
+      return {
+        cardClass: 'border-amber-500/60 dark:border-amber-500/40 ring-1 ring-amber-500/20 shadow-xs shadow-amber-500/10 border-t-4 border-t-amber-500',
+        headerTint: 'bg-gradient-to-b from-amber-500/8 via-amber-500/2 to-transparent',
+        budgetBadge: 'bg-amber-500 text-slate-950 font-extrabold',
+      };
+    case 'organico':
+    default:
+      return {
+        cardClass: 'border-slate-200 dark:border-slate-800',
+        headerTint: '',
+        budgetBadge: 'bg-slate-700 text-white font-semibold',
+      };
+  }
+});
+
 // Detectar si la fecha de publicación coincide con la fecha en que se cargó al sistema
 // (significa que nunca se confirmó la fecha real de la red social)
 const esFechaSinConfirmar = computed(() => {
@@ -413,9 +445,15 @@ const tiposPauta = [
 </script>
 
 <template>
-  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:shadow-md dark:shadow-none hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 relative flex flex-col justify-between h-full">
+  <div
+    class="bg-white dark:bg-slate-900 border rounded-2xl overflow-hidden shadow-xs hover:shadow-md dark:shadow-none transition-all duration-200 relative flex flex-col justify-between h-full"
+    :class="cardPautaStyles.cardClass"
+  >
     <!-- Header -->
-    <div class="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800/80 space-y-2.5 shrink-0">
+    <div
+      class="p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800/80 space-y-2.5 shrink-0 transition-colors"
+      :class="cardPautaStyles.headerTint"
+    >
       <!-- Fila 1: Autor (Avatar + Nombre + Handle) | Badges de Red & Acciones -->
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2.5 min-w-0">
@@ -634,7 +672,8 @@ const tiposPauta = [
           <!-- Paid Ads Overlay Tag if with budget -->
           <div
             v-if="['pauta_paga', 'organico_impulsado', 'colaboracion_pagada'].includes(post.tipo_pauta) && post.monto_invertido_pauta"
-            class="absolute top-2.5 right-2.5 bg-violet-600/90 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md z-10"
+            class="absolute top-2.5 right-2.5 backdrop-blur-xs text-xs px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md z-10"
+            :class="cardPautaStyles.budgetBadge"
           >
             <DollarSign class="w-3.5 h-3.5" />
             <span>Invertido: {{ formatCurrency(post.monto_invertido_pauta) }}</span>
