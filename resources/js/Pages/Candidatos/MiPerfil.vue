@@ -1087,16 +1087,32 @@ const refrescarCanal = () => {
               <span>Métricas & Dashboard</span>
             </Link>
 
+            <!-- Botón Único de Sincronización Maestra del Canal (Seguidores + Publicaciones) -->
             <button
+              v-if="canWrite && currentRed.perfil_id"
               type="button"
               @click="sincronizarCanalCompleto"
               :disabled="isSyncingCanal"
-              class="px-4 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:scale-102 disabled:opacity-50"
-              title="Sincronizar seguidores y publicaciones activas del canal (Sincronización Maestra)"
+              class="px-4 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold font-mono flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-500/20 hover:scale-102 disabled:opacity-50"
+              :title="`Sincronizar seguidores del canal y publicaciones activas de los últimos 15 días (${postsIn15DaysCount} posts)`"
             >
-              <RefreshCw class="w-4 h-4" :class="isSyncingCanal ? 'animate-spin' : ''" />
-              <span>{{ isSyncingCanal ? 'Sincronizando...' : '⚡ Sincronizar Canal' }}</span>
+              <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isSyncingCanal }" />
+              <span>{{ isSyncingCanal ? 'Sincronizando Canal...' : '⚡ Sincronizar Canal' }}</span>
+              <span v-if="postsIn15DaysCount > 0" class="px-1.5 py-0.2 rounded-full bg-slate-950 text-emerald-400 text-[10px] font-mono font-black">
+                {{ postsIn15DaysCount }} posts
+              </span>
             </button>
+
+            <!-- Acceso Directo al Feed de esta Red -->
+            <Link
+              v-if="canWrite"
+              :href="`/feed?filtro=propio&plataforma=${currentRed.key}`"
+              class="px-4 py-2.5 rounded-2xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer hover:scale-102"
+              :title="`Abrir muro de publicaciones y feed completo de ${currentRed.nombre}`"
+            >
+              <Radio class="w-4 h-4" />
+              <span>Feed {{ currentRed.nombre }}</span>
+            </Link>
 
             <button
               type="button"
@@ -1374,21 +1390,6 @@ const refrescarCanal = () => {
           </div>
 
           <div class="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
-            <button
-              v-if="canWrite && currentRed.perfil_id"
-              type="button"
-              @click="sincronizarCanalCompleto"
-              :disabled="isSyncingCanal"
-              class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs font-mono shadow-md shadow-emerald-500/20 transition-all hover:scale-102 cursor-pointer disabled:opacity-50"
-              :title="`Sincronizar seguidores del canal y publicaciones activas de los últimos 15 días (${postsIn15DaysCount} posts)`"
-            >
-              <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isSyncingCanal }" />
-              <span>{{ isSyncingCanal ? 'Sincronizando Canal...' : '⚡ Sincronizar Canal Completo' }}</span>
-              <span v-if="postsIn15DaysCount > 0" class="px-1.5 py-0.2 rounded-full bg-slate-950 text-emerald-400 text-[10px] font-mono font-black">
-                {{ postsIn15DaysCount }} posts
-              </span>
-            </button>
-
             <Link
               v-if="canWrite"
               :href="`/feed?filtro=propio&plataforma=${currentRed.key}`"
