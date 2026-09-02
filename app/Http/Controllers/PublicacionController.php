@@ -362,6 +362,7 @@ class PublicacionController extends Controller
                 'fecha_publicacion_humana' => $p->fecha_publicacion ? ($p->fecha_publicacion->year === (int) date('Y') ? $p->fecha_publicacion->locale('es')->isoFormat('D [de] MMMM') : $p->fecha_publicacion->locale('es')->isoFormat('D [de] MMMM [de] YYYY')) : null,
                 'fecha_carga' => $p->created_at?->format('Y-m-d'),
                 'fecha_relativa' => $p->fecha_publicacion?->diffForHumans(),
+                'fecha_confirmada' => (bool) $p->fecha_confirmada,
                 'tipo_formato' => $p->tipo_formato,
                 'tipo_pauta' => $p->tipo_pauta,
                 'monto_invertido_pauta' => (float) $p->monto_invertido_pauta,
@@ -745,6 +746,7 @@ class PublicacionController extends Controller
 
         if (! empty($validated['fecha_publicacion'])) {
             $updateData['fecha_publicacion'] = $validated['fecha_publicacion'];
+            $updateData['fecha_confirmada'] = true;
         }
 
         $publicacion->update($updateData);
@@ -770,6 +772,7 @@ class PublicacionController extends Controller
 
         $publicacion->update([
             'fecha_publicacion' => $validated['fecha_publicacion'],
+            'fecha_confirmada' => true,
         ]);
 
         return redirect()->back()->with('success', 'Fecha confirmada correctamente.');

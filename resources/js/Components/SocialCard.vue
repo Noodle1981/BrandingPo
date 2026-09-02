@@ -84,8 +84,8 @@ const isLinkedIn = computed(() => platform.value === 'linkedin');
 // Detectar si la fecha de publicación coincide con la fecha en que se cargó al sistema
 // (significa que nunca se confirmó la fecha real de la red social)
 const esFechaSinConfirmar = computed(() => {
-  // Si ya fue confirmada en esta sesión, mostrar verde directamente
-  if (fechaConfirmadaLocalmente.value) return false;
+  // Si ya fue confirmada (en base de datos o en esta sesión), es una fecha validada
+  if (props.post.fecha_confirmada || fechaConfirmadaLocalmente.value) return false;
   if (!props.post.fecha_publicacion_raw || !props.post.fecha_carga) return false;
   const fechaPub = props.post.fecha_publicacion_raw.slice(0, 10); // YYYY-MM-DD
   return fechaPub === props.post.fecha_carga;
@@ -136,6 +136,9 @@ const confirmarFecha = () => {
         guardandoFecha.value = false;
         // Actualizar estado visual inmediatamente sin esperar al reload de Inertia
         fechaConfirmadaLocalmente.value = true;
+        if (props.post) {
+          props.post.fecha_confirmada = true;
+        }
         fechaHumanaLocal.value = formatearFechaHumana(fechaEditada.value);
       },
       onError: () => {

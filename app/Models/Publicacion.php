@@ -23,6 +23,7 @@ class Publicacion extends Model
         'perfil_social_id',
         'eje_tematico_id',
         'fecha_publicacion',
+        'fecha_confirmada',
         'tipo_formato',
         'tipo_pauta',
         'monto_invertido_pauta',
@@ -47,6 +48,7 @@ class Publicacion extends Model
 
     protected $casts = [
         'fecha_publicacion' => 'datetime',
+        'fecha_confirmada' => 'boolean',
         'monto_invertido_pauta' => 'decimal:2',
         'vistas_organicas' => 'integer',
         'vistas_pagadas' => 'integer',
