@@ -218,6 +218,89 @@ const perfilesCandidatoSeleccionado = computed(() => {
   return c?.perfiles_sociales || c?.perfilesSociales || [];
 });
 
+// Metadatos dinámicos según la plataforma activa/seleccionada en el formulario
+const platformMeta = computed(() => {
+  const plat = (createForm.plataforma || selectedPlataforma.value || props.filtros.plataforma || 'instagram').toLowerCase();
+  switch (plat) {
+    case 'facebook':
+      return {
+        label: '🔗 Enlace de la Publicación o Reel de Facebook:',
+        placeholder: 'https://www.facebook.com/... o https://fb.watch/...',
+        nombre: 'Facebook',
+      };
+    case 'tiktok':
+      return {
+        label: '🔗 Enlace del Video de TikTok:',
+        placeholder: 'https://www.tiktok.com/@.../video/...',
+        nombre: 'TikTok',
+      };
+    case 'x_twitter':
+    case 'twitter':
+      return {
+        label: '🔗 Enlace del Post / Tweet de X (Twitter):',
+        placeholder: 'https://x.com/.../status/...',
+        nombre: 'X (Twitter)',
+      };
+    case 'youtube':
+      return {
+        label: '🔗 Enlace del Video o Short de YouTube:',
+        placeholder: 'https://www.youtube.com/watch?v=... o https://youtu.be/...',
+        nombre: 'YouTube',
+      };
+    case 'threads':
+      return {
+        label: '🔗 Enlace del Post de Threads:',
+        placeholder: 'https://www.threads.net/@.../post/...',
+        nombre: 'Threads',
+      };
+    case 'linkedin':
+      return {
+        label: '🔗 Enlace de la Publicación de LinkedIn:',
+        placeholder: 'https://www.linkedin.com/posts/...',
+        nombre: 'LinkedIn',
+      };
+    case 'instagram':
+    default:
+      return {
+        label: '🔗 Enlace de la Publicación o Reel de Instagram:',
+        placeholder: 'https://www.instagram.com/p/... o /reel/...',
+        nombre: 'Instagram',
+      };
+  }
+});
+
+// Detección automática inteligente cuando el usuario pega cualquier URL en el input
+watch(() => createForm.url_post, (newUrl) => {
+  if (!newUrl || typeof newUrl !== 'string' || newUrl.trim().length < 8) return;
+  const lower = newUrl.toLowerCase();
+  let detectedPlatform = null;
+  if (lower.includes('facebook.com') || lower.includes('fb.watch') || lower.includes('fb.com')) {
+    detectedPlatform = 'facebook';
+  } else if (lower.includes('instagram.com')) {
+    detectedPlatform = 'instagram';
+  } else if (lower.includes('tiktok.com')) {
+    detectedPlatform = 'tiktok';
+  } else if (lower.includes('twitter.com') || lower.includes('x.com')) {
+    detectedPlatform = 'x_twitter';
+  } else if (lower.includes('threads.net') || lower.includes('threads.com')) {
+    detectedPlatform = 'threads';
+  } else if (lower.includes('youtube.com') || lower.includes('youtu.be')) {
+    detectedPlatform = 'youtube';
+  } else if (lower.includes('linkedin.com')) {
+    detectedPlatform = 'linkedin';
+  }
+
+  if (detectedPlatform && detectedPlatform !== createForm.plataforma) {
+    createForm.plataforma = detectedPlatform;
+    const cand = props.candidatos.find(c => c.id === Number(createForm.candidato_id));
+    const perfiles = cand?.perfiles_sociales || cand?.perfilesSociales || [];
+    const matching = perfiles.find(p => p.plataforma.toLowerCase() === detectedPlatform);
+    if (matching) {
+      createForm.perfil_social_id = matching.id;
+    }
+  }
+});
+
 // Detección local inmediata de duplicados según URL ingresada
 const localDuplicatePost = computed(() => {
   if (!createForm.url_post || createForm.url_post.trim().length < 10) return null;
@@ -274,8 +357,9 @@ const openCreateModal = () => {
     createForm.candidato_id = propio ? propio.id : props.candidatos[0].id;
   }
 
-  // 2. Preseleccionar perfil social según red social filtrada
-  const perfiles = perfilesCandidatoSeleccionado.value;
+  // 2. Preseleccionar perfil social según red social filtrada en el Feed
+  const cand = props.candidatos.find(c => c.id === Number(createForm.candidato_id));
+  const perfiles = cand?.perfiles_sociales || cand?.perfilesSociales || [];
   const activePlatform = selectedPlataforma.value || props.filtros.plataforma;
 
   if (activePlatform) {
@@ -286,6 +370,8 @@ const openCreateModal = () => {
     } else if (perfiles.length > 0) {
       createForm.perfil_social_id = perfiles[0].id;
       createForm.plataforma = perfiles[0].plataforma;
+    } else {
+      createForm.plataforma = activePlatform.toLowerCase();
     }
   } else if (perfiles.length > 0) {
     createForm.perfil_social_id = perfiles[0].id;
@@ -308,7 +394,8 @@ const openCreateModal = () => {
 };
 
 const onCandidatoChange = () => {
-  const perfiles = perfilesCandidatoSeleccionado.value;
+  const cand = props.candidatos.find(c => c.id === Number(createForm.candidato_id));
+  const perfiles = cand?.perfiles_sociales || cand?.perfilesSociales || [];
   const activePlatform = selectedPlataforma.value || props.filtros.plataforma;
   
   if (activePlatform) {
@@ -886,14 +973,15 @@ const formatCurrency = (amount) => {
 
                 <!-- Fila 2: URL del Post + Botón Scraper 1 Clic -->
                 <div class="p-3.5 rounded-2xl bg-cyan-500/5 dark:bg-cyan-500/10 border border-cyan-500/20 space-y-2">
-                  <label class="block font-bold text-slate-800 dark:text-slate-200">
-                    🔗 Enlace del Post (Instagram, TikTok, Facebook, X, etc.):
+                  <label class="block font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center justify-between">
+                    <span>{{ platformMeta.label }}</span>
+                    <span class="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 font-bold uppercase tracking-wider">{{ platformMeta.nombre }}</span>
                   </label>
                   <div class="flex items-center gap-2">
                     <input
                       v-model="createForm.url_post"
                       type="url"
-                      placeholder="https://www.instagram.com/p/... o https://x.com/..."
+                      :placeholder="platformMeta.placeholder"
                       class="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-cyan-500 font-mono"
                       :class="(createForm.errors.url_post || duplicateAlert) ? 'border-amber-500 ring-1 ring-amber-500' : ''"
                     />
@@ -956,30 +1044,39 @@ const formatCurrency = (amount) => {
                   </div>
 
                   <div>
-                    <label class="block font-bold mb-1 flex items-center justify-between"
-                      :class="!createForm.fecha_publicacion ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'"
-                    >
-                      <span class="flex items-center gap-1">
-                        📅 Fecha (según la red social)
-                        <span v-if="!createForm.fecha_publicacion" class="text-amber-500 animate-pulse">← Obligatorio</span>
-                        <span v-else class="text-emerald-500 font-normal text-[10px]">✓</span>
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                      <label class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 text-xs">
+                        <Calendar class="w-3.5 h-3.5 text-cyan-500" />
+                        <span>Fecha de Publicación *</span>
+                      </label>
+                      <span
+                        v-if="!createForm.fecha_publicacion"
+                        class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0"
+                      >
+                        Requerida
                       </span>
-                      <span class="text-[10px] text-slate-400 font-normal">La que figura en el post</span>
-                    </label>
+                      <span
+                        v-else
+                        class="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 shrink-0"
+                      >
+                        <CheckCircle2 class="w-3 h-3" />
+                        Lista
+                      </span>
+                    </div>
                     <input
                       v-model="createForm.fecha_publicacion"
                       type="datetime-local"
                       required
-                      class="w-full px-3 py-2 rounded-xl font-mono text-xs transition-all"
+                      class="w-full px-3 py-2 rounded-xl font-mono text-xs transition-all bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
                       :class="[
-                        createForm.errors.fecha_publicacion ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50 dark:bg-rose-950/30 border' :
-                        !createForm.fecha_publicacion ? 'border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/30 ring-1 ring-amber-300' :
-                        'bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800'
+                        createForm.errors.fecha_publicacion ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50 dark:bg-rose-950/30' :
+                        !createForm.fecha_publicacion ? 'border-amber-400/80 bg-amber-500/5 ring-1 ring-amber-400/40' :
+                        ''
                       ]"
                     />
                     <span v-if="createForm.errors.fecha_publicacion" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.fecha_publicacion }}</span>
-                    <p v-else-if="!createForm.fecha_publicacion" class="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
-                      ⚠️ Ingresá la fecha y hora tal como aparece en Facebook, Instagram, etc.
+                    <p class="text-[10px] text-slate-400 mt-1">
+                      La fecha y hora que figura en la red social
                     </p>
                   </div>
                 </div>
