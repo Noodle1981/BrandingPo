@@ -824,10 +824,28 @@ const ejesBarChartOptions = {
           <Doughnut :data="doughnutChartData" :options="doughnutChartOptions" />
         </div>
 
-        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-center font-mono">
-          <div v-for="red in distribucion_plataformas.slice(0, 3)" :key="red.plataforma" class="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/40">
-            <span class="text-[10px] text-slate-400 block truncate">{{ red.nombre }}</span>
-            <span class="text-xs font-bold" :style="{ color: red.color }">{{ red.porcentaje }}%</span>
+        <!-- Tarjetas de desglose de todas las redes activas/configuradas -->
+        <div v-if="distribucion_plataformas.length > 0" class="flex flex-wrap items-stretch justify-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800/80 font-mono">
+          <div
+            v-for="red in distribucion_plataformas"
+            :key="red.plataforma"
+            class="flex-1 min-w-[95px] max-w-[150px] p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 flex flex-col justify-between"
+          >
+            <div class="flex items-center justify-between gap-1 mb-1">
+              <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold truncate flex items-center gap-1">
+                <SocialPlatformIcon :platform="red.plataforma" size="xs" />
+                {{ red.nombre }}
+              </span>
+              <span class="w-1.5 h-1.5 rounded-full shrink-0" :style="{ backgroundColor: red.color }"></span>
+            </div>
+            <div class="flex items-baseline justify-between gap-1">
+              <span class="text-xs sm:text-sm font-extrabold tracking-tight" :style="{ color: red.color }">
+                {{ red.porcentaje }}%
+              </span>
+              <span class="text-[9px] text-slate-400 truncate" :title="`${red.interacciones} interacciones totales`">
+                {{ formatNumber(red.interacciones) }} int.
+              </span>
+            </div>
           </div>
         </div>
       </div>

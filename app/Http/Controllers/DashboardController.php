@@ -304,8 +304,17 @@ class DashboardController extends Controller
             ];
         })->values();
 
-        // 2. Gráfico Donut: Distribución de Interacciones por Red Social
-        $distribucionPlataformas = $redesDesglose->map(function ($red) use ($interaccionesTotales) {
+        // 2. Gráfico Donut: Distribución de Interacciones por Red Social (solo redes activas/configuradas ordenadas por cuota)
+        $redesActivasInteraccion = $redesDesglose->filter(function ($red) {
+            return (bool) $red['esta_activo'] || (int) $red['interacciones_acumuladas'] > 0 || ! empty($red['handle_usuario']);
+        })->sortByDesc('interacciones_acumuladas')->values();
+
+        // Fallback si no hay perfiles activos aún
+        if ($redesActivasInteraccion->isEmpty()) {
+            $redesActivasInteraccion = $redesDesglose->take(3);
+        }
+
+        $distribucionPlataformas = $redesActivasInteraccion->map(function ($red) use ($interaccionesTotales) {
             $pct = $interaccionesTotales > 0
                 ? round(($red['interacciones_acumuladas'] / $interaccionesTotales) * 100, 1)
                 : 0;
@@ -313,11 +322,12 @@ class DashboardController extends Controller
             return [
                 'plataforma' => $red['plataforma'],
                 'nombre' => ucfirst(str_replace('_', ' ', $red['plataforma'])),
-                'interacciones' => $red['interacciones_acumuladas'],
+                'handle' => $red['handle_usuario'],
+                'interacciones' => (int) $red['interacciones_acumuladas'],
                 'porcentaje' => $pct,
                 'color' => $red['color'],
             ];
-        });
+        })->values();
 
         // 3. Gráfico de Barras: Rendimiento por Formato (Reels vs Fotos vs Posts vs Videos)
         $formatosAgrupados = $publicaciones->groupBy(function ($p) {
