@@ -183,9 +183,9 @@ const labelText = computed(() => {
     tiktok: 'TikTok',
     youtube: 'YouTube',
     linkedin: 'LinkedIn',
-    pauta_paga: 'Dark Post / Ads',
-    organico_impulsado: 'Post Impulsado (Boosted)',
-    colaboracion_pagada: 'Colaboración Pagada',
+    pauta_paga: 'Dark Post',
+    organico_impulsado: 'Boosted',
+    colaboracion_pagada: 'Colaboración',
     organico: 'Orgánico',
     admin: 'Administrador',
     consultor: 'Consultor',
@@ -198,13 +198,26 @@ const labelText = computed(() => {
   };
   return map[val] || props.value;
 });
+
+const badgeTitle = computed(() => {
+  const val = (props.value || '').toLowerCase();
+  const titleMap = {
+    organico: 'Publicación Orgánica Pura',
+    organico_impulsado: 'Post Impulsado (Boosted Post con pauta publicitaria)',
+    pauta_paga: 'Dark Post / Anuncio Directo (Ads Manager)',
+    colaboracion_pagada: 'Colaboración Pagada / Patrocinio',
+  };
+  if (titleMap[val]) return titleMap[val];
+  if (isSocial.value) return labelText.value;
+  return undefined;
+});
 </script>
 
 <template>
   <span
     class="inline-flex items-center justify-center gap-1 font-bold rounded-xl border tracking-wide uppercase transition-all shadow-2xs"
     :class="[badgeStyles, sizeStyles]"
-    :title="isSocial ? labelText : undefined"
+    :title="badgeTitle"
   >
     <!-- Logos Oficiales SVG para Redes Sociales -->
     <template v-if="isSocial">

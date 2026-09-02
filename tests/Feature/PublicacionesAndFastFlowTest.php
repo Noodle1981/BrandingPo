@@ -222,4 +222,63 @@ class PublicacionesAndFastFlowTest extends TestCase
             'ya_registrada' => true,
         ]);
     }
+
+    public function test_updating_tipo_pauta_creates_pauta_evento_snapshot(): void
+    {
+        $consultor = User::where('role', 'consultor')->first();
+        $publicacion = \App\Models\Publicacion::where('tipo_pauta', 'organico')->first();
+
+        $this->assertNotNull($publicacion);
+        $oldLikes = $publicacion->total_likes;
+
+        $response = $this->actingAs($consultor)->put("/publicaciones/{$publicacion->id}", [
+            'contenido_resumen' => $publicacion->contenido_resumen,
+            'tipo_formato' => $publicacion->tipo_formato,
+            'tipo_pauta' => 'organico_impulsado',
+            'monto_invertido_pauta' => 15000,
+            'total_likes' => $oldLikes,
+            'total_comentarios' => $publicacion->total_comentarios,
+            'total_compartidos' => $publicacion->total_compartidos,
+            'total_republicados' => $publicacion->total_republicados,
+            'total_guardados' => $publicacion->total_guardados,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('publicaciones', [
+            'id' => $publicacion->id,
+            'tipo_pauta' => 'organico_impulsado',
+            'monto_invertido_pauta' => 15000,
+        ]);
+
+        $this->assertDatabaseHas('publicacion_pauta_eventos', [
+            'publicacion_id' => $publicacion->id,
+            'tipo_pauta_anterior' => 'organico',
+            'tipo_pauta_nuevo' => 'organico_impulsado',
+            'monto_nuevo' => 15000,
+            'likes_snapshot' => $oldLikes,
+            'origen' => 'manual',
+        ]);
+    }
+
+    public function test_sincronizar_canal_completo_returns_expected_json(): void
+    {
+        $consultor = User::where('role', 'consultor')->first();
+        $perfil = \App\Models\PerfilSocial::first();
+
+        $response = $this->actingAs($consultor)->postJson("/perfiles-sociales/{$perfil->id}/sincronizar-canal");
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'success',
+            'plataforma',
+            'seguidores_actuales',
+            'delta_seguidores',
+            'mensaje_seguidores',
+            'posts_total',
+            'posts_actualizados',
+            'nuevos_likes',
+            'nuevos_comentarios',
+            'logs',
+        ]);
+    }
 }

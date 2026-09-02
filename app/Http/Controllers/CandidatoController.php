@@ -7,13 +7,17 @@ use App\Models\Candidato;
 use App\Models\CicloCampana;
 use App\Models\EjeTematico;
 use App\Models\PerfilSocial;
+use App\Models\PerfilSocialMetrica;
 use App\Models\Publicacion;
+use App\Models\PublicacionPautaEvento;
 use App\Models\Territorio;
+use App\Services\MediaStorageService;
 use App\Services\SocialProfileScraperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -290,7 +294,7 @@ class CandidatoController extends Controller
 
         $publicaciones = Publicacion::where('workspace_id', $workspace->id)
             ->where('candidato_id', $candidato->id)
-            ->with(['perfilSocial', 'ejeTematico'])
+            ->with(['perfilSocial', 'ejeTematico', 'pautaEventos'])
             ->orderByDesc('fecha_publicacion')
             ->get()
             ->map(function ($p) use ($candidato) {
@@ -341,6 +345,26 @@ class CandidatoController extends Controller
                     'figuras_acompanantes' => $p->figuras_acompanantes,
                     'comentarios_destacados' => $p->comentarios_destacados,
                     'termometro_humor_social' => $p->termometro_humor_social,
+                    'pauta_eventos' => $p->pautaEventos ? $p->pautaEventos->map(function ($ev) {
+                        return [
+                            'id' => $ev->id,
+                            'tipo_pauta_anterior' => $ev->tipo_pauta_anterior,
+                            'tipo_pauta_nuevo' => $ev->tipo_pauta_nuevo,
+                            'monto_anterior' => (float) $ev->monto_anterior,
+                            'monto_nuevo' => (float) $ev->monto_nuevo,
+                            'fecha_evento' => $ev->fecha_evento?->format('d/m/Y H:i'),
+                            'fecha_evento_humana' => $ev->fecha_evento?->diffForHumans(),
+                            'seguidores_canal_snapshot' => (int) $ev->seguidores_canal_snapshot,
+                            'likes_snapshot' => (int) $ev->likes_snapshot,
+                            'comentarios_snapshot' => (int) $ev->comentarios_snapshot,
+                            'vistas_snapshot' => (int) $ev->vistas_snapshot,
+                            'origen' => $ev->origen,
+                            'delta_likes_atribuibles' => $ev->delta_likes_atribuibles,
+                            'delta_comentarios_atribuibles' => $ev->delta_comentarios_atribuibles,
+                            'costo_por_like' => $ev->costo_por_like,
+                            'notas' => $ev->notas,
+                        ];
+                    }) : [],
                 ];
             });
 
@@ -558,6 +582,123 @@ class CandidatoController extends Controller
         }
 
         return redirect()->back()->with('success', $msg);
+    }
+
+    /**
+     * Sincronización Maestra del Canal (Seguidores + Publicaciones activas en ventana <=15 días + snapshots de corte).
+     */
+    public function sincronizarCanal(
+        Request $request,
+        PerfilSocial $perfilSocial,
+        SocialProfileScraperService $scraper,
+        MediaStorageService $mediaStorage
+    ): JsonResponse {
+        $resultadoCanal = [
+            'success' => true,
+            'plataforma' => $perfilSocial->plataforma,
+            'seguidores_actuales' => (int) $perfilSocial->seguidores_actuales,
+            'delta_seguidores' => 0,
+            'mensaje_seguidores' => '',
+            'posts_total' => 0,
+            'posts_actualizados' => 0,
+            'nuevos_likes' => 0,
+            'nuevos_comentarios' => 0,
+            'cambios_pauta' => 0,
+            'logs' => [],
+        ];
+
+        // PASO 1: Sincronizar Seguidores del Perfil Social (si tiene URL)
+        if (! empty($perfilSocial->url_perfil)) {
+            try {
+                $scrapedPerfil = $scraper->scrapeProfile($perfilSocial->url_perfil, $perfilSocial->plataforma);
+                $metrica = $perfilSocial->registrarMedicion($scrapedPerfil, 'sync_maestro');
+                $deltaSeg = (int) $metrica->crecimiento_seguidores_dia;
+                $signo = $deltaSeg > 0 ? '+' : '';
+                $resultadoCanal['seguidores_actuales'] = (int) $metrica->seguidores;
+                $resultadoCanal['delta_seguidores'] = $deltaSeg;
+                $resultadoCanal['mensaje_seguidores'] = "Seguidores actualizados: " . number_format($metrica->seguidores, 0, ',', '.') . ($deltaSeg != 0 ? " ({$signo}{$deltaSeg} hoy)" : '');
+            } catch (\Throwable $e) {
+                $resultadoCanal['mensaje_seguidores'] = "No se pudo actualizar seguidores: " . $e->getMessage();
+            }
+        } else {
+            $resultadoCanal['mensaje_seguidores'] = 'Canal sin URL de perfil para escanear seguidores.';
+        }
+
+        // PASO 2: Sincronizar publicaciones en ventana activa (<= 15 días)
+        $fechaLimite = Carbon::now()->subDays(15)->startOfDay();
+        $publicaciones = Publicacion::where('perfil_social_id', $perfilSocial->id)
+            ->where('fecha_publicacion', '>=', $fechaLimite)
+            ->whereNotNull('url_post')
+            ->where('url_post', '!=', '')
+            ->get();
+
+        $resultadoCanal['posts_total'] = $publicaciones->count();
+
+        foreach ($publicaciones as $pub) {
+            try {
+                $scrapedPost = $scraper->scrapePost($pub->url_post, $perfilSocial->plataforma);
+                if (! empty($scrapedPost['success'])) {
+                    $oldLikes = (int) $pub->total_likes;
+                    $oldComments = (int) $pub->total_comentarios;
+                    $freshLikes = (int) ($scrapedPost['total_likes'] ?? $oldLikes);
+                    $freshComments = (int) ($scrapedPost['total_comentarios'] ?? $oldComments);
+
+                    $deltaL = max(0, $freshLikes - $oldLikes);
+                    $deltaC = max(0, $freshComments - $oldComments);
+
+                    $resultadoCanal['nuevos_likes'] += $deltaL;
+                    $resultadoCanal['nuevos_comentarios'] += $deltaC;
+
+                    $pubUpdate = [
+                        'total_likes' => $freshLikes,
+                        'total_comentarios' => $freshComments,
+                    ];
+
+                    // Recalcular emociones con la función pública del PublicacionController
+                    $aiEmocional = app(PublicacionController::class)->calcularInteligenciaEmocional([], $freshLikes, $perfilSocial->plataforma);
+                    $pubUpdate['reacciones_detalladas'] = $aiEmocional['reacciones_detalladas'];
+                    $pubUpdate['sentimiento_predominante'] = $aiEmocional['sentimiento_predominante'];
+                    $pubUpdate['termometro_humor_social'] = $aiEmocional['termometro_humor_social'];
+
+                    if (! empty($scrapedPost['media_url'])) {
+                        $localMedia = $mediaStorage->guardarMediaLocal($scrapedPost['media_url'], $pub->media_url);
+                        if ($localMedia) {
+                            $pubUpdate['media_url'] = $localMedia;
+                        }
+                    }
+
+                    $pub->update($pubUpdate);
+                    $resultadoCanal['posts_actualizados']++;
+
+                    $resultadoCanal['logs'][] = [
+                        'status' => 'success',
+                        'url' => $pub->url_post,
+                        'resumen' => Str::limit($pub->contenido_resumen, 45),
+                        'likes' => $freshLikes,
+                        'deltaLikes' => $deltaL,
+                        'comments' => $freshComments,
+                        'deltaComments' => $deltaC,
+                        'fecha' => $pub->fecha_publicacion?->format('d/m/Y') ?? 'Reciente',
+                    ];
+                } else {
+                    $resultadoCanal['logs'][] = [
+                        'status' => 'warning',
+                        'url' => $pub->url_post,
+                        'resumen' => Str::limit($pub->contenido_resumen, 45),
+                        'error' => $scrapedPost['mensaje'] ?? 'Sin datos nuevos.',
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $resultadoCanal['logs'][] = [
+                    'status' => 'error',
+                    'url' => $pub->url_post,
+                    'resumen' => Str::limit($pub->contenido_resumen, 45),
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return response()->json($resultadoCanal);
     }
 
     /**

@@ -6,7 +6,9 @@ use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\EjeTematico;
 use App\Models\PerfilSocial;
+use App\Models\PerfilSocialMetrica;
 use App\Models\Publicacion;
+use App\Models\PublicacionPautaEvento;
 use App\Services\MediaStorageService;
 use App\Services\SocialProfileScraperService;
 use Carbon\Carbon;
@@ -269,7 +271,7 @@ class PublicacionController extends Controller
             })->unique('numero')->sortBy('numero')->values();
 
         $query = Publicacion::where('workspace_id', $workspace->id)
-            ->with(['candidato', 'perfilSocial', 'ejeTematico']);
+            ->with(['candidato', 'perfilSocial', 'ejeTematico', 'pautaEventos']);
 
         if ($filtro === 'propio') {
             $query->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
@@ -383,6 +385,26 @@ class PublicacionController extends Controller
                 'media_url' => $p->media_url,
                 'media_embed_url' => $p->media_embed_url,
                 'contenido_resumen' => $p->contenido_resumen,
+                'pauta_eventos' => $p->pautaEventos ? $p->pautaEventos->map(function ($ev) {
+                    return [
+                        'id' => $ev->id,
+                        'tipo_pauta_anterior' => $ev->tipo_pauta_anterior,
+                        'tipo_pauta_nuevo' => $ev->tipo_pauta_nuevo,
+                        'monto_anterior' => (float) $ev->monto_anterior,
+                        'monto_nuevo' => (float) $ev->monto_nuevo,
+                        'fecha_evento' => $ev->fecha_evento?->format('d/m/Y H:i'),
+                        'fecha_evento_humana' => $ev->fecha_evento?->diffForHumans(),
+                        'seguidores_canal_snapshot' => (int) $ev->seguidores_canal_snapshot,
+                        'likes_snapshot' => (int) $ev->likes_snapshot,
+                        'comentarios_snapshot' => (int) $ev->comentarios_snapshot,
+                        'vistas_snapshot' => (int) $ev->vistas_snapshot,
+                        'origen' => $ev->origen,
+                        'delta_likes_atribuibles' => $ev->delta_likes_atribuibles,
+                        'delta_comentarios_atribuibles' => $ev->delta_comentarios_atribuibles,
+                        'costo_por_like' => $ev->costo_por_like,
+                        'notas' => $ev->notas,
+                    ];
+                }) : [],
             ];
         });
 
@@ -690,6 +712,37 @@ class PublicacionController extends Controller
             'insights_internos_propios' => array_merge($publicacion->insights_internos_propios ?? [], $aiEmocional['insights_internos_propios']),
         ];
 
+        // Detectar cambio de tipo_pauta o cambio de presupuesto para registrar snapshot de corte
+        $huboCambioPauta = $validated['tipo_pauta'] !== $publicacion->tipo_pauta
+            || (in_array($validated['tipo_pauta'], Publicacion::TIPOS_CON_INVERSION) && (float) ($validated['monto_invertido_pauta'] ?? 0) !== (float) $publicacion->monto_invertido_pauta);
+
+        if ($huboCambioPauta) {
+            $seguidoresCanal = PerfilSocialMetrica::where('perfil_social_id', $publicacion->perfil_social_id)
+                ->orderByDesc('fecha')
+                ->orderByDesc('id')
+                ->value('seguidores')
+                ?? $publicacion->perfilSocial?->seguidores_actuales
+                ?? 0;
+
+            PublicacionPautaEvento::create([
+                'publicacion_id' => $publicacion->id,
+                'tipo_pauta_anterior' => $publicacion->tipo_pauta,
+                'tipo_pauta_nuevo' => $validated['tipo_pauta'],
+                'monto_anterior' => (float) ($publicacion->monto_invertido_pauta ?? 0),
+                'monto_nuevo' => $validated['tipo_pauta'] !== 'organico' ? (float) ($validated['monto_invertido_pauta'] ?? 0) : 0,
+                'fecha_evento' => Carbon::now(),
+                'seguidores_canal_snapshot' => (int) $seguidoresCanal,
+                'likes_snapshot' => (int) $publicacion->total_likes,
+                'comentarios_snapshot' => (int) $publicacion->total_comentarios,
+                'compartidos_snapshot' => (int) $publicacion->total_compartidos,
+                'vistas_snapshot' => (int) $publicacion->total_vistas,
+                'republicados_snapshot' => (int) ($publicacion->total_republicados ?? 0),
+                'registrado_por' => auth()->id(),
+                'origen' => 'manual',
+                'notas' => "Transición de {$publicacion->tipo_pauta} a {$validated['tipo_pauta']} guardada por usuario.",
+            ]);
+        }
+
         if (! empty($validated['fecha_publicacion'])) {
             $updateData['fecha_publicacion'] = $validated['fecha_publicacion'];
         }
@@ -725,7 +778,7 @@ class PublicacionController extends Controller
     /**
      * Motor de Inteligencia Emocional & Sentimiento Cuantificado.
      */
-    private function calcularInteligenciaEmocional(array $data, int $totalLikesFallback = 0, ?string $plataforma = null): array
+    public function calcularInteligenciaEmocional(array $data, int $totalLikesFallback = 0, ?string $plataforma = null): array
     {
         $plat = strtolower($plataforma ?? $data['plataforma'] ?? '');
 

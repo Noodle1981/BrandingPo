@@ -63,6 +63,7 @@ const groupedEjes = computed(() => {
 });
 
 const showComments = ref(false);
+const showPautaHistorial = ref(false);
 const isEditing = ref(false);
 const editandoFecha = ref(false);
 const fechaEditada = ref('');
@@ -435,14 +436,9 @@ const tiposPauta = [
           </div>
         </div>
 
-        <!-- Badges de Red Social, Pauta & Acciones -->
+        <!-- Badges de Red Social & Acciones -->
         <div class="flex items-center gap-1.5 shrink-0">
           <Badge :variant="post.plataforma || post.perfil_social?.plataforma || 'facebook'" size="sm" />
-          <Badge
-            variant="pauta"
-            :value="post.tipo_pauta || 'organico'"
-            size="sm"
-          />
 
           <!-- Botones de Acción -->
           <div class="flex items-center gap-0.5 ml-1 pl-1 border-l border-slate-200 dark:border-slate-800">
@@ -478,11 +474,11 @@ const tiposPauta = [
         </div>
       </div>
 
-      <!-- Fila 2: Fecha de Origen con Semáforo de Confirmación -->
-      <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/60 text-xs">
+      <!-- Fila 2: Fecha de Origen con Semáforo de Confirmación + Pauta & Sincronización -->
+      <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/60 text-xs flex-wrap sm:flex-nowrap">
 
         <!-- MODO VISUALIZACIÓN: Fecha con semáforo -->
-        <div v-if="!editandoFecha" class="flex items-center gap-1.5 min-w-0 flex-1">
+        <div v-if="!editandoFecha" class="flex items-center gap-1.5 min-w-0">
           <Calendar class="w-3.5 h-3.5 shrink-0" :class="esFechaSinConfirmar ? 'text-rose-500' : 'text-emerald-500'" />
 
           <!-- Badge de fecha: ROJO si sin confirmar, VERDE si confirmada -->
@@ -491,7 +487,7 @@ const tiposPauta = [
             type="button"
             @click="abrirEdicionFecha"
             :title="esFechaSinConfirmar ? '⚠️ Fecha pendiente de confirmar — Hacer clic para corregirla' : '✅ Fecha confirmada — Hacer clic para cambiarla'"
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[11px] sm:text-xs border transition-all cursor-pointer hover:opacity-80"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[11px] sm:text-xs border transition-all cursor-pointer hover:opacity-80 shrink-0"
             :class="esFechaSinConfirmar
               ? 'bg-rose-500/10 border-rose-400/40 text-rose-700 dark:text-rose-300 animate-pulse'
               : 'bg-emerald-500/10 border-emerald-400/40 text-emerald-700 dark:text-emerald-300'"
@@ -507,7 +503,7 @@ const tiposPauta = [
             {{ fechaHumanaVisible }}
           </span>
 
-          <span v-if="post.fecha_relativa" class="text-[10px] text-slate-400 font-normal shrink-0">
+          <span v-if="post.fecha_relativa" class="text-[10px] text-slate-400 font-normal shrink-0 truncate">
             ({{ post.fecha_relativa }})
           </span>
         </div>
@@ -540,8 +536,14 @@ const tiposPauta = [
           </button>
         </div>
 
-        <!-- Estado de Sincronización (derecha) -->
-        <div class="shrink-0 font-mono">
+        <!-- Pauta & Estado de Sincronización (derecha) -->
+        <div class="shrink-0 flex items-center gap-1.5 font-mono">
+          <Badge
+            variant="pauta"
+            :value="post.tipo_pauta || 'organico'"
+            size="sm"
+          />
+
           <span
             v-if="esFechaSinConfirmar"
             class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold"
@@ -774,6 +776,63 @@ const tiposPauta = [
       </div>
     </div>
 
+    <!-- Historial de Pauta & Atribución de Impacto (Si tiene eventos registrados) -->
+    <div v-if="post.pauta_eventos && post.pauta_eventos.length > 0" class="border-t border-slate-100 dark:border-slate-800/80">
+      <button
+        type="button"
+        @click="showPautaHistorial = !showPautaHistorial"
+        class="w-full px-4 sm:px-5 py-2.5 flex items-center justify-between text-xs font-mono font-bold bg-slate-50/70 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
+      >
+        <span class="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400">
+          <Sparkles class="w-3.5 h-3.5" />
+          <span>Historial de Pauta & Atribución de ROI ({{ post.pauta_eventos.length }} {{ post.pauta_eventos.length === 1 ? 'corte' : 'cortes' }})</span>
+        </span>
+        <span class="text-[10px] text-slate-400 font-normal">
+          {{ showPautaHistorial ? 'Ocultar ▲' : 'Ver cortes ▼' }}
+        </span>
+      </button>
+
+      <div v-if="showPautaHistorial" class="p-3.5 sm:p-4 bg-slate-100/50 dark:bg-slate-950/70 space-y-2.5 text-xs font-mono">
+        <div
+          v-for="ev in post.pauta_eventos"
+          :key="ev.id"
+          class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-2xs"
+        >
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-1.5 font-bold">
+              <Badge variant="pauta" :value="ev.tipo_pauta_anterior" size="sm" />
+              <span class="text-cyan-500 font-black">➔</span>
+              <Badge variant="pauta" :value="ev.tipo_pauta_nuevo" size="sm" />
+            </div>
+            <span class="text-[10px] text-slate-400">
+              {{ ev.fecha_evento }} ({{ ev.fecha_evento_humana }})
+            </span>
+          </div>
+
+          <!-- Métricas del snapshot vs incremento actual -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-[11px] text-slate-600 dark:text-slate-400">
+            <div>
+              <span class="text-[9px] uppercase tracking-wider text-slate-400 block">Base en Corte:</span>
+              <span class="font-bold text-slate-800 dark:text-slate-200">{{ formatNumber(ev.likes_snapshot) }} likes</span>
+            </div>
+            <div>
+              <span class="text-[9px] uppercase tracking-wider text-slate-400 block">Seguidores Canal:</span>
+              <span class="font-bold text-slate-800 dark:text-slate-200">{{ formatNumber(ev.seguidores_canal_snapshot) }}</span>
+            </div>
+            <div>
+              <span class="text-[9px] uppercase tracking-wider text-cyan-500 block">Ganados con Pauta:</span>
+              <span class="font-bold text-emerald-500">+{{ formatNumber(ev.delta_likes_atribuibles) }} likes</span>
+            </div>
+          </div>
+
+          <div v-if="ev.monto_nuevo > 0" class="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-slate-800/80 text-[10px]">
+            <span class="text-slate-400">Inversión: <strong class="text-slate-800 dark:text-slate-200 font-mono">{{ formatCurrency(ev.monto_nuevo) }}</strong></span>
+            <span v-if="ev.costo_por_like" class="text-cyan-600 dark:text-cyan-400 font-bold">CPL: ${{ ev.costo_por_like }} / like atribuible</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Edit Modal Dialog (Adaptativo por Red Social) -->
     <div
       v-if="isEditing"
@@ -872,6 +931,20 @@ const tiposPauta = [
                 class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-violet-500/40 text-xs font-mono font-bold text-violet-600 dark:text-violet-400 focus:ring-2 focus:ring-violet-500"
               />
             </div>
+          </div>
+
+          <!-- Alerta explicativa de snapshot de corte al cambiar de pauta -->
+          <div
+            v-if="editForm.tipo_pauta !== (post.tipo_pauta || 'organico')"
+            class="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-900 dark:text-cyan-200 text-xs space-y-1.5"
+          >
+            <div class="flex items-center gap-1.5 font-bold">
+              <Sparkles class="w-4 h-4 text-cyan-500 shrink-0" />
+              <span>Snapshot automático de corte al guardar:</span>
+            </div>
+            <p class="text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 font-sans">
+              Al pasar a <strong>{{ tiposPauta.find(t => t.value === editForm.tipo_pauta)?.label || editForm.tipo_pauta }}</strong>, el sistema registrará un snapshot con la base actual (<strong>{{ formatNumber(post.total_likes || 0) }} likes</strong>) y seguidores del canal. Así, todas las nuevas reacciones tras este momento quedarán atribuidas con precisión al impacto de la pauta.
+            </p>
           </div>
 
           <!-- 4. Eje Temático de Campaña -->

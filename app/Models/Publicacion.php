@@ -163,6 +163,14 @@ class Publicacion extends Model
     }
 
     /**
+     * Historial de eventos y transiciones de pauta con snapshots.
+     */
+    public function pautaEventos(): HasMany
+    {
+        return $this->hasMany(PublicacionPautaEvento::class)->orderByDesc('fecha_evento')->orderByDesc('id');
+    }
+
+    /**
      * Scope para filtrar publicaciones con pauta publicitaria.
      */
     public function scopeConPauta(Builder $query): Builder

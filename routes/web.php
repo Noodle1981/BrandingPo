@@ -57,6 +57,7 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
         Route::post('/perfiles-sociales', [CandidatoController::class, 'storePerfilSocial'])->name('perfiles-sociales.store');
         Route::post('/perfiles-sociales/scrape', [CandidatoController::class, 'scrapePerfilSocial'])->name('perfiles-sociales.scrape');
         Route::post('/perfiles-sociales/{perfilSocial}/refrescar', [CandidatoController::class, 'refrescarPerfilSocial'])->name('perfiles-sociales.refrescar');
+        Route::post('/perfiles-sociales/{perfilSocial}/sincronizar-canal', [CandidatoController::class, 'sincronizarCanal'])->name('perfiles-sociales.sincronizar-canal');
         Route::put('/perfiles-sociales/{perfilSocial}', [CandidatoController::class, 'updatePerfilSocial'])->name('perfiles-sociales.update');
         Route::delete('/perfiles-sociales/{perfilSocial}', [CandidatoController::class, 'destroyPerfilSocial'])->name('perfiles-sociales.destroy');
     });
