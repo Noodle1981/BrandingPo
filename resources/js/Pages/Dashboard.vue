@@ -127,6 +127,10 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  series_por_red: {
+    type: Object,
+    default: () => ({})
+  },
   organico_vs_pauta: {
     type: Object,
     default: () => ({
@@ -228,26 +232,56 @@ const getSocialMeta = (key) => {
   }
 };
 
-// 1. Gráfico de Evolución Temporal (Line Chart)
+// 1. Gráfico de Evolución Temporal (Line Chart Multired y por Canal)
 const chartTimeMetric = ref('seguidores'); // 'seguidores' | 'vistas'
+const selectedTimePlatform = ref('todas'); // 'todas' | 'facebook' | 'instagram' | ...
+
+// Redes con cuenta configurada o activas del candidato
+const redesDisponiblesTimeline = computed(() => {
+  return props.redes_desglose.filter(r => r.handle_usuario || r.esta_activo || r.seguidores > 0);
+});
+
+const activeTimelineSeries = computed(() => {
+  if (selectedTimePlatform.value !== 'todas' && props.series_por_red && props.series_por_red[selectedTimePlatform.value]) {
+    const s = props.series_por_red[selectedTimePlatform.value];
+    return {
+      plataforma: selectedTimePlatform.value,
+      nombre: s.nombre,
+      handle: s.handle,
+      color: s.color || getSocialMeta(selectedTimePlatform.value).color,
+      puntos: s.puntos || [],
+      esIndividual: true,
+    };
+  }
+
+  return {
+    plataforma: 'todas',
+    nombre: 'Comunidad Total Multired',
+    handle: 'Todas las redes activas',
+    color: chartTimeMetric.value === 'seguidores' ? '#06b6d4' : '#10b981',
+    puntos: props.historico_mediciones || [],
+    esIndividual: false,
+  };
+});
 
 const timelineChartData = computed(() => {
-  const labels = props.historico_mediciones.map(m => m.fecha);
+  const current = activeTimelineSeries.value;
+  const labels = current.puntos.map(m => m.fecha);
   const data = chartTimeMetric.value === 'seguidores'
-    ? props.historico_mediciones.map(m => m.seguidores)
-    : props.historico_mediciones.map(m => m.vistas);
+    ? current.puntos.map(m => m.seguidores)
+    : current.puntos.map(m => m.vistas);
 
   const isFollowers = chartTimeMetric.value === 'seguidores';
-  const colorHex = isFollowers ? '#06b6d4' : '#10b981';
+  const colorHex = current.color;
 
   return {
     labels,
     datasets: [
       {
-        label: isFollowers ? 'Comunidad Total' : 'Visualizaciones Acumuladas',
+        label: isFollowers ? `${current.nombre} (Seguidores)` : `${current.nombre} (Visualizaciones)`,
         data,
         borderColor: colorHex,
-        backgroundColor: isFollowers ? 'rgba(6, 182, 212, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+        backgroundColor: `${colorHex}1f`,
         fill: true,
         tension: 0.35,
         pointBackgroundColor: colorHex,
@@ -707,19 +741,21 @@ const ejesBarChartOptions = {
 
     <!-- 3. CENTRO DE ANALÍTICA VISUAL (4 GRÁFICOS INTERACTIVOS CHART.JS) -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-      <!-- Gráfico 1 (7 cols): Tendencia Temporal Multired -->
+      <!-- Gráfico 1 (7 cols): Tendencia Temporal Multired / Por Canal -->
       <div class="lg:col-span-7 p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Activity class="w-4 h-4 text-cyan-500" />
-              <span>Evolución Temporal Multired</span>
+              <span>Evolución Temporal {{ selectedTimePlatform === 'todas' ? 'Multired' : activeTimelineSeries.nombre }}</span>
             </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Progresión acumulada desde el inicio de campaña</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              {{ selectedTimePlatform === 'todas' ? 'Progresión continua acumulada de todas las redes activas' : `Progreso individual de ${activeTimelineSeries.nombre} (${activeTimelineSeries.handle || '@canal'})` }}
+            </p>
           </div>
 
-          <!-- Selector de Métrica Temporal -->
-          <div class="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 self-start">
+          <!-- Selector de Métrica Temporal (Comunidad vs Visualizaciones) -->
+          <div class="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 shrink-0">
             <button
               @click="chartTimeMetric = 'seguidores'"
               class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
@@ -735,6 +771,35 @@ const ejesBarChartOptions = {
               Visualizaciones
             </button>
           </div>
+        </div>
+
+        <!-- Filtro por Red Social Habilitada (Píldoras interactivas) -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100 dark:border-slate-800/80 scrollbar-none">
+          <button
+            type="button"
+            @click="selectedTimePlatform = 'todas'"
+            class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 shadow-2xs shrink-0"
+            :class="selectedTimePlatform === 'todas'
+              ? 'bg-cyan-500 text-slate-950 border-cyan-500 font-extrabold shadow-sm'
+              : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400'"
+          >
+            <span>🌐 Todas (Total)</span>
+          </button>
+          
+          <button
+            v-for="red in redesDisponiblesTimeline"
+            :key="red.plataforma"
+            type="button"
+            @click="selectedTimePlatform = red.plataforma"
+            class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 shadow-2xs shrink-0"
+            :class="selectedTimePlatform === red.plataforma
+              ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-sm ring-2 ring-cyan-500/40'
+              : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400'"
+          >
+            <SocialPlatformIcon :platform="red.plataforma" size="xs" />
+            <span>{{ red.plataforma.toUpperCase() }}</span>
+            <span class="text-[10px] opacity-75 font-normal">({{ formatNumber(red.seguidores) }})</span>
+          </button>
         </div>
 
         <div class="h-64 sm:h-72 w-full">

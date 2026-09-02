@@ -372,27 +372,84 @@ class DashboardController extends Controller
             ];
         })->filter(fn ($e) => $e['posts_count'] > 0)->values()->sortByDesc('total_interacciones')->values();
 
-        // 5. Histórico Consolidado Time-Series (Evolución de Seguidores y Vistas)
-        $perfilesIds = $candidato->perfilesSociales->pluck('id');
+        // 5. Histórico Consolidado Time-Series (Evolución sin caídas artificiales con Forward-Fill)
+        $perfilesActivos = $candidato->perfilesSociales->filter(fn ($p) => (bool) $p->esta_activo || (int) $p->seguidores_actuales > 0);
+        $perfilesIds = $perfilesActivos->pluck('id');
         $medicionesHistoricas = \App\Models\PerfilSocialMetrica::whereIn('perfil_social_id', $perfilesIds)
             ->orderBy('fecha', 'asc')
             ->get();
 
-        $historicoAgrupado = $medicionesHistoricas->groupBy(function ($m) {
-            return $m->fecha ? $m->fecha->format('d/m') : '';
-        })->map(function ($items, $fecha) {
-            return [
-                'fecha' => $fecha,
-                'seguidores' => $items->sum('seguidores'),
-                'vistas' => $items->sum('visualizaciones_acumuladas'),
-                'interacciones' => $items->sum('interacciones_totales'),
-            ];
-        })->values();
+        $fechasUnicas = $medicionesHistoricas->pluck('fecha')
+            ->filter()
+            ->map(fn ($f) => $f->format('Y-m-d'))
+            ->unique()
+            ->sort()
+            ->values();
 
-        // Fallback dinámico si aún no hay mediciones diarias cron grabadas
-        if ($historicoAgrupado->count() < 4) {
+        $medicionesPorPerfil = $medicionesHistoricas->groupBy('perfil_social_id');
+
+        $seriesPorRed = [];
+        $historicoAgrupado = [];
+        $ultimoValorSeguidores = [];
+        $ultimoValorVistas = [];
+        $ultimoValorInteracciones = [];
+
+        foreach ($perfilesActivos as $perfil) {
+            $ultimoValorSeguidores[$perfil->id] = (int) ($perfil->seguidores_punto_cero ?: $perfil->seguidores_actuales);
+            $ultimoValorVistas[$perfil->id] = 0;
+            $ultimoValorInteracciones[$perfil->id] = 0;
+            $seriesPorRed[$perfil->plataforma] = [
+                'plataforma' => $perfil->plataforma,
+                'nombre' => ucfirst(str_replace('_', ' ', $perfil->plataforma)),
+                'handle' => $perfil->handle_usuario,
+                'color' => $plataformasColores[$perfil->plataforma] ?? '#06b6d4',
+                'puntos' => [],
+            ];
+        }
+
+        if ($fechasUnicas->count() >= 2) {
+            foreach ($fechasUnicas as $fechaStr) {
+                $fechaLabel = date('d/m', strtotime($fechaStr));
+                $totalSeguidoresDia = 0;
+                $totalVistasDia = 0;
+                $totalInteraccionesDia = 0;
+
+                foreach ($perfilesActivos as $perfil) {
+                    $pid = $perfil->id;
+                    $medsPerfil = $medicionesPorPerfil->get($pid, collect());
+                    $medFecha = $medsPerfil->first(fn ($m) => $m->fecha && $m->fecha->format('Y-m-d') === $fechaStr);
+
+                    if ($medFecha) {
+                        $ultimoValorSeguidores[$pid] = (int) $medFecha->seguidores;
+                        $ultimoValorVistas[$pid] = (int) $medFecha->visualizaciones_totales;
+                        $ultimoValorInteracciones[$pid] = (int) ($medFecha->interacciones_totales ?? $medFecha->me_gusta_totales ?? 0);
+                    }
+
+                    $seriesPorRed[$perfil->plataforma]['puntos'][] = [
+                        'fecha' => $fechaLabel,
+                        'fecha_raw' => $fechaStr,
+                        'seguidores' => $ultimoValorSeguidores[$pid],
+                        'vistas' => $ultimoValorVistas[$pid],
+                        'interacciones' => $ultimoValorInteracciones[$pid],
+                    ];
+
+                    $totalSeguidoresDia += $ultimoValorSeguidores[$pid];
+                    $totalVistasDia += $ultimoValorVistas[$pid];
+                    $totalInteraccionesDia += $ultimoValorInteracciones[$pid];
+                }
+
+                $historicoAgrupado[] = [
+                    'fecha' => $fechaLabel,
+                    'fecha_raw' => $fechaStr,
+                    'seguidores' => $totalSeguidoresDia,
+                    'vistas' => $totalVistasDia,
+                    'interacciones' => $totalInteraccionesDia,
+                ];
+            }
+        } else {
+            // Progresión continua de fallback si hay menos de 2 mediciones registradas
             $diasMuestra = 7;
-            $historicoAgrupado = collect();
+            $historicoAgrupado = [];
             for ($i = $diasMuestra - 1; $i >= 0; $i--) {
                 $f = $now->copy()->subDays($i);
                 $prog = ($diasMuestra - $i) / $diasMuestra;
@@ -400,12 +457,25 @@ class DashboardController extends Controller
                 $vistasStep = (int) ($totalVistas * $prog * 0.85);
                 $intStep = (int) ($interaccionesTotales * $prog * 0.85);
 
-                $historicoAgrupado->push([
-                    'fecha' => $f->format('d/m'),
+                $fechaLabel = $f->format('d/m');
+                $historicoAgrupado[] = [
+                    'fecha' => $fechaLabel,
+                    'fecha_raw' => $f->format('Y-m-d'),
                     'seguidores' => $segStep,
                     'vistas' => $vistasStep,
                     'interacciones' => $intStep,
-                ]);
+                ];
+
+                foreach ($perfilesActivos as $perfil) {
+                    $segPerfilStep = (int) (($perfil->seguidores_punto_cero ?: $perfil->seguidores_actuales) + ((int) ($perfil->seguidores_actuales - $perfil->seguidores_punto_cero) * $prog));
+                    $seriesPorRed[$perfil->plataforma]['puntos'][] = [
+                        'fecha' => $fechaLabel,
+                        'fecha_raw' => $f->format('Y-m-d'),
+                        'seguidores' => $segPerfilStep,
+                        'vistas' => 0,
+                        'interacciones' => 0,
+                    ];
+                }
             }
         }
 
@@ -602,6 +672,7 @@ class DashboardController extends Controller
             'rendimiento_por_formato' => $rendimientoPorFormato,
             'distribucion_ejes' => $distribucionEjes,
             'historico_mediciones' => $historicoAgrupado,
+            'series_por_red' => $seriesPorRed,
             'organico_vs_pauta' => $organicoVsPauta,
             'top_publicaciones' => $topPublicaciones,
             'ultimas_publicaciones' => $ultimasPublicaciones,
