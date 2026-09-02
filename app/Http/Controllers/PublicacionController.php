@@ -24,7 +24,7 @@ class PublicacionController extends Controller
     /**
      * Extraer datos públicos de una publicación (Instagram, Facebook, TikTok, YouTube, etc.) con 1 clic.
      */
-    public function scrapePost(Request $request, SocialProfileScraperService $scraper): JsonResponse
+    public function scrapePost(Request $request, SocialProfileScraperService $scraper, MediaStorageService $mediaStorage): JsonResponse
     {
         $inputUrl = $request->input('url') ?? $request->input('url_post') ?? '';
         $plataforma = $request->input('plataforma');
@@ -54,6 +54,14 @@ class PublicacionController extends Controller
         }
 
         $data = $scraper->scrapePost($inputUrl, $plataforma);
+
+        // Si se extrajo una imagen/portada externa, guardarla de inmediato localmente en storage propio
+        if (! empty($data['media_url'])) {
+            $localMedia = $mediaStorage->guardarMediaLocal($data['media_url']);
+            if ($localMedia) {
+                $data['media_url'] = $localMedia;
+            }
+        }
 
         return response()->json([
             'success' => $data['success'] ?? false,

@@ -200,6 +200,19 @@ const plataformaName = computed(() => {
           <span>Reproducir en vivo</span>
         </button>
       </div>
+
+      <!-- Enlace directo discreto a la publicación original en la red social -->
+      <a
+        v-if="url || mediaUrl"
+        :href="cleanUrl(url || mediaUrl)"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-xl bg-slate-950/75 hover:bg-slate-900/95 backdrop-blur-xs text-white text-[11px] font-mono font-bold flex items-center gap-1.5 opacity-85 hover:opacity-100 transition-all shadow-md hover:scale-102 cursor-pointer z-10"
+        :title="`Abrir publicación original en ${plataformaName}`"
+      >
+        <ExternalLink class="w-3 h-3 text-cyan-400" />
+        <span>{{ plataformaName }}</span>
+      </a>
     </div>
 
     <!-- CASO 2: EMBEDS INTERACTIVOS (YouTube, Instagram, Facebook, TikTok) -->
