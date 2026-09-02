@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { ExternalLink, Play, Image as ImageIcon, Video, Radio, DollarSign } from '@lucide/vue';
+import { ExternalLink, Play, Image as ImageIcon, Video, Radio } from '@lucide/vue';
 
 const props = defineProps({
   url: {
@@ -18,14 +18,6 @@ const props = defineProps({
   plataforma: {
     type: String,
     default: 'facebook'
-  },
-  montoInvertido: {
-    type: [Number, String],
-    default: null
-  },
-  tipoPauta: {
-    type: String,
-    default: 'organico'
   }
 });
 
@@ -75,25 +67,6 @@ const isPhoto = computed(() => {
   const f = (props.formato || '').toLowerCase();
   return ['foto', 'carrusel', 'imagen'].includes(f);
 });
-
-const formatCurrency = (val) => {
-  if (!val) return '$0';
-  return '$' + Number(val).toLocaleString('es-AR');
-};
-
-const budgetBadgeClass = computed(() => {
-  const p = (props.tipoPauta || '').toLowerCase();
-  switch (p) {
-    case 'organico_impulsado':
-      return 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/40 font-extrabold';
-    case 'pauta_paga':
-      return 'bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/40 font-bold';
-    case 'colaboracion_pagada':
-      return 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-extrabold';
-    default:
-      return 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700';
-  }
-});
 </script>
 
 <template>
@@ -120,16 +93,6 @@ const budgetBadgeClass = computed(() => {
             </span>
             <span class="px-2 py-0.2 rounded-md bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[10px] font-bold">
               {{ formato }}
-            </span>
-            <!-- Tag de Presupuesto Invertido (alineado sobre la misma línea sin colisiones) -->
-            <span
-              v-if="montoInvertido && Number(montoInvertido) > 0"
-              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono shadow-2xs shrink-0"
-              :class="budgetBadgeClass"
-              title="Presupuesto asignado a esta publicación"
-            >
-              <DollarSign class="w-3 h-3" />
-              <span>Invertido: {{ formatCurrency(montoInvertido) }}</span>
             </span>
           </div>
           <p

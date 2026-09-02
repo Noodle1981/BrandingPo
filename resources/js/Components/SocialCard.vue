@@ -96,22 +96,26 @@ const cardPautaStyles = computed(() => {
       return {
         cardClass: 'border-cyan-500/60 dark:border-cyan-500/40 ring-1 ring-cyan-500/25 border-t-4 border-t-cyan-500 shadow-[0_4px_30px_-4px_rgba(6,182,212,0.30)] dark:shadow-[0_0_35px_-4px_rgba(6,182,212,0.35)] hover:shadow-[0_8px_40px_-2px_rgba(6,182,212,0.45)]',
         headerTint: 'bg-gradient-to-b from-cyan-500/8 via-cyan-500/2 to-transparent',
+        budgetBadge: 'bg-cyan-500 text-slate-950 border-cyan-400/80 shadow-xs shadow-cyan-500/30',
       };
     case 'pauta_paga':
       return {
         cardClass: 'border-violet-500/60 dark:border-violet-500/40 ring-1 ring-violet-500/25 border-t-4 border-t-violet-500 shadow-[0_4px_30px_-4px_rgba(139,92,246,0.30)] dark:shadow-[0_0_35px_-4px_rgba(139,92,246,0.35)] hover:shadow-[0_8px_40px_-2px_rgba(139,92,246,0.45)]',
         headerTint: 'bg-gradient-to-b from-violet-500/8 via-violet-500/2 to-transparent',
+        budgetBadge: 'bg-violet-600 text-white border-violet-400/80 shadow-xs shadow-violet-500/30',
       };
     case 'colaboracion_pagada':
       return {
         cardClass: 'border-amber-500/60 dark:border-amber-500/40 ring-1 ring-amber-500/25 border-t-4 border-t-amber-500 shadow-[0_4px_30px_-4px_rgba(245,158,11,0.30)] dark:shadow-[0_0_35px_-4px_rgba(245,158,11,0.35)] hover:shadow-[0_8px_40px_-2px_rgba(245,158,11,0.45)]',
         headerTint: 'bg-gradient-to-b from-amber-500/8 via-amber-500/2 to-transparent',
+        budgetBadge: 'bg-amber-500 text-slate-950 border-amber-400/80 shadow-xs shadow-amber-500/30',
       };
     case 'organico':
     default:
       return {
         cardClass: 'border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md dark:shadow-none',
         headerTint: '',
+        budgetBadge: '',
       };
   }
 });
@@ -656,15 +660,23 @@ const tiposPauta = [
 
       <!-- Zona Inferior del Body: Media Link Card + Figuras Acompañantes -->
       <div class="space-y-3 pt-1">
-        <!-- Media Embed / Preview -->
-        <div>
+        <!-- Media Embed / Preview con el valor del presupuesto justo sobre la línea superior del div -->
+        <div class="relative mt-1">
+          <!-- Valor de Inversión (ej. $5.000 / $80.000) reposando justo sobre la línea del div -->
+          <div
+            v-if="['pauta_paga', 'organico_impulsado', 'colaboracion_pagada'].includes(post.tipo_pauta) && post.monto_invertido_pauta"
+            class="absolute -top-2.5 right-4 px-2 py-0.5 rounded-full font-mono text-[10px] font-extrabold shadow-xs z-10 tracking-tight flex items-center border"
+            :class="cardPautaStyles.budgetBadge"
+            :title="`Inversión en pauta: ${formatCurrency(post.monto_invertido_pauta)}`"
+          >
+            <span>{{ formatCurrency(post.monto_invertido_pauta) }}</span>
+          </div>
+
           <MediaEmbed
             :url="post.url_post"
             :media-url="post.media_url"
             :formato="post.tipo_formato || 'Post'"
             :plataforma="post.plataforma || post.perfil_social?.plataforma || 'facebook'"
-            :monto-invertido="['pauta_paga', 'organico_impulsado', 'colaboracion_pagada'].includes(post.tipo_pauta) ? post.monto_invertido_pauta : null"
-            :tipo-pauta="post.tipo_pauta || 'organico'"
           />
         </div>
 
