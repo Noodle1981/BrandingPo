@@ -2180,7 +2180,7 @@ const refrescarCanal = () => {
             <div v-if="isPaidDiffusion" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 animate-fadeIn">
               <div>
                 <label class="block text-xs font-bold text-violet-600 dark:text-violet-400 mb-1 flex items-center justify-between">
-                  <span>Monto Invertido en Pauta ($ ARS/USD) *</span>
+                  <span>Monto Invertido en Pauta ($ ARS — Pesos) *</span>
                   <span class="text-[10px] font-mono">Presupuesto Asignado</span>
                 </label>
                 <input

@@ -14,6 +14,9 @@ class Publicacion extends Model
 
     protected $table = 'publicaciones';
 
+    /** Tipos de pauta que implican inversión económica. */
+    public const TIPOS_CON_INVERSION = ['organico_impulsado', 'pauta_paga', 'colaboracion_pagada'];
+
     protected $fillable = [
         'workspace_id',
         'candidato_id',
@@ -84,7 +87,7 @@ class Publicacion extends Model
      */
     public function getTasaViralidadPctAttribute(): float
     {
-        $vistas = (int) $this->total_vistas;
+        $vistas = (int) ($this->vistas_organicas > 0 ? $this->vistas_organicas : $this->total_vistas);
         if ($vistas <= 0) {
             return 0.0;
         }
@@ -164,7 +167,17 @@ class Publicacion extends Model
      */
     public function scopeConPauta(Builder $query): Builder
     {
-        return $query->where('tipo_pauta', 'pauta_paga')->where('monto_invertido_pauta', '>', 0);
+        return $query->whereIn('tipo_pauta', self::TIPOS_CON_INVERSION)->where('monto_invertido_pauta', '>', 0);
+    }
+
+    /**
+     * Scope para filtrar publicaciones 100% orgánicas (sin inversión publicitaria).
+     */
+    public function scopeOrganicoPuro(Builder $query): Builder
+    {
+        return $query->where('tipo_pauta', 'organico')->where(function ($q) {
+            $q->whereNull('monto_invertido_pauta')->orWhere('monto_invertido_pauta', '<=', 0);
+        });
     }
 
     /**

@@ -9,7 +9,7 @@ class AdsImpactPredictorService
     /**
      * Predecir el impacto de visualizaciones y engagement para una publicación con pauta.
      *
-     * @param  float  $montoInvertido  Monto en ARS
+     * @param  float  $montoInvertido  Monto en ARS (Pesos Argentinos)
      * @param  string  $formato  Tipo de formato (Reel, Video, Foto, Carrusel, Tweet, etc.)
      * @param  string|null  $plataforma  Red social (instagram, facebook, tiktok, etc.)
      * @param  int|null  $candidatoId  ID del candidato (opcional para afinamiento)
@@ -21,7 +21,7 @@ class AdsImpactPredictorService
         ?int $candidatoId = null
     ): array {
         // 1. Buscar histórico de publicaciones con pauta
-        $query = Publicacion::where('tipo_pauta', 'pauta_paga')
+        $query = Publicacion::whereIn('tipo_pauta', Publicacion::TIPOS_CON_INVERSION)
             ->where('monto_invertido_pauta', '>', 0);
 
         if ($formato) {
@@ -38,7 +38,7 @@ class AdsImpactPredictorService
 
         // 2. Si no hay muestras suficientes con ese filtro exacto, ampliar a todas las pautadas
         if ($cantidadMuestras < 2) {
-            $historico = Publicacion::where('tipo_pauta', 'pauta_paga')
+            $historico = Publicacion::whereIn('tipo_pauta', Publicacion::TIPOS_CON_INVERSION)
                 ->where('monto_invertido_pauta', '>', 0)
                 ->get();
             $cantidadMuestras = $historico->count();

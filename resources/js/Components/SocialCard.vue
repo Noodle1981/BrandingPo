@@ -602,7 +602,7 @@ const tiposPauta = [
 
         <!-- Paid Ads Overlay Tag if with budget -->
         <div
-          v-if="post.tipo_pauta === 'pauta_paga' && post.monto_invertido_pauta"
+          v-if="['pauta_paga', 'organico_impulsado', 'colaboracion_pagada'].includes(post.tipo_pauta) && post.monto_invertido_pauta"
           class="absolute top-2.5 right-2.5 bg-violet-600/90 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md z-10"
         >
           <DollarSign class="w-3.5 h-3.5" />
@@ -862,7 +862,7 @@ const tiposPauta = [
             <!-- Inversión si no es orgánico -->
             <div v-if="editForm.tipo_pauta !== 'organico'">
               <label class="block text-xs font-bold text-violet-600 dark:text-violet-400 mb-1">
-                Monto Invertido en Pauta ($ ARS/USD)
+                Monto Invertido en Pauta ($ ARS — Pesos)
               </label>
               <input
                 v-model.number="editForm.monto_invertido_pauta"

@@ -83,6 +83,12 @@ class DashboardController extends Controller
         $interaccionesTotales = $totalLikes + $totalComentarios + $totalCompartidos + $totalRepublicados;
         $scoreImpactoTotal = ($totalLikes * 1) + ($totalComentarios * 3) + ($totalCompartidos * 5) + ($totalRepublicados * 10);
 
+        // Score de Impacto calculado SOLO sobre posts orgánicos puros (sin pauta)
+        $postsOrganicos = $publicaciones->filter(fn ($p) => ! in_array($p->tipo_pauta, Publicacion::TIPOS_CON_INVERSION));
+        $scoreImpactoOrganicoPuro = (int) $postsOrganicos->sum(function ($p) {
+            return ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10);
+        });
+
         // ─────────────────────────────────────────────────────────────
         // DESDUPLICACIÓN DE AUDIENCIA POR TIERS (SOLO ELEMENTOS ACTIVOS)
         // ─────────────────────────────────────────────────────────────
@@ -404,11 +410,11 @@ class DashboardController extends Controller
         }
 
         // 6. Orgánico vs Pauta
-        $postsOrganicos = $publicaciones->filter(fn ($p) => $p->tipo_pauta === 'organico' || (float) $p->monto_invertido_pauta <= 0);
-        $postsPautados = $publicaciones->filter(fn ($p) => $p->tipo_pauta !== 'organico' && (float) $p->monto_invertido_pauta > 0);
+        $postsOrganicos = $publicaciones->filter(fn ($p) => ! in_array($p->tipo_pauta, Publicacion::TIPOS_CON_INVERSION));
+        $postsPautados = $publicaciones->filter(fn ($p) => in_array($p->tipo_pauta, Publicacion::TIPOS_CON_INVERSION) && (float) $p->monto_invertido_pauta > 0);
 
         $vistasOrg = (int) $postsOrganicos->sum('total_vistas');
-        $vistasPag = (int) $postsPautados->sum('total_vistas');
+        $vistasPag = (int) $postsPautados->sum('vistas_pagadas');
         $intOrg = (int) $postsOrganicos->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
         $intPag = (int) $postsPautados->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
 
@@ -571,6 +577,8 @@ class DashboardController extends Controller
                 'crecimiento_pct_seguidores' => $crecimientoPctTotalSeguidores,
                 'score_impacto_total' => number_format($scoreImpactoTotal),
                 'score_impacto_raw' => $scoreImpactoTotal,
+                'score_impacto_organico_puro' => number_format($scoreImpactoOrganicoPuro),
+                'score_impacto_organico_puro_raw' => $scoreImpactoOrganicoPuro,
                 'score_impacto_meta' => number_format($scoreImpactoMeta),
                 'score_impacto_meta_raw' => $scoreImpactoMeta,
                 'score_impacto_pct' => $scoreImpactoPct,

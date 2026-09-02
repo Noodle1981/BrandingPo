@@ -1171,11 +1171,11 @@ class CandidatoController extends Controller
 
         // 7. Orgánico vs Pauta (Desglose Estratégico)
         $postsOrganicos = $publicaciones->filter(function ($p) {
-            return $p->tipo_pauta === 'organico' || empty($p->tipo_pauta) || (float) $p->monto_invertido_pauta <= 0;
+            return ! in_array($p->tipo_pauta, Publicacion::TIPOS_CON_INVERSION) || (float) $p->monto_invertido_pauta <= 0;
         });
 
         $postsPautados = $publicaciones->filter(function ($p) {
-            return $p->tipo_pauta !== 'organico' && ((float) $p->monto_invertido_pauta > 0 || in_array($p->tipo_pauta, ['pauta_paga', 'boosted', 'dark_post']));
+            return in_array($p->tipo_pauta, Publicacion::TIPOS_CON_INVERSION) && (float) $p->monto_invertido_pauta > 0;
         });
 
         $intOrganicas = $postsOrganicos->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
