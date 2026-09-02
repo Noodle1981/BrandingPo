@@ -94,28 +94,24 @@ const cardPautaStyles = computed(() => {
   switch (p) {
     case 'organico_impulsado':
       return {
-        cardClass: 'border-cyan-500/60 dark:border-cyan-500/40 ring-1 ring-cyan-500/20 shadow-xs shadow-cyan-500/10 border-t-4 border-t-cyan-500',
+        cardClass: 'border-cyan-500/60 dark:border-cyan-500/40 ring-1 ring-cyan-500/25 border-t-4 border-t-cyan-500 shadow-[0_4px_30px_-4px_rgba(6,182,212,0.30)] dark:shadow-[0_0_35px_-4px_rgba(6,182,212,0.35)] hover:shadow-[0_8px_40px_-2px_rgba(6,182,212,0.45)]',
         headerTint: 'bg-gradient-to-b from-cyan-500/8 via-cyan-500/2 to-transparent',
-        budgetBadge: 'bg-cyan-500 text-slate-950 font-extrabold',
       };
     case 'pauta_paga':
       return {
-        cardClass: 'border-violet-500/60 dark:border-violet-500/40 ring-1 ring-violet-500/20 shadow-xs shadow-violet-500/10 border-t-4 border-t-violet-500',
+        cardClass: 'border-violet-500/60 dark:border-violet-500/40 ring-1 ring-violet-500/25 border-t-4 border-t-violet-500 shadow-[0_4px_30px_-4px_rgba(139,92,246,0.30)] dark:shadow-[0_0_35px_-4px_rgba(139,92,246,0.35)] hover:shadow-[0_8px_40px_-2px_rgba(139,92,246,0.45)]',
         headerTint: 'bg-gradient-to-b from-violet-500/8 via-violet-500/2 to-transparent',
-        budgetBadge: 'bg-violet-600 text-white font-bold',
       };
     case 'colaboracion_pagada':
       return {
-        cardClass: 'border-amber-500/60 dark:border-amber-500/40 ring-1 ring-amber-500/20 shadow-xs shadow-amber-500/10 border-t-4 border-t-amber-500',
+        cardClass: 'border-amber-500/60 dark:border-amber-500/40 ring-1 ring-amber-500/25 border-t-4 border-t-amber-500 shadow-[0_4px_30px_-4px_rgba(245,158,11,0.30)] dark:shadow-[0_0_35px_-4px_rgba(245,158,11,0.35)] hover:shadow-[0_8px_40px_-2px_rgba(245,158,11,0.45)]',
         headerTint: 'bg-gradient-to-b from-amber-500/8 via-amber-500/2 to-transparent',
-        budgetBadge: 'bg-amber-500 text-slate-950 font-extrabold',
       };
     case 'organico':
     default:
       return {
-        cardClass: 'border-slate-200 dark:border-slate-800',
+        cardClass: 'border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md dark:shadow-none',
         headerTint: '',
-        budgetBadge: 'bg-slate-700 text-white font-semibold',
       };
   }
 });
@@ -661,23 +657,15 @@ const tiposPauta = [
       <!-- Zona Inferior del Body: Media Link Card + Figuras Acompañantes -->
       <div class="space-y-3 pt-1">
         <!-- Media Embed / Preview -->
-        <div class="relative">
+        <div>
           <MediaEmbed
             :url="post.url_post"
             :media-url="post.media_url"
             :formato="post.tipo_formato || 'Post'"
             :plataforma="post.plataforma || post.perfil_social?.plataforma || 'facebook'"
+            :monto-invertido="['pauta_paga', 'organico_impulsado', 'colaboracion_pagada'].includes(post.tipo_pauta) ? post.monto_invertido_pauta : null"
+            :tipo-pauta="post.tipo_pauta || 'organico'"
           />
-
-          <!-- Paid Ads Overlay Tag if with budget -->
-          <div
-            v-if="['pauta_paga', 'organico_impulsado', 'colaboracion_pagada'].includes(post.tipo_pauta) && post.monto_invertido_pauta"
-            class="absolute top-2.5 right-2.5 backdrop-blur-xs text-xs px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md z-10"
-            :class="cardPautaStyles.budgetBadge"
-          >
-            <DollarSign class="w-3.5 h-3.5" />
-            <span>Invertido: {{ formatCurrency(post.monto_invertido_pauta) }}</span>
-          </div>
         </div>
 
         <!-- Accompanying Figures / Alliances -->
