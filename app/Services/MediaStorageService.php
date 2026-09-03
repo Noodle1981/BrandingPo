@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\SecurityHelper;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -28,9 +29,9 @@ class MediaStorageService
             return str_starts_with($urlExterna, '/') ? $urlExterna : '/'.$urlExterna;
         }
 
-        // Si no es un enlace HTTP(S), retornar intacto
-        if (! str_starts_with($urlExterna, 'http://') && ! str_starts_with($urlExterna, 'https://')) {
-            return $urlExterna;
+        // Validación de seguridad SSRF: solo admitir URLs públicas y esquemas seguros
+        if (! SecurityHelper::esUrlSegura($urlExterna)) {
+            return $rutaActual ?: $urlExterna;
         }
 
         try {
@@ -105,8 +106,9 @@ class MediaStorageService
             return str_starts_with($urlExterna, '/') ? $urlExterna : '/'.$urlExterna;
         }
 
-        if (! str_starts_with($urlExterna, 'http://') && ! str_starts_with($urlExterna, 'https://')) {
-            return $urlExterna;
+        // Validación de seguridad SSRF: solo admitir URLs públicas y esquemas seguros
+        if (! SecurityHelper::esUrlSegura($urlExterna)) {
+            return $rutaActual ?: $urlExterna;
         }
 
         try {

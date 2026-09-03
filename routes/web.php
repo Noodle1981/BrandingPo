@@ -18,8 +18,8 @@ use Illuminate\Support\Facades\Route;
 
 // --- Rutas Públicas / Autenticación ---
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/quick-login', [AuthController::class, 'quickLogin'])->name('quick-login');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth');
+Route::post('/quick-login', [AuthController::class, 'quickLogin'])->middleware('throttle:auth')->name('quick-login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // --- Rutas Protegidas (Requieren autenticación y Workspace Activo) ---

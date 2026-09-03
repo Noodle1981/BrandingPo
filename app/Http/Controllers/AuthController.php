@@ -56,6 +56,10 @@ class AuthController extends Controller
      */
     public function quickLogin(Request $request): RedirectResponse
     {
+        if (app()->isProduction()) {
+            abort(403, 'El acceso rápido de demostración está deshabilitado en entorno de producción.');
+        }
+
         $role = $request->input('role', 'admin');
         $user = User::where('role', $role)->first();
 

@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -52,20 +53,20 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:6'],
+            'password' => ['required', 'string', Password::min(8)],
             'role' => ['required', Rule::in(['admin', 'consultor', 'visualizador'])],
         ], [
             'name.required' => 'El nombre es obligatorio.',
             'email.required' => 'El correo electrónico es obligatorio.',
             'email.unique' => 'Ya existe un usuario con este correo.',
-            'password.min' => 'La contraseña debe tener al menos 6 caracteres.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
             'role.in' => 'El rol seleccionado no es válido.',
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => bcrypt($validated['password']),
+            'password' => $validated['password'],
             'role' => $validated['role'],
             'active_workspace_id' => $workspace?->id,
         ]);
@@ -91,7 +92,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($usuario->id)],
             'role' => ['required', Rule::in(['admin', 'consultor', 'visualizador'])],
-            'password' => ['nullable', 'string', 'min:6'],
+            'password' => ['nullable', 'string', Password::min(8)],
         ]);
 
         $data = [
@@ -101,7 +102,7 @@ class UserController extends Controller
         ];
 
         if (! empty($validated['password'])) {
-            $data['password'] = bcrypt($validated['password']);
+            $data['password'] = $validated['password'];
         }
 
         $usuario->update($data);

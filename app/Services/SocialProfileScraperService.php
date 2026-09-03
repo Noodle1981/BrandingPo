@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\SecurityHelper;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -29,6 +30,12 @@ class SocialProfileScraperService
 
         if (empty($url)) {
             $result['mensaje'] = 'La URL está vacía.';
+
+            return $result;
+        }
+
+        if (! SecurityHelper::esUrlSegura($url)) {
+            $result['mensaje'] = 'La URL proporcionada no es válida o apunta a un destino restringido.';
 
             return $result;
         }
@@ -659,6 +666,13 @@ class SocialProfileScraperService
         $cleanUrl = preg_replace('/(\?|&)(?:twsrc|twcamp|tweetembed|twterm|twgr|twcon)=[^&]*/i', '', $cleanUrl);
         $cleanUrl = rtrim($cleanUrl, '?&');
         $result['url_post'] = $cleanUrl;
+
+        // Validación de seguridad SSRF
+        if (! SecurityHelper::esUrlSegura($cleanUrl)) {
+            $result['mensaje'] = 'La URL de la publicación no es válida o apunta a un host no permitido.';
+
+            return $result;
+        }
 
         // 2. Detectar plataforma
         if (str_contains($cleanUrl, 'instagram.com')) {
