@@ -144,18 +144,6 @@ const platformDiffusionTypes = {
   ],
 };
 
-const currentPlatformFormats = computed(() => {
-  return platformFormats[selectedPlatformKey.value] || platformFormats.instagram;
-});
-
-const currentPlatformDiffusionTypes = computed(() => {
-  return platformDiffusionTypes[selectedPlatformKey.value] || platformDiffusionTypes.default;
-});
-
-const isPaidDiffusion = computed(() => {
-  return formPost.tipo_pauta !== 'organico';
-});
-
 const props = defineProps({
   candidato: {
     type: Object,
@@ -783,6 +771,18 @@ const formPost = useForm({
   termometro_humor_social: 4,
   comentario_destacado: '',
   figura_acompanante: '',
+});
+
+const currentPlatformFormats = computed(() => {
+  return platformFormats[selectedPlatformKey.value] || platformFormats.instagram;
+});
+
+const currentPlatformDiffusionTypes = computed(() => {
+  return platformDiffusionTypes[selectedPlatformKey.value] || platformDiffusionTypes.default;
+});
+
+const isPaidDiffusion = computed(() => {
+  return formPost.tipo_pauta !== 'organico';
 });
 
 const openCreatePostModal = () => {

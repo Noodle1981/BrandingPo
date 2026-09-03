@@ -128,7 +128,7 @@ class PublicacionController extends Controller
             'total_comentarios' => $freshComments,
             'url_post' => $publicacion->url_post,
             'fecha' => $publicacion->fecha_publicacion?->format('d/m/Y') ?? 'Reciente',
-            'resumen' => substr($publicacion->contenido_resumen, 0, 45).(strlen($publicacion->contenido_resumen) > 45 ? '...' : ''),
+            'resumen' => Str::limit($publicacion->contenido_resumen ?? '', 45),
         ]);
     }
 
