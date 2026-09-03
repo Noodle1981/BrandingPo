@@ -7,6 +7,7 @@ use App\Models\Candidato;
 use App\Models\NotaPrensa;
 use App\Models\Publicacion;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -53,7 +54,7 @@ class DashboardController extends Controller
         // Publicaciones del candidato en este workspace
         $publicaciones = Publicacion::where('workspace_id', $workspace->id)
             ->where('candidato_id', $candidato->id)
-            ->with(['perfilSocial', 'ejeTematico'])
+            ->with(['perfilSocial', 'ejeTematico', 'pautaEventos'])
             ->latest('fecha_publicacion')
             ->get();
 
@@ -774,10 +775,63 @@ class DashboardController extends Controller
         $postsOrganicos = $publicaciones->filter(fn ($p) => ! in_array($p->tipo_pauta, Publicacion::TIPOS_CON_INVERSION));
         $postsPautados = $publicaciones->filter(fn ($p) => in_array($p->tipo_pauta, Publicacion::TIPOS_CON_INVERSION) && (float) $p->monto_invertido_pauta > 0);
 
-        $vistasOrg = (int) $postsOrganicos->sum('total_vistas');
-        $vistasPag = (int) $postsPautados->sum('vistas_pagadas');
-        $intOrg = (int) $postsOrganicos->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
-        $intPag = (int) $postsPautados->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0));
+        // Desglose detallado de posts impulsados con eventos de booster y snapshots de corte
+        $postsImpulsadosDetalle = $postsPautados->map(function ($p) {
+            $ultimoEvento = $p->pautaEventos->first();
+
+            if ($ultimoEvento) {
+                $baseOrganicaLikes = (int) $ultimoEvento->likes_snapshot;
+                $ganadosPautaLikes = max(0, (int) $p->total_likes - $baseOrganicaLikes);
+                $baseOrganicaVistas = (int) $ultimoEvento->vistas_snapshot;
+                $ganadosPautaVistas = max(0, (int) $p->total_vistas - $baseOrganicaVistas);
+                $fechaBooster = $ultimoEvento->fecha_evento ? $ultimoEvento->fecha_evento->format('d/m/Y') : null;
+                $costoPorLikeAtribuible = $ultimoEvento->costo_por_like;
+            } else {
+                $baseOrganicaLikes = (int) round($p->total_likes * 0.70);
+                $ganadosPautaLikes = max(0, $p->total_likes - $baseOrganicaLikes);
+                $baseOrganicaVistas = (int) ($p->vistas_organicas > 0 ? $p->vistas_organicas : round($p->total_vistas * 0.70));
+                $ganadosPautaVistas = max(0, (int) ($p->vistas_pagadas > 0 ? $p->vistas_pagadas : $p->total_vistas - $baseOrganicaVistas));
+                $fechaBooster = $p->fecha_publicacion ? $p->fecha_publicacion->format('d/m/Y') : 'Activo';
+                $costoPorLikeAtribuible = $ganadosPautaLikes > 0 && (float) $p->monto_invertido_pauta > 0
+                    ? round((float) $p->monto_invertido_pauta / $ganadosPautaLikes, 2)
+                    : null;
+            }
+
+            $totalInteraccionesPost = (int) ($p->total_likes + $p->total_comentarios + $p->total_compartidos + ($p->total_republicados ?? 0));
+            $pctOrg = $p->total_likes > 0 ? round(($baseOrganicaLikes / $p->total_likes) * 100, 1) : 100;
+            $pctPauta = $p->total_likes > 0 ? round(($ganadosPautaLikes / $p->total_likes) * 100, 1) : 0;
+
+            return [
+                'id' => $p->id,
+                'titulo' => Str::limit($p->contenido_resumen ?: 'Post Impulsado', 65),
+                'url_post' => $p->url_post,
+                'media_url' => $p->media_url,
+                'plataforma' => $p->plataforma ?: $p->perfilSocial?->plataforma ?: 'facebook',
+                'tipo_formato' => $p->tipo_formato ?: 'Post',
+                'tipo_pauta' => $p->tipo_pauta,
+                'monto_invertido' => (float) $p->monto_invertido_pauta,
+                'total_likes' => (int) $p->total_likes,
+                'base_organica_likes' => $baseOrganicaLikes,
+                'ganados_pauta_likes' => $ganadosPautaLikes,
+                'total_vistas' => (int) $p->total_vistas,
+                'base_organica_vistas' => $baseOrganicaVistas,
+                'ganados_pauta_vistas' => $ganadosPautaVistas,
+                'total_interacciones' => $totalInteraccionesPost,
+                'pct_organico' => $pctOrg,
+                'pct_pautado' => $pctPauta,
+                'costo_por_like' => $costoPorLikeAtribuible,
+                'fecha_booster' => $fechaBooster,
+                'estado' => $p->tipo_pauta === 'organico_impulsado' ? 'Booster Activo' : 'Dark Post Activo',
+            ];
+        })->values();
+
+        $vistasOrg = (int) $postsOrganicos->sum('total_vistas') + (int) $postsImpulsadosDetalle->sum('base_organica_vistas');
+        $vistasPag = (int) $postsImpulsadosDetalle->sum('ganados_pauta_vistas');
+        $intOrg = (int) $postsOrganicos->sum(fn ($p) => $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0)) + (int) $postsImpulsadosDetalle->sum('base_organica_likes');
+        $intPag = (int) $postsImpulsadosDetalle->sum('ganados_pauta_likes');
+
+        $totalIntGeneral = $intOrg + $intPag;
+        $totalVistasGeneral = $vistasOrg + $vistasPag;
 
         $costoPorInteraccion = ($totalPauta > 0 && $intPag > 0) ? round($totalPauta / $intPag, 2) : 0;
         $cpmEstimado = ($totalPauta > 0 && $vistasPag > 0) ? round(($totalPauta / $vistasPag) * 1000, 2) : 0;
@@ -789,11 +843,15 @@ class DashboardController extends Controller
             'vistas_pagadas' => $vistasPag,
             'interacciones_organicas' => $intOrg,
             'interacciones_pautadas' => $intPag,
-            'porcentaje_vistas_organicas' => $totalVistas > 0 ? round(($vistasOrg / $totalVistas) * 100, 1) : 100,
-            'porcentaje_vistas_pagadas' => $totalVistas > 0 ? round(($vistasPag / $totalVistas) * 100, 1) : 0,
+            'porcentaje_interacciones_organicas' => $totalIntGeneral > 0 ? round(($intOrg / $totalIntGeneral) * 100, 1) : 100,
+            'porcentaje_interacciones_pautadas' => $totalIntGeneral > 0 ? round(($intPag / $totalIntGeneral) * 100, 1) : 0,
+            'porcentaje_vistas_organicas' => $totalVistasGeneral > 0 ? round(($vistasOrg / $totalVistasGeneral) * 100, 1) : 100,
+            'porcentaje_vistas_pagadas' => $totalVistasGeneral > 0 ? round(($vistasPag / $totalVistasGeneral) * 100, 1) : 0,
             'inversion_total' => $totalPauta,
             'costo_por_interaccion' => $costoPorInteraccion,
             'cpm_estimado' => $cpmEstimado,
+            'posts_impulsados' => $postsImpulsadosDetalle,
+            'primer_post_impulsado' => $postsImpulsadosDetalle->first(),
         ];
 
         // 7. Top Publicaciones Destacadas
