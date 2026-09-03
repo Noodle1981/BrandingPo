@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import MetricCard from '../../Components/MetricCard.vue';
@@ -82,8 +82,23 @@ const ejecutarSimulacion = async () => {
   }
 };
 
+let debounceTimer = null;
+
+const debouncedSimular = () => {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    ejecutarSimulacion();
+  }, 300);
+};
+
 watch([montoSlider, formatoSelect, plataformaSelect, candidatoSelect], () => {
-  ejecutarSimulacion();
+  debouncedSimular();
+});
+
+onUnmounted(() => {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+  }
 });
 
 const formatNumber = (num) => {

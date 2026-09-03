@@ -142,9 +142,6 @@ const confirmarFecha = () => {
         guardandoFecha.value = false;
         // Actualizar estado visual inmediatamente sin esperar al reload de Inertia
         fechaConfirmadaLocalmente.value = true;
-        if (props.post) {
-          props.post.fecha_confirmada = true;
-        }
         fechaHumanaLocal.value = formatearFechaHumana(fechaEditada.value);
       },
       onError: () => {
