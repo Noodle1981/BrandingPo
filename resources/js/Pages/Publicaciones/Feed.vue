@@ -1371,12 +1371,65 @@ const formatCurrency = (amount) => {
                   </div>
                 </div>
 
-                <!-- CASO 4: X / TWITTER Y THREADS -->
-                <div v-else-if="createForm.plataforma === 'x_twitter' || createForm.plataforma === 'twitter' || createForm.plataforma === 'threads'" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-3">
+                <!-- CASO 4A: THREADS -->
+                <div v-else-if="createForm.plataforma === 'threads'" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-3">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1.5">
-                      <span class="font-black text-xs text-slate-100 font-mono">{{ createForm.plataforma === 'threads' ? '@' : '𝕏' }}</span>
-                      <span class="font-bold text-xs text-slate-800 dark:text-slate-200">{{ createForm.plataforma === 'threads' ? 'Métricas de Threads' : 'Métricas de X (Twitter)' }}</span>
+                      <span class="font-black text-xs text-slate-100 font-mono">@</span>
+                      <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas de Threads</span>
+                    </div>
+                    <span class="text-[10px] font-mono text-cyan-400 font-bold uppercase">Feed de Conversación</span>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2 font-mono text-center">
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-rose-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-rose-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Heart class="w-3 h-3 fill-rose-500" />
+                        <span>Me gusta (❤️)</span>
+                      </label>
+                      <input v-model.number="createForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-blue-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-blue-500 mb-0.5 flex items-center justify-center gap-1">
+                        <MessageCircle class="w-3 h-3" />
+                        <span>Respuestas (💬)</span>
+                      </label>
+                      <input v-model.number="createForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Repeat class="w-3 h-3" />
+                        <span>Reposts (🔁)</span>
+                      </label>
+                      <input v-model.number="createForm.total_republicados" type="number" min="0" class="w-full text-center text-xs font-bold" />
+                    </div>
+
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Send class="w-3 h-3" />
+                        <span>Compartir (✈️)</span>
+                      </label>
+                      <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                  </div>
+
+                  <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center font-mono">
+                    <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-0.5 flex items-center justify-center gap-1">
+                      <Eye class="w-3 h-3" />
+                      <span>Visualizaciones / Vistas</span>
+                    </label>
+                    <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                </div>
+
+                <!-- CASO 4B: X / TWITTER -->
+                <div v-else-if="createForm.plataforma === 'x_twitter' || createForm.plataforma === 'twitter'" class="p-4 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-black text-xs text-slate-100 font-mono">𝕏</span>
+                      <span class="font-bold text-xs text-slate-800 dark:text-slate-200">Métricas de X (Twitter)</span>
                     </div>
                     <span class="text-[10px] font-mono text-cyan-400 font-bold uppercase">Timeline</span>
                   </div>
@@ -1415,12 +1468,21 @@ const formatCurrency = (amount) => {
                     </div>
                   </div>
 
-                  <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center font-mono">
-                    <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-0.5 flex items-center justify-center gap-1">
-                      <Eye class="w-3 h-3" />
-                      <span>Impresiones / Vistas</span>
-                    </label>
-                    <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
+                  <div class="grid grid-cols-2 gap-2 font-mono text-center">
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-0.5 flex items-center justify-center gap-1">
+                        <Eye class="w-3 h-3" />
+                        <span>Impresiones</span>
+                      </label>
+                      <input v-model.number="createForm.vistas_organicas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
+                    </div>
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs">
+                      <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-0.5 flex items-center justify-center gap-1">
+                        <Send class="w-3 h-3" />
+                        <span>Compartidos (↗️)</span>
+                      </label>
+                      <input v-model.number="createForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
+                    </div>
                   </div>
                 </div>
 

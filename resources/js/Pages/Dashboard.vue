@@ -41,6 +41,7 @@ import {
   Film,
   Rocket,
   Maximize2,
+  Calendar,
   X
 } from '@lucide/vue';
 
@@ -93,6 +94,17 @@ const props = defineProps({
       crecimiento_pct_seguidores: 0,
       score_impacto_total: '0',
       score_impacto_raw: 0,
+      score_promedio_post: '0',
+      score_promedio_post_raw: 0,
+      score_promedio_post_meta: '0',
+      score_promedio_post_pct: 0,
+      score_promedio_mensual: '0',
+      score_promedio_mensual_raw: 0,
+      score_promedio_diario: '0',
+      score_promedio_diario_raw: 0,
+      dias_campana_activa: 1,
+      meses_campana_activa: 1,
+      tendencia_score_mes: null,
       score_impacto_meta: '0',
       score_impacto_meta_raw: 0,
       score_impacto_pct: 0,
@@ -110,6 +122,10 @@ const props = defineProps({
       tiers_desglose: [],
       share_of_voice: '0%',
     })
+  },
+  desglose_mensual: {
+    type: Array,
+    default: () => []
   },
   redes_desglose: {
     type: Array,
@@ -249,184 +265,475 @@ const redesDisponiblesTimeline = computed(() => {
   return props.redes_desglose.filter(r => r.handle_usuario || r.esta_activo || r.seguidores > 0);
 });
 
+// Redes que manejan métricas de visualizaciones activas (> 0 vistas) para la Gráfica 3
+const redesConVistasDisponibles = computed(() => {
+  return props.redes_desglose.filter(r => (r.vistas_acumuladas && r.vistas_acumuladas > 0));
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. GRÁFICA TEMPORAL: COMUNIDAD (SEGUIDORES NETOS) CON HITOS DE BOOSTER 🚀
 // ─────────────────────────────────────────────────────────────────────────────
+// 1. GRÁFICA TEMPORAL: COMUNIDAD MULTILÍNEA SIMULTÁNEA CON HITOS DE BOOSTER 🚀
+// ─────────────────────────────────────────────────────────────────────────────
 const selectedComunidadPlatform = ref('todas');
 
-const activeComunidadSeries = computed(() => {
-  if (selectedComunidadPlatform.value !== 'todas' && props.series_por_red && props.series_por_red[selectedComunidadPlatform.value]) {
-    const s = props.series_por_red[selectedComunidadPlatform.value];
-    return {
-      nombre: s.nombre,
-      color: s.color || getSocialMeta(selectedComunidadPlatform.value).color,
-      puntos: s.puntos || [],
-      esIndividual: true,
-    };
-  }
-  return {
-    nombre: 'Comunidad Total Multired',
-    color: '#06b6d4',
-    puntos: props.historico_mediciones || [],
-    esIndividual: false,
-  };
-});
-
 const comunidadChartData = computed(() => {
-  const current = activeComunidadSeries.value;
-  const labels = current.puntos.map(m => m.fecha);
-  const data = current.puntos.map(m => m.seguidores);
-  const colorHex = current.color;
-
   const hitos = props.hitos_booster || [];
+  const series = props.series_por_red || {};
+  const plataformasKeys = Object.keys(series);
+
+  // MODO 1: MULTILÍNEA SIMULTÁNEA (TODAS LAS REDES JUNTAS CON SUS COLORES OFICIALES)
+  if (selectedComunidadPlatform.value === 'todas') {
+    // Tomar las etiquetas cronológicas de la primera serie disponible
+    const primerKey = plataformasKeys[0];
+    const labels = primerKey && series[primerKey].puntos
+      ? series[primerKey].puntos.map(m => m.fecha)
+      : (props.historico_mediciones || []).map(m => m.fecha);
+
+    const datasets = [];
+
+    plataformasKeys.forEach(platKey => {
+      const s = series[platKey];
+      if (!s || !s.puntos || s.puntos.length === 0) return;
+
+      const meta = getSocialMeta(platKey);
+      const colorHex = s.color || meta.color;
+
+      const pointRadiuses = [];
+      const pointHoverRadiuses = [];
+      const pointBackgroundColors = [];
+      const pointBorderColors = [];
+      const pointBorderWidths = [];
+
+      s.puntos.forEach(p => {
+        // El booster DEBE coincidir con la plataforma exacta de esta línea
+        const tieneBooster = hitos.some(h => 
+          h.plataforma === platKey && (
+            (h.fecha_raw && p.fecha_raw && h.fecha_raw === p.fecha_raw) || 
+            (h.fecha && p.fecha && h.fecha === p.fecha)
+          )
+        );
+
+        if (tieneBooster) {
+          pointRadiuses.push(8);
+          pointHoverRadiuses.push(10);
+          pointBackgroundColors.push('#ef4444'); // Rojo Booster solo en su red real
+          pointBorderColors.push('#ffffff');
+          pointBorderWidths.push(2);
+        } else {
+          pointRadiuses.push(3);
+          pointHoverRadiuses.push(5);
+          pointBackgroundColors.push(colorHex);
+          pointBorderColors.push('#ffffff');
+          pointBorderWidths.push(1);
+        }
+      });
+
+      datasets.push({
+        label: s.nombre,
+        data: s.puntos.map(m => m.seguidores),
+        borderColor: colorHex,
+        backgroundColor: `${colorHex}15`,
+        fill: false,
+        tension: 0.35,
+        borderWidth: 2.5,
+        pointRadius: pointRadiuses,
+        pointHoverRadius: pointHoverRadiuses,
+        pointBackgroundColor: pointBackgroundColors,
+        pointBorderColor: pointBorderColors,
+        pointBorderWidth: pointBorderWidths,
+        plataforma: platKey,
+      });
+    });
+
+    // Línea destacada: Suma Total de Todas las Redes (Consolidado Multired)
+    const totalPuntos = props.historico_mediciones || [];
+    if (totalPuntos.length > 0) {
+      const colorTotal = '#06b6d4'; // Cian institucional War Room
+      datasets.unshift({
+        label: 'Total Multired (Suma)',
+        data: totalPuntos.map(m => m.seguidores),
+        borderColor: colorTotal,
+        backgroundColor: `${colorTotal}10`,
+        fill: false,
+        tension: 0.35,
+        borderWidth: 2.5,
+        borderDash: [5, 4], // Estilo punteado elegante para identificar la suma consolidada
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: colorTotal,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1.5,
+        plataforma: 'todas',
+      });
+    }
+
+    return { labels, datasets };
+  }
+
+  // MODO 2: RED INDIVIDUAL AISLADA
+  const s = series[selectedComunidadPlatform.value];
+  if (!s || !s.puntos || s.puntos.length === 0) {
+    return { labels: [], datasets: [] };
+  }
+
+  const meta = getSocialMeta(selectedComunidadPlatform.value);
+  const colorHex = s.color || meta.color;
+  const labels = s.puntos.map(m => m.fecha);
+  const data = s.puntos.map(m => m.seguidores);
+
   const pointRadiuses = [];
   const pointHoverRadiuses = [];
   const pointBackgroundColors = [];
   const pointBorderColors = [];
+  const pointBorderWidths = [];
 
-  current.puntos.forEach(p => {
+  s.puntos.forEach(p => {
     const tieneBooster = hitos.some(h => 
-      (h.fecha_raw && p.fecha_raw && h.fecha_raw === p.fecha_raw) || 
-      (h.fecha && p.fecha && h.fecha === p.fecha)
+      h.plataforma === selectedComunidadPlatform.value && (
+        (h.fecha_raw && p.fecha_raw && h.fecha_raw === p.fecha_raw) || 
+        (h.fecha && p.fecha && h.fecha === p.fecha)
+      )
     );
+
     if (tieneBooster) {
-      pointRadiuses.push(7);
-      pointHoverRadiuses.push(9);
-      pointBackgroundColors.push('#f43f5e'); // Rojo Fuego para Booster
+      pointRadiuses.push(8);
+      pointHoverRadiuses.push(10);
+      pointBackgroundColors.push('#ef4444');
       pointBorderColors.push('#ffffff');
+      pointBorderWidths.push(2);
     } else {
       pointRadiuses.push(3);
       pointHoverRadiuses.push(5);
       pointBackgroundColors.push(colorHex);
       pointBorderColors.push('#ffffff');
+      pointBorderWidths.push(1);
     }
   });
 
   return {
     labels,
     datasets: [{
-      label: `${current.nombre} (Seguidores)`,
+      label: s.nombre,
       data,
       borderColor: colorHex,
       backgroundColor: `${colorHex}18`,
       fill: true,
       tension: 0.35,
+      borderWidth: 2.5,
       pointRadius: pointRadiuses,
       pointHoverRadius: pointHoverRadiuses,
       pointBackgroundColor: pointBackgroundColors,
       pointBorderColor: pointBorderColors,
-      borderWidth: 2.5,
+      pointBorderWidth: pointBorderWidths,
+      plataforma: selectedComunidadPlatform.value,
     }]
   };
 });
 
-const comunidadChartOptions = computed(() => ({
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: '#0f172a',
-      titleColor: '#06b6d4',
-      bodyColor: '#f8fafc',
-      padding: 10,
-      cornerRadius: 8,
-      borderColor: 'rgba(148, 163, 184, 0.2)',
-      borderWidth: 1,
-      callbacks: {
-        label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString('es-AR')}`,
-        afterLabel: (ctx) => {
-          const idx = ctx.dataIndex;
-          const current = activeComunidadSeries.value;
-          const punto = current.puntos ? current.puntos[idx] : null;
-          if (!punto) return '';
-          const hitos = (props.hitos_booster || []).filter(h => 
-            (h.fecha_raw && punto.fecha_raw && h.fecha_raw === punto.fecha_raw) || 
-            (h.fecha && punto.fecha && h.fecha === punto.fecha)
-          );
-          if (hitos.length > 0) {
-            const h = hitos[0];
-            return `🚀 BOOSTER ACTIVO: ${h.monto_formateado} (${h.plataforma.toUpperCase()})\n📌 ${h.titulo}`;
+const comunidadChartOptions = computed(() => {
+  const isAll = selectedComunidadPlatform.value === 'todas';
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        display: isAll,
+        position: 'top',
+        align: 'end',
+        labels: {
+          boxWidth: 8,
+          boxHeight: 8,
+          usePointStyle: true,
+          color: '#94a3b8',
+          padding: 8,
+          font: { size: 10, family: 'monospace', weight: 'bold' }
+        }
+      },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        titleColor: '#06b6d4',
+        bodyColor: '#f8fafc',
+        padding: 10,
+        cornerRadius: 8,
+        borderColor: 'rgba(148, 163, 184, 0.2)',
+        borderWidth: 1,
+        callbacks: {
+          label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString('es-AR')} seg`,
+          afterLabel: (ctx) => {
+            const dataset = ctx.dataset;
+            const plat = dataset.plataforma || selectedComunidadPlatform.value;
+            const idx = ctx.dataIndex;
+            const series = props.series_por_red || {};
+            const punto = series[plat]?.puntos ? series[plat].puntos[idx] : null;
+            if (!punto) return '';
+
+            const hitos = (props.hitos_booster || []).filter(h => 
+              h.plataforma === plat && (
+                (h.fecha_raw && punto.fecha_raw && h.fecha_raw === punto.fecha_raw) || 
+                (h.fecha && punto.fecha && h.fecha === punto.fecha)
+              )
+            );
+
+            if (hitos.length > 0) {
+              const h = hitos[0];
+              return `🚀 BOOSTER ${h.plataforma.toUpperCase()}: ${h.monto_formateado}\n📌 ${h.titulo}`;
+            }
+            return '';
           }
-          return '';
         }
       }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
+      y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
     }
-  },
-  scales: {
-    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
-    y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
-  }
-}));
+  };
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. GRÁFICA TEMPORAL: TRACCIÓN / SCORE DE IMPACTO PONDERADO (PUNTOS 🔥)
 // ─────────────────────────────────────────────────────────────────────────────
 const selectedScorePlatform = ref('todas');
 
-const activeScoreSeries = computed(() => {
-  if (selectedScorePlatform.value !== 'todas' && props.series_por_red && props.series_por_red[selectedScorePlatform.value]) {
-    const s = props.series_por_red[selectedScorePlatform.value];
-    return {
-      nombre: s.nombre,
-      color: '#f59e0b',
-      puntos: s.puntos || [],
-      esIndividual: true,
-    };
-  }
-  return {
-    nombre: 'Tracción Total (Score)',
-    color: '#f59e0b',
-    puntos: props.historico_mediciones || [],
-    esIndividual: false,
-  };
-});
-
 const scoreChartData = computed(() => {
-  const current = activeScoreSeries.value;
-  const labels = current.puntos.map(m => m.fecha);
-  const data = current.puntos.map(m => m.puntos || 0);
-  const colorHex = '#f59e0b';
+  const series = props.series_por_red || {};
+  const plataformasKeys = Object.keys(series);
+
+  // MODO 1: MULTILÍNEA SIMULTÁNEA DE SCORE (TODAS LAS REDES + TOTAL)
+  if (selectedScorePlatform.value === 'todas') {
+    const primerKey = plataformasKeys[0];
+    const labels = primerKey && series[primerKey].puntos
+      ? series[primerKey].puntos.map(m => m.fecha)
+      : (props.historico_mediciones || []).map(m => m.fecha);
+
+    const datasets = [];
+
+    plataformasKeys.forEach(platKey => {
+      const s = series[platKey];
+      if (!s || !s.puntos || s.puntos.length === 0) return;
+
+      const meta = getSocialMeta(platKey);
+      const colorHex = s.color || meta.color;
+
+      datasets.push({
+        label: s.nombre,
+        data: s.puntos.map(m => m.puntos || 0),
+        borderColor: colorHex,
+        backgroundColor: `${colorHex}15`,
+        fill: false,
+        tension: 0.35,
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        pointBackgroundColor: colorHex,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1,
+        plataforma: platKey,
+      });
+    });
+
+    // Línea de Suma Total (Tracción Consolidada)
+    const totalPuntos = props.historico_mediciones || [];
+    if (totalPuntos.length > 0) {
+      const colorTotal = '#f59e0b'; // Ámbar fuego institucional
+      datasets.unshift({
+        label: 'Total Score (Suma)',
+        data: totalPuntos.map(m => m.puntos || 0),
+        borderColor: colorTotal,
+        backgroundColor: `${colorTotal}10`,
+        fill: false,
+        tension: 0.35,
+        borderWidth: 2.5,
+        borderDash: [5, 4],
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: colorTotal,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1.5,
+        plataforma: 'todas',
+      });
+    }
+
+    return { labels, datasets };
+  }
+
+  // MODO 2: RED INDIVIDUAL AISLADA
+  const s = series[selectedScorePlatform.value];
+  if (!s || !s.puntos || s.puntos.length === 0) {
+    return { labels: [], datasets: [] };
+  }
+
+  const meta = getSocialMeta(selectedScorePlatform.value);
+  const colorHex = s.color || meta.color;
+  const labels = s.puntos.map(m => m.fecha);
+  const data = s.puntos.map(m => m.puntos || 0);
 
   return {
     labels,
     datasets: [{
-      label: `${current.nombre} (Puntos)`,
+      label: s.nombre,
       data,
       borderColor: colorHex,
       backgroundColor: `${colorHex}18`,
       fill: true,
       tension: 0.35,
+      borderWidth: 2.5,
       pointRadius: 3,
       pointHoverRadius: 6,
       pointBackgroundColor: colorHex,
       pointBorderColor: '#ffffff',
-      borderWidth: 2.5,
+      pointBorderWidth: 1,
+      plataforma: selectedScorePlatform.value,
     }]
   };
 });
 
-const scoreChartOptions = computed(() => ({
+const scoreChartOptions = computed(() => {
+  const isAll = selectedScorePlatform.value === 'todas';
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        display: isAll,
+        position: 'top',
+        align: 'end',
+        labels: {
+          boxWidth: 8,
+          boxHeight: 8,
+          usePointStyle: true,
+          color: '#94a3b8',
+          padding: 8,
+          font: { size: 10, family: 'monospace', weight: 'bold' }
+        }
+      },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        titleColor: '#f59e0b',
+        bodyColor: '#f8fafc',
+        padding: 10,
+        cornerRadius: 8,
+        borderColor: 'rgba(245, 158, 11, 0.3)',
+        borderWidth: 1,
+        callbacks: {
+          label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString('es-AR')} pts`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
+      y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
+    }
+  };
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2.B. GRÁFICA Y COMPARATIVA MENSUAL DE SCORE (JULIO, AGOSTO, SEPTIEMBRE...)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const listaDesgloseMensual = computed(() => {
+  if (props.stats?.desglose_mensual && props.stats.desglose_mensual.length > 0) {
+    return props.stats.desglose_mensual;
+  }
+  if (props.desglose_mensual && props.desglose_mensual.length > 0) {
+    return props.desglose_mensual;
+  }
+  return [];
+});
+
+const scoreMensualChartData = computed(() => {
+  const meses = listaDesgloseMensual.value;
+  const labels = meses.map(m => m.mes_corto || m.nombre_mes);
+  const dataPromedios = meses.map(m => m.score_promedio_post || 0);
+  const dataPosts = meses.map(m => m.total_posts || 0);
+
+  return {
+    labels,
+    datasets: [
+      {
+        type: 'bar',
+        label: 'Score Promedio por Post (pts/post)',
+        data: dataPromedios,
+        backgroundColor: '#8b5cf6',
+        borderRadius: 8,
+        barThickness: 32,
+        yAxisID: 'y',
+      },
+      {
+        type: 'line',
+        label: 'Publicaciones Realizadas',
+        data: dataPosts,
+        borderColor: '#06b6d4',
+        backgroundColor: 'rgba(6, 182, 212, 0.15)',
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#06b6d4',
+        tension: 0.3,
+        yAxisID: 'y1',
+      }
+    ]
+  };
+});
+
+const scoreMensualChartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { display: false },
+    legend: {
+      display: true,
+      position: 'top',
+      labels: {
+        color: '#94a3b8',
+        font: { size: 11, weight: 'bold' },
+        usePointStyle: true,
+      }
+    },
     tooltip: {
       backgroundColor: '#0f172a',
-      titleColor: '#f59e0b',
+      titleColor: '#8b5cf6',
       bodyColor: '#f8fafc',
-      padding: 10,
-      cornerRadius: 8,
-      borderColor: 'rgba(245, 158, 11, 0.3)',
+      padding: 12,
+      cornerRadius: 10,
+      borderColor: 'rgba(139, 92, 246, 0.3)',
       borderWidth: 1,
       callbacks: {
-        label: (ctx) => `Score Acumulado: ${Number(ctx.raw).toLocaleString('es-AR')} pts`
+        label: (ctx) => {
+          if (ctx.dataset.type === 'line') {
+            return `Publicaciones: ${ctx.raw} posts`;
+          }
+          return `Score Promedio: ${Number(ctx.raw).toLocaleString('es-AR')} pts/post`;
+        }
       }
     }
   },
   scales: {
-    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
-    y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
+    x: {
+      grid: { display: false },
+      ticks: { color: '#94a3b8', font: { size: 11, family: 'monospace', weight: 'bold' } }
+    },
+    y: {
+      position: 'left',
+      grid: { color: 'rgba(148, 163, 184, 0.1)' },
+      ticks: { color: '#8b5cf6', font: { size: 10, family: 'monospace' }, callback: (v) => `${formatNumber(v)} pts` },
+      title: { display: true, text: 'Score Promedio (pts/post)', color: '#8b5cf6', font: { size: 10 } }
+    },
+    y1: {
+      position: 'right',
+      grid: { display: false },
+      ticks: { color: '#06b6d4', font: { size: 10, family: 'monospace' }, stepSize: 1 },
+      title: { display: true, text: 'Cant. Posts', color: '#06b6d4', font: { size: 10 } }
+    }
   }
 }));
 
@@ -435,77 +742,153 @@ const scoreChartOptions = computed(() => ({
 // ─────────────────────────────────────────────────────────────────────────────
 const selectedVistasPlatform = ref('todas');
 
-const activeVistasSeries = computed(() => {
-  if (selectedVistasPlatform.value !== 'todas' && props.series_por_red && props.series_por_red[selectedVistasPlatform.value]) {
-    const s = props.series_por_red[selectedVistasPlatform.value];
-    return {
-      nombre: s.nombre,
-      color: '#10b981',
-      puntos: s.puntos || [],
-      esIndividual: true,
-    };
-  }
-  return {
-    nombre: 'Reproducciones Totales',
-    color: '#10b981',
-    puntos: props.historico_mediciones || [],
-    esIndividual: false,
-  };
-});
-
 const vistasChartData = computed(() => {
-  const current = activeVistasSeries.value;
-  const labels = current.puntos.map(m => m.fecha);
-  const data = current.puntos.map(m => m.vistas || 0);
-  const colorHex = '#10b981';
+  const series = props.series_por_red || {};
+  const plataformasConVistas = redesConVistasDisponibles.value.map(r => r.plataforma);
+
+  // MODO 1: MULTILÍNEA SIMULTÁNEA DE REPRODUCCIONES
+  if (selectedVistasPlatform.value === 'todas') {
+    const primerKey = plataformasConVistas[0] || Object.keys(series)[0];
+    const labels = primerKey && series[primerKey]?.puntos
+      ? series[primerKey].puntos.map(m => m.fecha)
+      : (props.historico_mediciones || []).map(m => m.fecha);
+
+    const datasets = [];
+
+    plataformasConVistas.forEach(platKey => {
+      const s = series[platKey];
+      if (!s || !s.puntos || s.puntos.length === 0) return;
+
+      const meta = getSocialMeta(platKey);
+      const colorHex = s.color || meta.color;
+
+      datasets.push({
+        label: s.nombre,
+        data: s.puntos.map(m => m.vistas || 0),
+        borderColor: colorHex,
+        backgroundColor: `${colorHex}15`,
+        fill: false,
+        tension: 0.35,
+        borderWidth: 2.5,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        pointBackgroundColor: colorHex,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1,
+        plataforma: platKey,
+      });
+    });
+
+    // Línea de Suma Total (Vistas Totales)
+    const totalPuntos = props.historico_mediciones || [];
+    if (totalPuntos.length > 0) {
+      const colorTotal = '#10b981'; // Verde Esmeralda institucional
+      datasets.unshift({
+        label: 'Total Vistas (Suma)',
+        data: totalPuntos.map(m => m.vistas || 0),
+        borderColor: colorTotal,
+        backgroundColor: `${colorTotal}10`,
+        fill: false,
+        tension: 0.35,
+        borderWidth: 2.5,
+        borderDash: [5, 4],
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: colorTotal,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1.5,
+        plataforma: 'todas',
+      });
+    }
+
+    return { labels, datasets };
+  }
+
+  // MODO 2: RED INDIVIDUAL AISLADA
+  const s = series[selectedVistasPlatform.value];
+  if (!s || !s.puntos || s.puntos.length === 0) {
+    return { labels: [], datasets: [] };
+  }
+
+  const meta = getSocialMeta(selectedVistasPlatform.value);
+  const colorHex = s.color || meta.color;
+  const labels = s.puntos.map(m => m.fecha);
+  const data = s.puntos.map(m => m.vistas || 0);
 
   return {
     labels,
     datasets: [{
-      label: `${current.nombre} (Vistas)`,
+      label: s.nombre,
       data,
       borderColor: colorHex,
       backgroundColor: `${colorHex}18`,
       fill: true,
       tension: 0.35,
+      borderWidth: 2.5,
       pointRadius: 3,
       pointHoverRadius: 6,
       pointBackgroundColor: colorHex,
       pointBorderColor: '#ffffff',
-      borderWidth: 2.5,
+      pointBorderWidth: 1,
+      plataforma: selectedVistasPlatform.value,
     }]
   };
 });
 
-const vistasChartOptions = computed(() => ({
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: '#0f172a',
-      titleColor: '#10b981',
-      bodyColor: '#f8fafc',
-      padding: 10,
-      cornerRadius: 8,
-      borderColor: 'rgba(16, 185, 129, 0.3)',
-      borderWidth: 1,
-      callbacks: {
-        label: (ctx) => `Reproducciones: ${Number(ctx.raw).toLocaleString('es-AR')}`
+const vistasChartOptions = computed(() => {
+  const isAll = selectedVistasPlatform.value === 'todas';
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        display: isAll,
+        position: 'top',
+        align: 'end',
+        labels: {
+          boxWidth: 8,
+          boxHeight: 8,
+          usePointStyle: true,
+          color: '#94a3b8',
+          padding: 8,
+          font: { size: 10, family: 'monospace', weight: 'bold' }
+        }
+      },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        titleColor: '#10b981',
+        bodyColor: '#f8fafc',
+        padding: 10,
+        cornerRadius: 8,
+        borderColor: 'rgba(16, 185, 129, 0.3)',
+        borderWidth: 1,
+        callbacks: {
+          label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString('es-AR')} vistas`
+        }
       }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
+      y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
     }
-  },
-  scales: {
-    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
-    y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
-  }
-}));
+  };
+});
 
 // 2. Gráfico Donut de Participación por Red Social
 const doughnutChartData = computed(() => {
   const labels = props.distribucion_plataformas.map(p => p.nombre);
   const data = props.distribucion_plataformas.map(p => p.interacciones);
-  const colors = props.distribucion_plataformas.map(p => p.color);
+  const colors = props.distribucion_plataformas.map(p => {
+    if (p.plataforma === 'threads' || p.plataforma === 'x_twitter' || p.plataforma === 'twitter') {
+      return '#94a3b8';
+    }
+    return p.color;
+  });
 
   return {
     labels,
@@ -901,165 +1284,324 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 2. HUD CENTRAL DE KPIS MULTICANAL NORMALIZADOS -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-      <!-- KPI 1: Comunidad Multired & Crecimiento Neto (con Tiers) -->
-      <div class="p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Comunidad Total</span>
-          <div class="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center">
-            <Users class="w-4 h-4" />
-          </div>
+    <!-- 2. HUD CENTRAL DE KPIS ESTRATÉGICOS (DIVIDIDO EN 2 BLOQUES CONTEXTUALES) -->
+    <div class="space-y-4">
+      
+      <!-- BLOQUE 1: AUDIENCIA, TERRITORIO & CLIMA ELECTORAL (3 TARJETAS GRANDES) -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
+          <Users class="w-3.5 h-3.5 text-cyan-500" />
+          <span>Audiencia, Territorio & Clima Social</span>
         </div>
-        <div class="mt-2.5">
-          <div class="flex items-baseline justify-between gap-1">
-            <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
-              {{ stats.total_seguidores }}
-            </p>
-            <span
-              v-if="stats.total_seguidores_netos && stats.total_seguidores_netos !== stats.total_seguidores"
-              class="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 font-mono px-1.5 py-0.5 rounded-md bg-cyan-500/10"
-              :title="`Alcance Único Neto por Tiers: ~${stats.total_seguidores_netos} personas reales desduplicadas`"
-            >
-              ~{{ stats.total_seguidores_netos }} netos
-            </span>
-          </div>
-          <div class="mt-1 flex items-center gap-1.5 text-xs font-semibold" :class="stats.crecimiento_neto_seguidores >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'">
-            <TrendingUp v-if="stats.crecimiento_neto_seguidores >= 0" class="w-3.5 h-3.5" />
-            <TrendingDown v-else class="w-3.5 h-3.5" />
-            <span>{{ stats.crecimiento_neto_seguidores >= 0 ? '+' : '' }}{{ Number(stats.crecimiento_neto_seguidores).toLocaleString('es-AR') }} neto</span>
-            <span class="text-slate-400 font-normal">vs Punto Cero</span>
-          </div>
-        </div>
-      </div>
 
-      <!-- KPI 2: Score de Impacto Orgánico vs Padrón Objetivo -->
-      <div class="p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Score de Impacto</span>
-          <div class="w-8 h-8 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center">
-            <Zap class="w-4 h-4" />
-          </div>
-        </div>
-        <div class="mt-2.5">
-          <div class="flex items-baseline justify-between gap-1">
-            <div class="flex items-baseline gap-1.5 min-w-0">
-              <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
-                {{ stats.score_impacto_total }}
-              </p>
-              <span class="text-xs font-semibold text-slate-400 font-mono truncate" :title="`Meta objetivo: ${stats.score_impacto_meta || '3.500'} pts`">
-                / {{ stats.score_impacto_meta || '3.500' }}
-              </span>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- KPI 1: Comunidad Multired & Crecimiento Neto (con Tiers) -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Comunidad Total</span>
+              <div class="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center">
+                <Users class="w-4 h-4" />
+              </div>
             </div>
-            <span
-              class="text-xs font-bold font-mono shrink-0"
-              :class="{
-                'text-emerald-500': (stats.score_impacto_pct || 0) >= 100,
-                'text-amber-500': (stats.score_impacto_pct || 0) >= 60 && (stats.score_impacto_pct || 0) < 100,
-                'text-cyan-500': (stats.score_impacto_pct || 0) >= 35 && (stats.score_impacto_pct || 0) < 60,
-                'text-rose-500': (stats.score_impacto_pct || 0) < 35
-              }"
-            >
-              {{ stats.score_impacto_pct || 0 }}%
-            </span>
+            <div class="mt-3">
+              <div class="flex items-baseline justify-between gap-1">
+                <p class="text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                  {{ stats.total_seguidores }}
+                </p>
+                <span
+                  v-if="stats.total_seguidores_netos && stats.total_seguidores_netos !== stats.total_seguidores"
+                  class="text-xs font-semibold text-cyan-600 dark:text-cyan-400 font-mono px-2 py-0.5 rounded-md bg-cyan-500/10"
+                  :title="`Alcance Único Neto por Tiers: ~${stats.total_seguidores_netos} personas reales desduplicadas`"
+                >
+                  ~{{ stats.total_seguidores_netos }} netos
+                </span>
+              </div>
+              <div class="mt-2 flex items-center gap-1.5 text-xs font-semibold" :class="stats.crecimiento_neto_seguidores >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'">
+                <TrendingUp v-if="stats.crecimiento_neto_seguidores >= 0" class="w-3.5 h-3.5" />
+                <TrendingDown v-else class="w-3.5 h-3.5" />
+                <span>{{ stats.crecimiento_neto_seguidores >= 0 ? '+' : '' }}{{ Number(stats.crecimiento_neto_seguidores).toLocaleString('es-AR') }} neto</span>
+                <span class="text-slate-400 font-normal">vs Punto Cero</span>
+              </div>
+            </div>
           </div>
 
-          <!-- Barra de progreso de penetración territorial -->
-          <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
-            <div
-              class="h-full rounded-full transition-all duration-500"
-              :class="{
-                'bg-emerald-500': (stats.score_impacto_pct || 0) >= 100,
-                'bg-amber-500': (stats.score_impacto_pct || 0) >= 60 && (stats.score_impacto_pct || 0) < 100,
-                'bg-cyan-500': (stats.score_impacto_pct || 0) >= 35 && (stats.score_impacto_pct || 0) < 60,
-                'bg-rose-500': (stats.score_impacto_pct || 0) < 35
-              }"
-              :style="{ width: `${Math.min(stats.score_impacto_pct || 0, 100)}%` }"
-            ></div>
+          <!-- KPI 2: Penetración sobre el Padrón (Neto Real por Tiers) -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Penetración Padrón</span>
+              <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                <Target class="w-4 h-4" />
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="flex items-baseline justify-between gap-1">
+                <p class="text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                  {{ stats.ratio_penetracion }}
+                </p>
+                <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
+                  Neto Real
+                </span>
+              </div>
+
+              <!-- Barra de Progreso de Penetración sobre el Padrón -->
+              <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2.5 overflow-hidden" :title="`~${stats.total_seguidores_netos} de ${Number(candidato.padron_electoral).toLocaleString('es-AR')} electores únicos alcanzados`">
+                <div
+                  class="h-full rounded-full bg-blue-500 transition-all duration-500"
+                  :style="{ width: `${Math.min(stats.ratio_penetracion_raw || 0, 100)}%` }"
+                ></div>
+              </div>
+
+              <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                <span class="text-[11px] text-slate-700 dark:text-slate-300">~{{ stats.total_seguidores_netos }} electores únicos</span>
+                <span class="text-[11px] text-slate-400">de {{ Number(candidato.padron_electoral).toLocaleString('es-AR') }}</span>
+              </div>
+            </div>
           </div>
 
-          <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center justify-between">
-            <span class="truncate" :title="stats.score_impacto_base_texto">{{ stats.score_impacto_base_texto || 'Calculando...' }}</span>
-            <span
-              class="font-semibold shrink-0"
-              :class="{
-                'text-emerald-500': (stats.score_impacto_pct || 0) >= 100,
-                'text-amber-500': (stats.score_impacto_pct || 0) >= 60 && (stats.score_impacto_pct || 0) < 100,
-                'text-cyan-500': (stats.score_impacto_pct || 0) >= 35 && (stats.score_impacto_pct || 0) < 60,
-                'text-rose-500': (stats.score_impacto_pct || 0) < 35
-              }"
-            >
-              {{ stats.score_impacto_estado_texto || 'Sin datos' }}
-            </span>
+          <!-- KPI 3: Clima de Humor Social Dinámico -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Humor Social</span>
+              <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                <Flame class="w-4 h-4" />
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="flex items-baseline justify-between gap-1">
+                <p class="text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight flex items-center gap-1.5">
+                  <span>{{ stats.humor_social_promedio }}</span>
+                  <span class="text-xs text-slate-400 font-normal">/ 5.0</span>
+                </p>
+                <span
+                  class="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md border shrink-0"
+                  :class="{
+                    'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20': (stats.humor_social_promedio_raw || 5) >= 4.5,
+                    'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20': (stats.humor_social_promedio_raw || 5) >= 3.5 && (stats.humor_social_promedio_raw || 5) < 4.5,
+                    'bg-rose-500/10 text-rose-500 border-rose-500/20': (stats.humor_social_promedio_raw || 5) < 3.5
+                  }"
+                >
+                  {{ stats.humor_clima_texto || 'Muy Favorable' }}
+                </span>
+              </div>
+              <div class="mt-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-1 text-sm">
+                  <span
+                    v-for="star in 5"
+                    :key="star"
+                    :class="star <= Math.round(stats.humor_social_promedio_raw || 5) ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600'"
+                  >★</span>
+                </div>
+                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">0% Rechazo</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- KPI 3: Visualizaciones Acumuladas -->
-      <div class="p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Alcance & Vistas</span>
-          <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-            <Eye class="w-4 h-4" />
-          </div>
+      <!-- BLOQUE 2: ALCANCE, TRACCIÓN & RENDIMIENTO DE CAMPAÑA (4 TARJETAS GRANDES) -->
+      <div class="space-y-2 pt-1">
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
+          <Flame class="w-3.5 h-3.5 text-amber-500" />
+          <span>Alcance, Tracción & Metas de Contenido</span>
         </div>
-        <div class="mt-2.5">
-          <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
-            {{ stats.total_vistas }}
-          </p>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            {{ stats.engagement_promedio }} engagement rate
-          </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- KPI 4: Visualizaciones Acumuladas & Eficiencia de Alcance -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Alcance & Vistas</span>
+              <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                <Eye class="w-4 h-4" />
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="flex items-baseline justify-between gap-1">
+                <p class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                  {{ stats.total_vistas }}
+                </p>
+                <span
+                  class="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0"
+                  :title="`Tasa de interacción activa: ${stats.engagement_promedio}`"
+                >
+                  {{ stats.engagement_promedio }} ER
+                </span>
+              </div>
+              <div class="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span class="font-mono">{{ stats.vistas_promedio_post || '0' }} vistas / post</span>
+                <span class="font-semibold text-emerald-600 dark:text-emerald-400 text-[11px]">{{ stats.engagement_calidad_texto || 'Alto Involucramiento' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI 5: Score Promedio por Publicación (pts/post) -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Score / Post</span>
+              <div class="w-8 h-8 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center">
+                <Sparkles class="w-4 h-4" />
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="flex items-baseline justify-between gap-1">
+                <div class="flex items-baseline gap-1.5">
+                  <p class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                    {{ stats.score_promedio_post || '0' }}
+                  </p>
+                  <span class="text-xs font-semibold text-violet-600 dark:text-violet-400 font-mono">pts / post</span>
+                </div>
+
+                <span
+                  class="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md border shrink-0 flex items-center gap-1"
+                  :class="{
+                    'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20': stats.score_promedio_post_pct >= 100,
+                    'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20': stats.score_promedio_post_pct >= 60 && stats.score_promedio_post_pct < 100,
+                    'bg-rose-500/10 text-rose-500 border-rose-500/20': stats.score_promedio_post_pct < 60
+                  }"
+                  :title="`Meta Territorial: ${stats.score_promedio_post_meta} pts (${stats.meta_score_base_texto})`"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full" :class="{
+                    'bg-emerald-500': stats.score_promedio_post_pct >= 100,
+                    'bg-amber-500': stats.score_promedio_post_pct >= 60 && stats.score_promedio_post_pct < 100,
+                    'bg-rose-500': stats.score_promedio_post_pct < 60
+                  }"></span>
+                  <span>{{ stats.score_promedio_post_pct || 0 }}%</span>
+                </span>
+              </div>
+
+              <!-- Barra de Progreso hacia la Meta Territorial -->
+              <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2.5 overflow-hidden" :title="`${stats.score_promedio_post} de ${stats.score_promedio_post_meta} pts objetivo`">
+                <div
+                  class="h-full rounded-full transition-all duration-500"
+                  :class="{
+                    'bg-emerald-500': stats.score_promedio_post_pct >= 100,
+                    'bg-amber-500': stats.score_promedio_post_pct >= 60 && stats.score_promedio_post_pct < 100,
+                    'bg-rose-500': stats.score_promedio_post_pct < 60
+                  }"
+                  :style="{ width: `${Math.min(stats.score_promedio_post_pct || 0, 100)}%` }"
+                ></div>
+              </div>
+
+              <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                <span class="font-mono">{{ stats.total_publicaciones }} posts</span>
+                <span class="font-mono text-[10px] text-slate-400 dark:text-slate-500">
+                  Meta: <strong class="text-slate-700 dark:text-slate-300 font-bold">{{ stats.score_promedio_post_meta }}</strong> pts
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI 6: Score Promedio Mensual (pts/mes) -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Score / Mes</span>
+              <button
+                type="button"
+                @click="abrirModalGrafico('score_mensual')"
+                class="w-8 h-8 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-500 flex items-center justify-center transition-colors cursor-pointer"
+                title="Ver comparativa detallada por meses (Julio, Agosto, Septiembre)"
+              >
+                <Calendar class="w-4 h-4" />
+              </button>
+            </div>
+            <div class="mt-3">
+              <div class="flex items-baseline justify-between gap-1">
+                <div class="flex items-baseline gap-1.5">
+                  <p class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                    {{ stats.score_promedio_mensual || '0' }}
+                  </p>
+                  <span class="text-xs font-semibold text-cyan-600 dark:text-cyan-400 font-mono">pts / mes</span>
+                </div>
+
+                <div v-if="stats.tendencia_score_mes" class="shrink-0">
+                  <span
+                    class="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md flex items-center gap-0.5"
+                    :class="stats.tendencia_score_mes.variacion_pct >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'"
+                    :title="`Tendencia de Volumen: ${stats.tendencia_score_mes.variacion_pct >= 0 ? '+' : ''}${stats.tendencia_score_mes.variacion_pct}% vs mes anterior`"
+                  >
+                    <TrendingUp v-if="stats.tendencia_score_mes.variacion_pct >= 0" class="w-3 h-3" />
+                    <TrendingDown v-else class="w-3 h-3" />
+                    <span>{{ stats.tendencia_score_mes.variacion_pct >= 0 ? '+' : '' }}{{ stats.tendencia_score_mes.variacion_pct }}%</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Barra de Progreso hacia la Meta Mensual Territorial -->
+              <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2.5 overflow-hidden" :title="`${stats.score_promedio_mensual} de ${stats.score_promedio_mensual_meta} pts objetivo mensual`">
+                <div
+                  class="h-full rounded-full transition-all duration-500"
+                  :class="{
+                    'bg-emerald-500': stats.score_promedio_mensual_pct >= 100,
+                    'bg-amber-500': stats.score_promedio_mensual_pct >= 60 && stats.score_promedio_mensual_pct < 100,
+                    'bg-rose-500': stats.score_promedio_mensual_pct < 60
+                  }"
+                  :style="{ width: `${Math.min(stats.score_promedio_mensual_pct || 0, 100)}%` }"
+                ></div>
+              </div>
+
+              <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                <span class="font-mono text-[10px] text-slate-400 dark:text-slate-500">
+                  Meta: <strong class="text-slate-700 dark:text-slate-300 font-bold">{{ stats.score_promedio_mensual_meta }}</strong> pts
+                </span>
+                <button
+                  type="button"
+                  @click="abrirModalGrafico('score_mensual')"
+                  class="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                >
+                  <span>Ver meses</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI 7: Score Campaña (Presión Electoral sobre Padrón) -->
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Score Campaña</span>
+              <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                <Flame class="w-4 h-4" />
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="flex items-baseline justify-between gap-1">
+                <div class="flex items-baseline gap-1.5">
+                  <p class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                    {{ stats.score_impacto_total }}
+                  </p>
+                  <span class="text-xs font-semibold text-amber-600 dark:text-amber-400 font-mono">pts tot.</span>
+                </div>
+
+                <span
+                  class="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0"
+                  :title="`Presión Electoral: ${stats.avance_campana_padron_pct}% del padrón total`"
+                >
+                  {{ stats.avance_campana_padron_pct || 0 }}% padrón
+                </span>
+              </div>
+
+              <!-- Barra de Progreso hacia el 100% del Padrón Electoral -->
+              <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2.5 overflow-hidden" :title="`${stats.score_impacto_total} de ${stats.meta_score_campana} pts del padrón`">
+                <div
+                  class="h-full rounded-full bg-amber-500 transition-all duration-500"
+                  :style="{ width: `${Math.min(stats.avance_campana_padron_pct || 0, 100)}%` }"
+                ></div>
+              </div>
+
+              <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                <span class="text-[10px] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1" :title="`Mes récord: ${stats.record_mensual_score} pts en ${stats.record_mensual_nombre}`">
+                  <span>🏆 Récord:</span>
+                  <strong class="text-amber-600 dark:text-amber-400">{{ stats.record_mensual_score }}</strong>
+                  <span class="text-slate-400 text-[9px]">({{ stats.record_mensual_corto }})</span>
+                </span>
+                <span class="text-[10px] text-slate-400">
+                  {{ stats.score_promedio_diario || '0' }} pts/d
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- KPI 4: Clima de Humor Social -->
-      <div class="p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Humor Social</span>
-          <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-            <Flame class="w-4 h-4" />
-          </div>
-        </div>
-        <div class="mt-2.5">
-          <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight flex items-center gap-1.5">
-            <span>{{ stats.humor_social_promedio }}</span>
-            <span class="text-xs text-slate-400 font-normal">/ 5.0</span>
-          </p>
-          <div class="mt-1 flex items-center gap-1 text-amber-400 text-xs">
-            <span>★</span><span>★</span><span>★</span><span>★</span><span class="text-slate-300 dark:text-slate-600">★</span>
-            <span class="text-slate-500 dark:text-slate-400 text-[11px] ml-1 font-semibold">Favorable</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- KPI 5: Penetración sobre el Padrón (Neto por Tiers vs Bruto) -->
-      <div class="p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Penetración Padrón</span>
-          <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-            <Target class="w-4 h-4" />
-          </div>
-        </div>
-        <div class="mt-2.5">
-          <div class="flex items-baseline justify-between gap-1">
-            <p class="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
-              {{ stats.ratio_penetracion }}
-            </p>
-            <span
-              v-if="stats.ratio_penetracion_bruta && stats.ratio_penetracion_bruta !== stats.ratio_penetracion"
-              class="text-[11px] font-semibold text-slate-400 font-mono"
-              :title="`Penetración bruta sin desduplicar: ${stats.ratio_penetracion_bruta}`"
-            >
-              vs {{ stats.ratio_penetracion_bruta }} bruto
-            </span>
-          </div>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
-            <span>Electores únicos (Tiers)</span>
-            <span class="font-bold text-blue-500 text-[11px]">Neto Real</span>
-          </p>
-        </div>
-      </div>
     </div>
 
     <!-- 3. CENTRO DE ANALÍTICA VISUAL (WAR ROOM) -->
@@ -1088,7 +1630,7 @@ onUnmounted(() => {
                   v-model="selectedComunidadPlatform"
                   class="px-2 py-1 text-xs font-mono font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 >
-                  <option value="todas">🌐 Todas (Total)</option>
+                  <option value="todas">🌐 Todas (Multilínea)</option>
                   <option v-for="red in redesDisponiblesTimeline" :key="red.plataforma" :value="red.plataforma">
                     {{ red.plataforma.toUpperCase() }}
                   </option>
@@ -1105,13 +1647,6 @@ onUnmounted(() => {
                   <span class="text-[11px]">Ampliar</span>
                 </button>
               </div>
-            </div>
-
-            <!-- Banner Hitos Booster -->
-            <div v-if="hitos_booster && hitos_booster.length > 0" class="flex items-center gap-1.5 text-[11px] text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20">
-              <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-              <span class="font-bold flex items-center gap-1"><Rocket class="w-3 h-3" /> Hitos Booster:</span>
-              <span class="truncate">Nodos rojos = Pauta activa</span>
             </div>
           </div>
 
@@ -1158,11 +1693,6 @@ onUnmounted(() => {
                 </button>
               </div>
             </div>
-
-            <div class="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
-              <span class="font-bold">Métrica Universal:</span>
-              <span class="truncate">Mide engagement real sin ceros</span>
-            </div>
           </div>
 
           <div class="h-60 w-full">
@@ -1190,8 +1720,8 @@ onUnmounted(() => {
                   v-model="selectedVistasPlatform"
                   class="px-2 py-1 text-xs font-mono font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
-                  <option value="todas">🌐 Todas (Total)</option>
-                  <option v-for="red in redesDisponiblesTimeline" :key="red.plataforma" :value="red.plataforma">
+                  <option value="todas">🌐 Todas (Multilínea)</option>
+                  <option v-for="red in redesConVistasDisponibles" :key="red.plataforma" :value="red.plataforma">
                     {{ red.plataforma.toUpperCase() }}
                   </option>
                 </select>
@@ -1207,11 +1737,6 @@ onUnmounted(() => {
                   <span class="text-[11px]">Ampliar</span>
                 </button>
               </div>
-            </div>
-
-            <div class="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-              <span class="font-bold">Facebook Reels:</span>
-              <span class="truncate">Métrica pública de vistos en Reels</span>
             </div>
           </div>
 
@@ -1262,12 +1787,22 @@ onUnmounted(() => {
               <div class="flex items-center justify-between gap-1 mb-1">
                 <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold truncate flex items-center gap-1">
                   <SocialPlatformIcon :platform="red.plataforma" size="xs" />
-                  {{ red.nombre }}
+                  <span :class="{ 'text-slate-900 dark:text-white font-black': red.plataforma === 'threads' || red.plataforma === 'x_twitter' }">
+                    {{ red.nombre }}
+                  </span>
                 </span>
-                <span class="w-1.5 h-1.5 rounded-full shrink-0" :style="{ backgroundColor: red.color }"></span>
+                <span
+                  class="w-1.5 h-1.5 rounded-full shrink-0"
+                  :class="{ 'bg-slate-900 dark:bg-white ring-1 ring-slate-400/50': red.plataforma === 'threads' || red.plataforma === 'x_twitter' }"
+                  :style="{ backgroundColor: (red.plataforma === 'threads' || red.plataforma === 'x_twitter') ? '' : red.color }"
+                ></span>
               </div>
               <div class="flex items-baseline justify-between gap-1">
-                <span class="text-xs sm:text-sm font-extrabold tracking-tight" :style="{ color: red.color }">
+                <span
+                  class="text-xs sm:text-sm font-extrabold tracking-tight"
+                  :class="{ 'text-slate-900 dark:text-white': red.plataforma === 'threads' || red.plataforma === 'x_twitter' }"
+                  :style="{ color: (red.plataforma === 'threads' || red.plataforma === 'x_twitter') ? '' : red.color }"
+                >
                   {{ red.porcentaje }}%
                 </span>
                 <span class="text-[9px] text-slate-400 truncate" :title="`${red.interacciones} interacciones totales`">
@@ -1598,6 +2133,7 @@ onUnmounted(() => {
                   {{
                     modalGraficoActivo === 'comunidad' ? 'Evolución de Comunidad (Seguidores Netos)' :
                     modalGraficoActivo === 'score' ? 'Tracción Acumulada (Score / Puntos de Impacto)' :
+                    modalGraficoActivo === 'score_mensual' ? 'Evolución y Desglose Mensual del Score de Impacto' :
                     modalGraficoActivo === 'vistas' ? 'Visualizaciones Totales (Facebook Reels & Video)' :
                     modalGraficoActivo === 'cuota' ? 'Cuota de Interacción por Red (Share of Social)' :
                     modalGraficoActivo === 'formato' ? 'Rendimiento Promedio por Formato' :
@@ -1607,24 +2143,139 @@ onUnmounted(() => {
                   }}
                 </h3>
                 <p class="text-xs text-slate-500 dark:text-slate-400">
-                  Visualización detallada de alta resolución
+                  {{
+                    modalGraficoActivo === 'score_mensual'
+                      ? 'Comparativa del Score Promedio por Post mes a mes (Julio, Agosto, Septiembre...)'
+                      : 'Visualización detallada de alta resolución'
+                  }}
                 </p>
               </div>
             </div>
 
-            <button
-              type="button"
-              @click="cerrarModalGrafico"
-              class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer shrink-0"
-              title="Cerrar modal (Esc)"
-            >
-              <X class="w-5 h-5" />
-            </button>
+            <!-- Controles y Filtros del Modal (Filtro interactivo de red + botón cerrar) -->
+            <div class="flex items-center gap-2.5 shrink-0">
+              <!-- Filtro de Red para Score al ampliar -->
+              <div v-if="modalGraficoActivo === 'score'" class="flex items-center gap-1.5">
+                <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400 hidden sm:inline">Canal:</span>
+                <select
+                  v-model="selectedScorePlatform"
+                  class="px-2.5 py-1.5 text-xs font-mono font-bold rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-xs"
+                >
+                  <option value="todas">🌐 Todas (Multilínea)</option>
+                  <option v-for="red in redesDisponiblesTimeline" :key="red.plataforma" :value="red.plataforma">
+                    {{ red.plataforma.toUpperCase() }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Filtro de Red para Comunidad al ampliar -->
+              <div v-if="modalGraficoActivo === 'comunidad'" class="flex items-center gap-1.5">
+                <span class="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 hidden sm:inline">Canal:</span>
+                <select
+                  v-model="selectedComunidadPlatform"
+                  class="px-2.5 py-1.5 text-xs font-mono font-bold rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-500 cursor-pointer shadow-xs"
+                >
+                  <option value="todas">🌐 Todas (Multilínea)</option>
+                  <option v-for="red in redesDisponiblesTimeline" :key="red.plataforma" :value="red.plataforma">
+                    {{ red.plataforma.toUpperCase() }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Filtro de Red para Vistas al ampliar -->
+              <div v-if="modalGraficoActivo === 'vistas'" class="flex items-center gap-1.5">
+                <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hidden sm:inline">Canal:</span>
+                <select
+                  v-model="selectedVistasPlatform"
+                  class="px-2.5 py-1.5 text-xs font-mono font-bold rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer shadow-xs"
+                >
+                  <option value="todas">🌐 Todas (Multilínea)</option>
+                  <option v-for="red in redesConVistasDisponibles" :key="red.plataforma" :value="red.plataforma">
+                    {{ red.plataforma.toUpperCase() }}
+                  </option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                @click="cerrarModalGrafico"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer shrink-0"
+                title="Cerrar modal (Esc)"
+              >
+                <X class="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <!-- Contenido del Gráfico Ampliado -->
-          <div class="p-6 flex-1 overflow-y-auto min-h-[460px] flex flex-col justify-center">
-            <div class="h-[62vh] w-full">
+          <div class="p-6 flex-1 overflow-y-auto min-h-[460px] flex flex-col justify-start">
+            <!-- Caso Especial: Desglose Mensual de Score con Gráfica Dual y Tabla Comparativa -->
+            <div v-if="modalGraficoActivo === 'score_mensual'" class="space-y-6">
+              <!-- Gráfica de Barras por Mes -->
+              <div class="h-64 sm:h-72 w-full bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl p-3 border border-slate-100 dark:border-slate-800/80">
+                <Bar :data="scoreMensualChartData" :options="scoreMensualChartOptions" />
+              </div>
+
+              <!-- Tabla Comparativa Mes a Mes -->
+              <div>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
+                  <Calendar class="w-4 h-4 text-violet-500" />
+                  <span>Matriz Comparativa por Mes de Campaña</span>
+                </h4>
+
+                <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                  <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 font-mono uppercase text-[10px] border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th class="px-4 py-3">Mes</th>
+                        <th class="px-4 py-3 text-center">Publicaciones</th>
+                        <th class="px-4 py-3 text-right">Score Promedio / Post</th>
+                        <th class="px-4 py-3 text-right">Score Total Acumulado</th>
+                        <th class="px-4 py-3 text-right">Vistas Totales</th>
+                        <th class="px-4 py-3 text-right">Total Interacciones</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+                      <tr
+                        v-for="(mes, idx) in listaDesgloseMensual"
+                        :key="mes.clave_mes || idx"
+                        class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <td class="px-4 py-3.5 font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                          <span class="w-2 h-2 rounded-full bg-violet-500"></span>
+                          <span>{{ mes.nombre_mes }}</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-center text-slate-600 dark:text-slate-300">
+                          <span class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-bold">
+                            {{ mes.total_posts }} posts
+                          </span>
+                        </td>
+                        <td class="px-4 py-3.5 text-right font-black text-violet-600 dark:text-violet-400 text-sm">
+                          {{ Number(mes.score_promedio_post).toLocaleString('es-AR') }} <span class="text-[10px] font-normal text-slate-400">pts/post</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-right text-slate-700 dark:text-slate-300 font-semibold">
+                          {{ Number(mes.score_total).toLocaleString('es-AR') }} pts
+                        </td>
+                        <td class="px-4 py-3.5 text-right text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {{ Number(mes.total_vistas).toLocaleString('es-AR') }}
+                        </td>
+                        <td class="px-4 py-3.5 text-right text-slate-700 dark:text-slate-300 font-semibold">
+                          {{ Number(mes.total_interacciones).toLocaleString('es-AR') }}
+                        </td>
+                      </tr>
+                      <tr v-if="listaDesgloseMensual.length === 0">
+                        <td colspan="6" class="px-4 py-6 text-center text-slate-400">
+                          No se registran meses con publicaciones para auditar.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gráficos Estándar -->
+            <div v-else class="h-[62vh] w-full">
               <Line v-if="modalGraficoActivo === 'comunidad'" :data="comunidadChartData" :options="comunidadChartOptions" />
               <Line v-else-if="modalGraficoActivo === 'score'" :data="scoreChartData" :options="scoreChartOptions" />
               <Line v-else-if="modalGraficoActivo === 'vistas'" :data="vistasChartData" :options="vistasChartOptions" />

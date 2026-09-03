@@ -90,6 +90,98 @@ class DashboardController extends Controller
         });
 
         // ─────────────────────────────────────────────────────────────
+        // NORMALIZACIÓN DEL SCORE DE IMPACTO (PROMEDIOS Y TEMPORALIDAD)
+        // ─────────────────────────────────────────────────────────────
+        $mesesEspanol = [
+            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+            5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+            9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
+        ];
+        $mesesCortos = [
+            1 => 'Ene', 2 => 'Feb', 3 => 'Mar', 4 => 'Abr',
+            5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
+            9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic',
+        ];
+
+        // Agrupación mensual cronológica de publicaciones
+        $publicacionesCronologicas = $publicaciones->sortBy('fecha_publicacion');
+        $gruposPorMes = $publicacionesCronologicas->groupBy(function ($p) {
+            return $p->fecha_publicacion ? $p->fecha_publicacion->format('Y-m') : 'sin_fecha';
+        })->reject(fn ($posts, $key) => $key === 'sin_fecha');
+
+        $desgloseMensual = $gruposPorMes->map(function ($postsMes, $keyYm) use ($mesesEspanol, $mesesCortos) {
+            $partes = explode('-', $keyYm);
+            $ano = $partes[0] ?? date('Y');
+            $mesInt = (int) ($partes[1] ?? 1);
+            $nombreMes = ($mesesEspanol[$mesInt] ?? $keyYm) . " {$ano}";
+            $cortoMes = $mesesCortos[$mesInt] ?? $keyYm;
+
+            $cantPosts = $postsMes->count();
+            $scoreMes = (int) $postsMes->sum(function ($p) {
+                return ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10);
+            });
+            $promedioPorPostMes = $cantPosts > 0 ? (int) round($scoreMes / $cantPosts) : 0;
+            $vistasMes = (int) $postsMes->sum('total_vistas');
+            $likesMes = (int) $postsMes->sum('total_likes');
+            $comentariosMes = (int) $postsMes->sum('total_comentarios');
+            $compartidosMes = (int) $postsMes->sum('total_compartidos');
+            $republicadosMes = (int) $postsMes->sum('total_republicados');
+
+            return [
+                'clave_mes' => $keyYm,
+                'nombre_mes' => $nombreMes,
+                'mes_corto' => $cortoMes,
+                'ano' => (int) $ano,
+                'total_posts' => $cantPosts,
+                'score_total' => $scoreMes,
+                'score_promedio_post' => $promedioPorPostMes,
+                'total_vistas' => $vistasMes,
+                'total_interacciones' => $likesMes + $comentariosMes + $compartidosMes + $republicadosMes,
+            ];
+        })->values();
+
+        $mesesActivos = max(1, $desgloseMensual->count());
+        $scorePromedioPorPost = $totalPosts > 0 ? (int) round($scoreImpactoTotal / $totalPosts) : 0;
+        $scorePromedioMensual = (int) round($scoreImpactoTotal / $mesesActivos);
+
+        // Días de campaña transcurridos entre primer y último post
+        $fechaPrimera = $publicacionesCronologicas->first()?->fecha_publicacion;
+        $fechaUltima = $publicacionesCronologicas->last()?->fecha_publicacion ?? \Carbon\Carbon::now();
+        $diasCampanaActiva = $fechaPrimera ? max(1, (int) $fechaPrimera->diffInDays($fechaUltima) + 1) : 1;
+        $scorePromedioDiario = (int) round($scoreImpactoTotal / $diasCampanaActiva);
+
+        // Comparativa de tendencia: buscar el mes en curso (o el más reciente hasta hoy) y su mes previo
+        $mesActualYm = \Carbon\Carbon::now()->format('Y-m');
+        $mesActualItem = $desgloseMensual->firstWhere('clave_mes', $mesActualYm);
+
+        if (! $mesActualItem) {
+            // Si el mes en curso no tiene posts, tomar el último mes registrado hasta hoy
+            $mesActualItem = $desgloseMensual->filter(fn ($m) => $m['clave_mes'] <= $mesActualYm)->last() ?? $desgloseMensual->last();
+        }
+
+        $tendenciaScoreMes = null;
+        if ($mesActualItem) {
+            $idxActual = $desgloseMensual->search(fn ($m) => $m['clave_mes'] === $mesActualItem['clave_mes']);
+            if ($idxActual !== false && $idxActual > 0) {
+                $mesAnterior = $desgloseMensual[$idxActual - 1];
+                // Tendencia de Volumen de Puntos Totales del Mes (Agosto vs Julio)
+                $diffScoreTotal = $mesActualItem['score_total'] - $mesAnterior['score_total'];
+                $diffPct = $mesAnterior['score_total'] > 0
+                    ? round(($diffScoreTotal / $mesAnterior['score_total']) * 100, 1)
+                    : 0;
+
+                $tendenciaScoreMes = [
+                    'mes_actual' => $mesActualItem['mes_corto'],
+                    'mes_anterior' => $mesAnterior['mes_corto'],
+                    'score_actual' => $mesActualItem['score_total'],
+                    'score_anterior' => $mesAnterior['score_total'],
+                    'variacion_pts' => $diffScoreTotal,
+                    'variacion_pct' => $diffPct,
+                ];
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
         // DESDUPLICACIÓN DE AUDIENCIA POR TIERS (SOLO ELEMENTOS ACTIVOS)
         // ─────────────────────────────────────────────────────────────
         $perfilesActivos = $candidato->perfilesSociales
@@ -149,11 +241,37 @@ class DashboardController extends Controller
             ? round(($interaccionesTotales / $totalVistas) * 100, 2)
             : ($seguidoresNetosEstimados > 0 ? round(($interaccionesTotales / $seguidoresNetosEstimados) * 100, 2) : 0);
 
+        $vistasPromedioPorPost = $totalPosts > 0 ? (int) round($totalVistas / $totalPosts) : 0;
+
+        // Diagnóstico cualitativo de Engagement Rate
+        if ($engagementRate >= 5.0) {
+            $engagementCalidadTexto = 'Alto Involucramiento';
+        } elseif ($engagementRate >= 2.5) {
+            $engagementCalidadTexto = 'Sólido';
+        } else {
+            $engagementCalidadTexto = 'Moderado';
+        }
+
         $humorPromedio = $publicaciones->whereNotNull('termometro_humor_social')->avg('termometro_humor_social');
-        $humorPromedioFormateado = $humorPromedio ? number_format($humorPromedio, 1) : '4.8';
+        $humorPromedioRaw = $humorPromedio ? round((float) $humorPromedio, 1) : 5.0;
+        $humorPromedioFormateado = number_format($humorPromedioRaw, 1);
+
+        if ($humorPromedioRaw >= 4.5) {
+            $humorClimaTexto = 'Muy Favorable';
+            $humorClimaEstado = 'excelente';
+        } elseif ($humorPromedioRaw >= 3.5) {
+            $humorClimaTexto = 'Favorable';
+            $humorClimaEstado = 'bueno';
+        } elseif ($humorPromedioRaw >= 2.5) {
+            $humorClimaTexto = 'Moderado';
+            $humorClimaEstado = 'alerta';
+        } else {
+            $humorClimaTexto = 'Crítico';
+            $humorClimaEstado = 'crisis';
+        }
 
         // Ratio de Penetración Territorial sobre el Padrón (Neto Real vs Bruto)
-        $padronElectoral = $candidato->territorio?->padron_electoral ?? 0;
+        $padronElectoral = (int) ($candidato->padron_electoral ?: ($candidato->territorio?->padron_electoral ?? 0));
         $ratioPenetracionNeta = $padronElectoral > 0
             ? round(($seguidoresNetosEstimados / $padronElectoral) * 100, 1)
             : 0;
@@ -161,12 +279,118 @@ class DashboardController extends Controller
             ? round(($totalSeguidores / $padronElectoral) * 100, 1)
             : 0;
 
-        // Meta de Score de Impacto: Anclada a la audiencia real deduplicada por Tiers (cross-platform)
-        // El sistema de Tiers ya descuenta solapamiento entre redes (ej: 100 FB + 150 IG = 150 únicos, no 250).
-        // Meta = seguidores únicos netos (post-deduplicación) × factor de engagement objetivo (0.5 = 50% debería interactuar).
-        // Esto hace que la meta escale con la AUDIENCIA REAL, no con el ritmo de publicación propio.
+        // Meta de Score de Impacto Total: Anclada a la audiencia real deduplicada por Tiers (cross-platform)
         $factorEngagementObjetivo = 0.5;
         $scoreImpactoMeta = (int) max(500, round($seguidoresNetosEstimados * $factorEngagementObjetivo));
+
+        // ─────────────────────────────────────────────────────────────
+        // META DE SCORE PROMEDIO POR POST (BENCHMARK TERRITORIAL PROPORCIONAL)
+        // ─────────────────────────────────────────────────────────────
+        // Escala proporcional y universal al padrón electoral del candidato:
+        if ($padronElectoral > 0) {
+            if ($padronElectoral <= 50000) {
+                // Distritos municipales (hasta 50k): 0.5% del padrón (ej. 21.000 -> 105 pts)
+                $factorPadron = 0.005;
+                $pctTexto = '0.5% del padrón';
+            } elseif ($padronElectoral <= 200000) {
+                // Distritos medianos (50k a 200k): 0.4% del padrón (ej. 100.000 -> 400 pts)
+                $factorPadron = 0.004;
+                $pctTexto = '0.4% del padrón';
+            } else {
+                // Distritos grandes o provinciales (>200k): 0.25% del padrón (ej. 600.000 -> 1.500 pts)
+                $factorPadron = 0.0025;
+                $pctTexto = '0.25% del padrón';
+            }
+
+            $scorePromedioPostMeta = (int) max(20, round($padronElectoral * $factorPadron));
+            $origenMetaScore = 'padron';
+            $metaScoreBaseTexto = $pctTexto;
+        } else {
+            // Fallback inteligente si no hay padrón cargado: 3% de la comunidad de seguidores
+            $scorePromedioPostMeta = (int) max(20, round($seguidoresNetosEstimados * 0.03));
+            $origenMetaScore = 'seguidores';
+            $metaScoreBaseTexto = '3% de seguidores';
+        }
+
+        $scorePromedioPostPct = $scorePromedioPostMeta > 0
+            ? round(($scorePromedioPorPost / $scorePromedioPostMeta) * 100, 1)
+            : 0;
+
+        if ($scorePromedioPostPct >= 100) {
+            $scorePromedioPostEstado = 'exitoso';
+            $scorePromedioPostEstadoTexto = 'Exitoso';
+        } elseif ($scorePromedioPostPct >= 60) {
+            $scorePromedioPostEstado = 'solido';
+            $scorePromedioPostEstadoTexto = 'Sólido';
+        } else {
+            $scorePromedioPostEstado = 'bajo';
+            $scorePromedioPostEstadoTexto = 'Por mejorar';
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // META DE SCORE PROMEDIO MENSUAL (BENCHMARK TERRITORIAL PROPORCIONAL)
+        // ─────────────────────────────────────────────────────────────
+        if ($padronElectoral > 0) {
+            if ($padronElectoral <= 50000) {
+                // Distritos municipales: 10% del padrón en impacto acumulado mensual (ej. 24.500 -> 2.450 pts)
+                $factorPadronMensual = 0.10;
+                $pctTextoMensual = '10% del padrón';
+            } elseif ($padronElectoral <= 200000) {
+                // Distritos medianos: 6% del padrón (ej. 100.000 -> 6.000 pts)
+                $factorPadronMensual = 0.06;
+                $pctTextoMensual = '6% del padrón';
+            } else {
+                // Distritos grandes o provinciales: 3% del padrón (ej. 600.000 -> 18.000 pts)
+                $factorPadronMensual = 0.03;
+                $pctTextoMensual = '3% del padrón';
+            }
+
+            $scorePromedioMensualMeta = (int) max(100, round($padronElectoral * $factorPadronMensual));
+            $origenMetaMensual = 'padron';
+            $metaMensualBaseTexto = $pctTextoMensual;
+        } else {
+            // Fallback si no hay padrón: 30% de la comunidad neta de seguidores
+            $scorePromedioMensualMeta = (int) max(100, round($seguidoresNetosEstimados * 0.30));
+            $origenMetaMensual = 'seguidores';
+            $metaMensualBaseTexto = '30% de seguidores';
+        }
+
+        $scorePromedioMensualPct = $scorePromedioMensualMeta > 0
+            ? round(($scorePromedioMensual / $scorePromedioMensualMeta) * 100, 1)
+            : 0;
+
+        if ($scorePromedioMensualPct >= 100) {
+            $scorePromedioMensualEstado = 'exitoso';
+            $scorePromedioMensualEstadoTexto = 'Exitoso';
+        } elseif ($scorePromedioMensualPct >= 60) {
+            $scorePromedioMensualEstado = 'solido';
+            $scorePromedioMensualEstadoTexto = 'Sólido';
+        } else {
+            $scorePromedioMensualEstado = 'bajo';
+            $scorePromedioMensualEstadoTexto = 'Por mejorar';
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // RÉCORD HISTÓRICO MENSUAL Y META TOTAL DE CAMPAÑA (PADRÓN)
+        // ─────────────────────────────────────────────────────────────
+        // Mejor mes histórico de la campaña
+        $mejorMesItem = $desgloseMensual->sortByDesc('score_total')->first();
+        $recordMensualScore = $mejorMesItem ? (int) $mejorMesItem['score_total'] : $scoreImpactoTotal;
+        $recordMensualNombre = $mejorMesItem ? $mejorMesItem['mes_corto'] . ' ' . $mejorMesItem['ano'] : '';
+        $recordMensualCorto = $mejorMesItem ? $mejorMesItem['mes_corto'] : '';
+
+        // Meta Total de Campaña: Presión Electoral Total (100% del Padrón Electoral)
+        if ($padronElectoral > 0) {
+            $metaScoreCampana = $padronElectoral;
+            $metaCampanaBaseTexto = '100% del padrón electoral';
+        } else {
+            $metaScoreCampana = (int) max(1000, round($seguidoresNetosEstimados * 2.0));
+            $metaCampanaBaseTexto = '2x comunidad de seguidores';
+        }
+
+        $avanceCampanaPadronPct = $metaScoreCampana > 0
+            ? round(($scoreImpactoTotal / $metaScoreCampana) * 100, 1)
+            : 0;
 
         // Contexto de padrón: qué % del universo electoral cubre la audiencia neta actual
         $pctPadronCubiertoPorTiers = $padronElectoral > 0
@@ -731,6 +955,38 @@ class DashboardController extends Controller
                 'crecimiento_pct_seguidores' => $crecimientoPctTotalSeguidores,
                 'score_impacto_total' => number_format($scoreImpactoTotal),
                 'score_impacto_raw' => $scoreImpactoTotal,
+                'score_promedio_post' => number_format($scorePromedioPorPost),
+                'score_promedio_post_raw' => $scorePromedioPorPost,
+                'score_promedio_post_meta' => number_format($scorePromedioPostMeta),
+                'score_promedio_post_meta_raw' => $scorePromedioPostMeta,
+                'score_promedio_post_pct' => $scorePromedioPostPct,
+                'score_promedio_post_estado' => $scorePromedioPostEstado,
+                'score_promedio_post_estado_texto' => $scorePromedioPostEstadoTexto,
+                'origen_meta_score' => $origenMetaScore,
+                'meta_score_base_texto' => $metaScoreBaseTexto,
+                'score_promedio_mensual' => number_format($scorePromedioMensual),
+                'score_promedio_mensual_raw' => $scorePromedioMensual,
+                'score_promedio_mensual_meta' => number_format($scorePromedioMensualMeta),
+                'score_promedio_mensual_meta_raw' => $scorePromedioMensualMeta,
+                'score_promedio_mensual_pct' => $scorePromedioMensualPct,
+                'score_promedio_mensual_estado' => $scorePromedioMensualEstado,
+                'score_promedio_mensual_estado_texto' => $scorePromedioMensualEstadoTexto,
+                'origen_meta_mensual' => $origenMetaMensual,
+                'meta_mensual_base_texto' => $metaMensualBaseTexto,
+                'score_promedio_diario' => number_format($scorePromedioDiario),
+                'score_promedio_diario_raw' => $scorePromedioDiario,
+                'record_mensual_score' => number_format($recordMensualScore),
+                'record_mensual_score_raw' => $recordMensualScore,
+                'record_mensual_nombre' => $recordMensualNombre,
+                'record_mensual_corto' => $recordMensualCorto,
+                'meta_score_campana' => number_format($metaScoreCampana),
+                'meta_score_campana_raw' => $metaScoreCampana,
+                'avance_campana_padron_pct' => $avanceCampanaPadronPct,
+                'meta_campana_base_texto' => $metaCampanaBaseTexto,
+                'dias_campana_activa' => $diasCampanaActiva,
+                'meses_campana_activa' => $mesesActivos,
+                'tendencia_score_mes' => $tendenciaScoreMes,
+                'desglose_mensual' => $desgloseMensual,
                 'score_impacto_organico_puro' => number_format($scoreImpactoOrganicoPuro),
                 'score_impacto_organico_puro_raw' => $scoreImpactoOrganicoPuro,
                 'score_impacto_meta' => number_format($scoreImpactoMeta),
@@ -741,16 +997,23 @@ class DashboardController extends Controller
                 'score_impacto_base_texto' => $scoreImpactoBaseTexto,
                 'total_vistas' => number_format($totalVistas),
                 'total_vistas_raw' => $totalVistas,
+                'vistas_promedio_post' => number_format($vistasPromedioPorPost),
+                'vistas_promedio_post_raw' => $vistasPromedioPorPost,
                 'total_publicaciones' => $totalPosts,
                 'engagement_promedio' => $engagementRate.'%',
+                'engagement_calidad_texto' => $engagementCalidadTexto,
                 'inversion_pauta_total' => $totalPauta,
                 'humor_social_promedio' => $humorPromedioFormateado,
+                'humor_social_promedio_raw' => $humorPromedioRaw,
+                'humor_clima_texto' => $humorClimaTexto,
+                'humor_clima_estado' => $humorClimaEstado,
                 'ratio_penetracion' => $ratioPenetracionNeta.'%',
                 'ratio_penetracion_raw' => $ratioPenetracionNeta,
                 'ratio_penetracion_bruta' => $ratioPenetracionBruta.'%',
                 'tiers_desglose' => $tiersDesglose,
                 'share_of_voice' => $shareOfVoicePropio.'%',
             ],
+            'desglose_mensual' => $desgloseMensual,
             'redes_desglose' => $redesDesglose,
             'distribucion_plataformas' => $distribucionPlataformas,
             'rendimiento_por_formato' => $rendimientoPorFormato,

@@ -1019,12 +1019,36 @@ class SocialProfileScraperService
     protected function scrapeTikTokPost(string $url, array $result): array
     {
         $result['plataforma'] = 'tiktok';
-        $result['tipo_formato'] = 'Video Corto';
+        $result['tipo_formato'] = 'Video';
+
+        // 0. Limpiar URL de parámetros UTM o query strings
+        $cleanUrl = strtok($url, '?');
+        $result['url_post'] = $cleanUrl;
 
         try {
-            // 1. Consultar endpoint oficial oEmbed de TikTok
-            $oembedUrl = 'https://www.tiktok.com/oembed?url='.urlencode($url);
-            $oembedResp = Http::timeout(6)->get($oembedUrl);
+            // 1. Extraer fecha nativa directa del Video ID (TikTok Snowflake Algorithm)
+            if (preg_match('/video\/(\d+)/i', $cleanUrl, $vm)) {
+                $videoId = $vm[1];
+                $ts = (int) ($videoId >> 32);
+                if ($ts > 1000000000 && $ts < 2500000000) {
+                    $result['fecha_publicacion'] = date('Y-m-d\TH:i', $ts);
+                }
+            }
+
+            // 2. Extraer autor del handle en la URL si está presente
+            if (preg_match('/tiktok\.com\/@([a-zA-Z0-9_\.\-]+)/i', $cleanUrl, $am)) {
+                $result['handle_autor'] = '@' . ltrim($am[1], '@');
+            }
+
+            // 3. Consultar endpoint oficial oEmbed de TikTok con SSL bypass y User-Agent
+            $oembedUrl = 'https://www.tiktok.com/oembed?url=' . urlencode($cleanUrl);
+            $oembedResp = Http::withoutVerifying()
+                ->timeout(10)
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept' => 'application/json',
+                ])
+                ->get($oembedUrl);
 
             if ($oembedResp->successful()) {
                 $oembed = $oembedResp->json();
@@ -1035,18 +1059,9 @@ class SocialProfileScraperService
                     $result['media_url'] = $oembed['thumbnail_url'];
                 }
                 if (! empty($oembed['author_unique_id'])) {
-                    $result['handle_autor'] = '@'.ltrim($oembed['author_unique_id'], '@');
-                } elseif (! empty($oembed['author_name'])) {
+                    $result['handle_autor'] = '@' . ltrim($oembed['author_unique_id'], '@');
+                } elseif (! empty($oembed['author_name']) && empty($result['handle_autor'])) {
                     $result['handle_autor'] = $oembed['author_name'];
-                }
-            }
-
-            // Extraer fecha nativa directa del Video ID (TikTok Snowflake Algorithm)
-            if (preg_match('/video\/(\d+)/i', $url, $vm)) {
-                $videoId = $vm[1];
-                $ts = (int) ($videoId >> 32);
-                if ($ts > 1000000000 && $ts < 2500000000) {
-                    $result['fecha_publicacion'] = date('Y-m-d\TH:i', $ts);
                 }
             }
 

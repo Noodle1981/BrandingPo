@@ -1354,17 +1354,25 @@ const tiposPauta = [
                 <input v-model.number="editForm.total_republicados" type="number" min="0" class="w-full text-center text-xs font-bold text-slate-800 dark:text-slate-100" />
               </div>
 
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs">
+              <!-- 4to item: Guardados en Twitter / Compartir en Threads -->
+              <div v-if="!isThreads" class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 shadow-2xs">
                 <label class="block text-[10px] uppercase font-bold text-amber-500 mb-1 flex items-center justify-center gap-1">
                   <Bookmark class="w-3 h-3 fill-amber-500" />
                   <span>Guardados (🔖)</span>
                 </label>
                 <input v-model.number="editForm.total_guardados" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-600 dark:text-amber-400" />
               </div>
+              <div v-else class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs">
+                <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-1 flex items-center justify-center gap-1">
+                  <Send class="w-3 h-3" />
+                  <span>Compartir (✈️)</span>
+                </label>
+                <input v-model.number="editForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold text-indigo-600 dark:text-indigo-400" />
+              </div>
             </div>
 
-            <!-- Vistas / Impresiones X -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-mono">
+            <!-- Vistas / Impresiones (X y Threads) -->
+            <div :class="isThreads ? 'grid grid-cols-1 gap-2.5 font-mono' : 'grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-mono'">
               <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/30 shadow-2xs text-center font-mono">
                 <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1 flex items-center justify-center gap-1">
                   <Eye class="w-3 h-3" />
@@ -1373,7 +1381,7 @@ const tiposPauta = [
                 <input v-model.number="editForm.total_vistas" type="number" min="0" class="w-full text-center text-xs font-bold text-cyan-600 dark:text-cyan-400" />
               </div>
 
-              <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs text-center font-mono">
+              <div v-if="!isThreads" class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-500/30 shadow-2xs text-center font-mono">
                 <label class="block text-[10px] uppercase font-bold text-indigo-500 mb-1 flex items-center justify-center gap-1">
                   <Send class="w-3 h-3" />
                   <span>Compartidos / DM (↗️)</span>

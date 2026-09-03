@@ -44,6 +44,11 @@ export default defineConfig({
         chunkSizeWarningLimit: 1000,
     },
     server: {
+        host: 'localhost',
+        cors: true,
+        hmr: {
+            host: 'localhost',
+        },
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },
