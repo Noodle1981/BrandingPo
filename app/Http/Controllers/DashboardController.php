@@ -6,6 +6,7 @@ use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
 use App\Models\NotaPrensa;
 use App\Models\Publicacion;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -51,8 +52,8 @@ class DashboardController extends Controller
             ]);
         }
 
-        // Publicaciones del candidato en este workspace
-        $publicaciones = Publicacion::where('workspace_id', $workspace->id)
+        // Todas las publicaciones históricas del candidato en este workspace
+        $todasPublicacionesCandidato = Publicacion::where('workspace_id', $workspace->id)
             ->where('candidato_id', $candidato->id)
             ->with(['perfilSocial', 'ejeTematico', 'pautaEventos'])
             ->latest('fecha_publicacion')
@@ -62,33 +63,6 @@ class DashboardController extends Controller
             ->orderBy('orden')
             ->orderBy('id')
             ->get();
-
-        // Métricas directas del Perfil del Candidato (Comunidad Bruta)
-        $totalSeguidores = (int) $candidato->perfilesSociales->sum('seguidores_actuales');
-        $totalSeguidoresPuntoCero = (int) $candidato->perfilesSociales->sum('seguidores_punto_cero');
-        $crecimientoNetoTotalSeguidores = $totalSeguidores - $totalSeguidoresPuntoCero;
-        $crecimientoPctTotalSeguidores = $totalSeguidoresPuntoCero > 0
-            ? round(($crecimientoNetoTotalSeguidores / $totalSeguidoresPuntoCero) * 100, 1)
-            : 0;
-
-        // Métricas directas de Publicaciones
-        $totalVistas = (int) $publicaciones->sum('total_vistas');
-        $totalLikes = (int) $publicaciones->sum('total_likes');
-        $totalComentarios = (int) $publicaciones->sum('total_comentarios');
-        $totalCompartidos = (int) $publicaciones->sum('total_compartidos');
-        $totalRepublicados = (int) $publicaciones->sum('total_republicados');
-        $totalGuardados = (int) $publicaciones->sum('total_guardados');
-        $totalPauta = (float) $publicaciones->sum('monto_invertido_pauta');
-        $totalPosts = $publicaciones->count();
-
-        $interaccionesTotales = $totalLikes + $totalComentarios + $totalCompartidos + $totalRepublicados;
-        $scoreImpactoTotal = ($totalLikes * 1) + ($totalComentarios * 3) + ($totalCompartidos * 5) + ($totalRepublicados * 10);
-
-        // Score de Impacto calculado SOLO sobre posts orgánicos puros (sin pauta)
-        $postsOrganicos = $publicaciones->filter(fn ($p) => ! in_array($p->tipo_pauta, Publicacion::TIPOS_CON_INVERSION));
-        $scoreImpactoOrganicoPuro = (int) $postsOrganicos->sum(function ($p) {
-            return ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10);
-        });
 
         // ─────────────────────────────────────────────────────────────
         // NORMALIZACIÓN DEL SCORE DE IMPACTO (PROMEDIOS Y TEMPORALIDAD)
@@ -104,8 +78,8 @@ class DashboardController extends Controller
             9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic',
         ];
 
-        // Agrupación mensual cronológica de publicaciones
-        $publicacionesCronologicas = $publicaciones->sortBy('fecha_publicacion');
+        // Agrupación mensual cronológica histórica de publicaciones
+        $publicacionesCronologicas = $todasPublicacionesCandidato->sortBy('fecha_publicacion');
         $gruposPorMes = $publicacionesCronologicas->groupBy(function ($p) {
             return $p->fecha_publicacion ? $p->fecha_publicacion->format('Y-m') : 'sin_fecha';
         })->reject(fn ($posts, $key) => $key === 'sin_fecha');
@@ -141,40 +115,131 @@ class DashboardController extends Controller
             ];
         })->values();
 
-        $mesesActivos = max(1, $desgloseMensual->count());
+        // Asegurar que el mes en curso (ej. Septiembre) figure en el desglose aunque tenga 0 posts
+        $mesActualYm = Carbon::now()->format('Y-m');
+        if (! $desgloseMensual->firstWhere('clave_mes', $mesActualYm)) {
+            $partesNow = explode('-', $mesActualYm);
+            $anoNow = $partesNow[0] ?? date('Y');
+            $mesIntNow = (int) ($partesNow[1] ?? 1);
+            $desgloseMensual->push([
+                'clave_mes' => $mesActualYm,
+                'nombre_mes' => ($mesesEspanol[$mesIntNow] ?? $mesActualYm) . " {$anoNow}",
+                'mes_corto' => $mesesCortos[$mesIntNow] ?? $mesActualYm,
+                'ano' => (int) $anoNow,
+                'total_posts' => 0,
+                'score_total' => 0,
+                'score_promedio_post' => 0,
+                'total_vistas' => 0,
+                'total_interacciones' => 0,
+            ]);
+        }
+        $desgloseMensual = $desgloseMensual->sortBy('clave_mes')->values();
+
+        // Listado de períodos disponibles para el selector
+        $periodosDisponibles = collect([
+            [
+                'clave' => 'todos',
+                'nombre' => '🌐 Campaña Completa (Histórico)',
+                'es_actual' => false,
+                'total_posts' => $todasPublicacionesCandidato->count(),
+            ],
+        ]);
+
+        foreach ($desgloseMensual->sortByDesc('clave_mes') as $m) {
+            $esActual = $m['clave_mes'] === $mesActualYm;
+            $periodosDisponibles->push([
+                'clave' => $m['clave_mes'],
+                'nombre' => $esActual ? "📅 {$m['nombre_mes']} (Mes Actual)" : "📅 {$m['nombre_mes']}",
+                'es_actual' => $esActual,
+                'total_posts' => $m['total_posts'],
+            ]);
+        }
+
+        // Determinar período activo y filtrar publicaciones
+        $periodoActivo = $request->input('periodo', 'todos');
+        $periodoValido = $periodosDisponibles->firstWhere('clave', $periodoActivo);
+        if (! $periodoValido) {
+            $periodoActivo = 'todos';
+        }
+
+        if ($periodoActivo !== 'todos') {
+            $publicaciones = $todasPublicacionesCandidato->filter(function ($p) use ($periodoActivo) {
+                return $p->fecha_publicacion && $p->fecha_publicacion->format('Y-m') === $periodoActivo;
+            })->values();
+        } else {
+            $publicaciones = $todasPublicacionesCandidato;
+        }
+
+        // Métricas directas del Perfil del Candidato (Comunidad Bruta)
+        $totalSeguidores = (int) $candidato->perfilesSociales->sum('seguidores_actuales');
+        $totalSeguidoresPuntoCero = (int) $candidato->perfilesSociales->sum('seguidores_punto_cero');
+        $crecimientoNetoTotalSeguidores = $totalSeguidores - $totalSeguidoresPuntoCero;
+        $crecimientoPctTotalSeguidores = $totalSeguidoresPuntoCero > 0
+            ? round(($crecimientoNetoTotalSeguidores / $totalSeguidoresPuntoCero) * 100, 1)
+            : 0;
+
+        // Métricas directas de Publicaciones del período seleccionado
+        $totalVistas = (int) $publicaciones->sum('total_vistas');
+        $totalLikes = (int) $publicaciones->sum('total_likes');
+        $totalComentarios = (int) $publicaciones->sum('total_comentarios');
+        $totalCompartidos = (int) $publicaciones->sum('total_compartidos');
+        $totalRepublicados = (int) $publicaciones->sum('total_republicados');
+        $totalGuardados = (int) $publicaciones->sum('total_guardados');
+        $totalPauta = (float) $publicaciones->sum('monto_invertido_pauta');
+        $totalPosts = $publicaciones->count();
+
+        $interaccionesTotales = $totalLikes + $totalComentarios + $totalCompartidos + $totalRepublicados;
+        $scoreImpactoTotal = ($totalLikes * 1) + ($totalComentarios * 3) + ($totalCompartidos * 5) + ($totalRepublicados * 10);
+
+        // Score de Impacto calculado SOLO sobre posts orgánicos puros (sin pauta)
+        $postsOrganicos = $publicaciones->filter(fn ($p) => ! in_array($p->tipo_pauta, Publicacion::TIPOS_CON_INVERSION));
+        $scoreImpactoOrganicoPuro = (int) $postsOrganicos->sum(function ($p) {
+            return ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10);
+        });
+
+        $mesesActivos = max(1, $desgloseMensual->filter(fn ($m) => $m['total_posts'] > 0)->count());
         $scorePromedioPorPost = $totalPosts > 0 ? (int) round($scoreImpactoTotal / $totalPosts) : 0;
-        $scorePromedioMensual = (int) round($scoreImpactoTotal / $mesesActivos);
+        $scorePromedioMensual = $periodoActivo === 'todos'
+            ? (int) round($scoreImpactoTotal / $mesesActivos)
+            : $scoreImpactoTotal;
+        $vistasPromedioPorPost = $totalPosts > 0 ? (int) round($totalVistas / $totalPosts) : 0;
 
-        // Días de campaña transcurridos entre primer y último post
-        $fechaPrimera = $publicacionesCronologicas->first()?->fecha_publicacion;
-        $fechaUltima = $publicacionesCronologicas->last()?->fecha_publicacion ?? \Carbon\Carbon::now();
-        $diasCampanaActiva = $fechaPrimera ? max(1, (int) $fechaPrimera->diffInDays($fechaUltima) + 1) : 1;
-        $scorePromedioDiario = (int) round($scoreImpactoTotal / $diasCampanaActiva);
+        // Días de campaña transcurridos para cálculo diario
+        if ($periodoActivo === 'todos') {
+            $fechaPrimera = $publicacionesCronologicas->first()?->fecha_publicacion;
+            $fechaUltima = $publicacionesCronologicas->last()?->fecha_publicacion ?? Carbon::now();
+            $diasCampanaActiva = $fechaPrimera ? max(1, (int) $fechaPrimera->diffInDays($fechaUltima) + 1) : 1;
+        } else {
+            try {
+                $diasCampanaActiva = Carbon::createFromFormat('Y-m', $periodoActivo)->daysInMonth;
+            } catch (\Throwable $e) {
+                $diasCampanaActiva = 30;
+            }
+        }
+        $scorePromedioDiario = (int) round($scoreImpactoTotal / max(1, $diasCampanaActiva));
 
-        // Comparativa de tendencia: buscar el mes en curso (o el más reciente hasta hoy) y su mes previo
-        $mesActualYm = \Carbon\Carbon::now()->format('Y-m');
-        $mesActualItem = $desgloseMensual->firstWhere('clave_mes', $mesActualYm);
+        // Comparativa de tendencia: buscar el mes activo o el mes actual y su mes previo
+        $mesParaTendenciaYm = $periodoActivo !== 'todos' ? $periodoActivo : $mesActualYm;
+        $mesReferenciaItem = $desgloseMensual->firstWhere('clave_mes', $mesParaTendenciaYm);
 
-        if (! $mesActualItem) {
-            // Si el mes en curso no tiene posts, tomar el último mes registrado hasta hoy
-            $mesActualItem = $desgloseMensual->filter(fn ($m) => $m['clave_mes'] <= $mesActualYm)->last() ?? $desgloseMensual->last();
+        if (! $mesReferenciaItem) {
+            $mesReferenciaItem = $desgloseMensual->filter(fn ($m) => $m['clave_mes'] <= $mesParaTendenciaYm)->last() ?? $desgloseMensual->last();
         }
 
         $tendenciaScoreMes = null;
-        if ($mesActualItem) {
-            $idxActual = $desgloseMensual->search(fn ($m) => $m['clave_mes'] === $mesActualItem['clave_mes']);
+        if ($mesReferenciaItem) {
+            $idxActual = $desgloseMensual->search(fn ($m) => $m['clave_mes'] === $mesReferenciaItem['clave_mes']);
             if ($idxActual !== false && $idxActual > 0) {
                 $mesAnterior = $desgloseMensual[$idxActual - 1];
-                // Tendencia de Volumen de Puntos Totales del Mes (Agosto vs Julio)
-                $diffScoreTotal = $mesActualItem['score_total'] - $mesAnterior['score_total'];
+                $diffScoreTotal = $mesReferenciaItem['score_total'] - $mesAnterior['score_total'];
                 $diffPct = $mesAnterior['score_total'] > 0
                     ? round(($diffScoreTotal / $mesAnterior['score_total']) * 100, 1)
                     : 0;
 
                 $tendenciaScoreMes = [
-                    'mes_actual' => $mesActualItem['mes_corto'],
+                    'mes_actual' => $mesReferenciaItem['mes_corto'],
                     'mes_anterior' => $mesAnterior['mes_corto'],
-                    'score_actual' => $mesActualItem['score_total'],
+                    'score_actual' => $mesReferenciaItem['score_total'],
                     'score_anterior' => $mesAnterior['score_total'],
                     'variacion_pts' => $diffScoreTotal,
                     'variacion_pct' => $diffPct,
@@ -1017,6 +1082,8 @@ class DashboardController extends Controller
                 'ciclo_nombre' => $candidato->cicloCampana?->nombre ?? 'Campaña 2025',
             ],
             'candidatos_lista' => $todosCandidatos,
+            'periodo_activo' => $periodoActivo,
+            'periodos_disponibles' => $periodosDisponibles->values(),
             'stats' => [
                 'total_seguidores' => number_format($totalSeguidores),
                 'total_seguidores_raw' => $totalSeguidores,

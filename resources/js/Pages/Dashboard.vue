@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import WarRoomLayout from '../Layouts/WarRoomLayout.vue';
 import MetricCard from '../Components/MetricCard.vue';
@@ -80,6 +80,14 @@ const props = defineProps({
     default: null
   },
   candidatos_lista: {
+    type: Array,
+    default: () => []
+  },
+  periodo_activo: {
+    type: String,
+    default: 'todos'
+  },
+  periodos_disponibles: {
     type: Array,
     default: () => []
   },
@@ -191,8 +199,29 @@ const props = defineProps({
 
 const cambiarCandidato = (event) => {
   const id = event.target.value;
-  router.get('/dashboard', { candidato_id: id }, { preserveState: true, replace: true });
+  router.get('/dashboard', { candidato_id: id, periodo: props.periodo_activo }, { preserveState: true, replace: true });
 };
+
+const cambiarPeriodo = (event) => {
+  const periodo = event.target.value;
+  router.get('/dashboard', { candidato_id: props.candidato?.id, periodo: periodo }, { preserveState: true, replace: true });
+};
+
+const selectedBoostIndex = ref(0);
+
+watch(() => props.organico_vs_pauta?.posts_impulsados, (newPosts) => {
+  if (!newPosts || selectedBoostIndex.value >= newPosts.length) {
+    selectedBoostIndex.value = 0;
+  }
+});
+
+const activeBoostedPost = computed(() => {
+  const posts = props.organico_vs_pauta?.posts_impulsados;
+  if (Array.isArray(posts) && posts.length > 0) {
+    return posts[selectedBoostIndex.value] || posts[0];
+  }
+  return props.organico_vs_pauta?.primer_post_impulsado || null;
+});
 
 const formatCurrency = (amount) => {
   if (!amount) return '$0';
@@ -1353,6 +1382,20 @@ onUnmounted(() => {
             <ChevronDown class="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
+          <!-- Selector de Período Temporal (Meses / Campaña) -->
+          <div v-if="periodos_disponibles && periodos_disponibles.length > 0" class="relative">
+            <select
+              :value="periodo_activo"
+              @change="cambiarPeriodo"
+              class="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-xl pl-3 pr-8 py-2.5 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all cursor-pointer shadow-2xs"
+            >
+              <option v-for="per in periodos_disponibles" :key="per.clave" :value="per.clave">
+                {{ per.nombre }}
+              </option>
+            </select>
+            <ChevronDown class="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
           <Link
             href="/mi-candidato"
             class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-all shadow-xs hover:scale-102"
@@ -1369,6 +1412,29 @@ onUnmounted(() => {
           </Link>
         </div>
       </div>
+    </div>
+
+    <!-- Banner Informativo si el Período no tiene publicaciones (ej. Septiembre en curso) -->
+    <div
+      v-if="periodo_activo !== 'todos' && (!stats.total_publicaciones || stats.total_publicaciones === 0)"
+      class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-xs flex items-center justify-between gap-3 shadow-xs"
+    >
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+          <Calendar class="w-4 h-4" />
+        </div>
+        <div>
+          <p class="font-bold">Período Seleccionado: {{ periodos_disponibles.find(p => p.clave === periodo_activo)?.nombre || periodo_activo }}</p>
+          <p class="text-[11px] opacity-90">No hay publicaciones cargadas todavía para este mes. Todas las métricas de actividad figuran en 0.</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        @click="router.get('/dashboard', { candidato_id: candidato?.id, periodo: 'todos' }, { preserveState: true, replace: true })"
+        class="px-3 py-1.5 rounded-xl font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-100 transition-all cursor-pointer shrink-0"
+      >
+        Ver Campaña Completa
+      </button>
     </div>
 
     <!-- 2. HUD CENTRAL DE KPIS ESTRATÉGICOS (DIVIDIDO EN 2 BLOQUES CONTEXTUALES) -->
@@ -2149,12 +2215,12 @@ onUnmounted(() => {
               <DollarSign class="w-4 h-4" />
               Eficiencia Publicitaria (ROI)
             </span>
-            <span v-if="organico_vs_pauta?.primer_post_impulsado" class="text-[10px] px-2.5 py-0.5 rounded-full bg-violet-500/25 text-violet-300 font-mono font-bold flex items-center gap-1 border border-violet-500/30">
+            <span v-if="organico_vs_pauta?.posts_impulsados && organico_vs_pauta.posts_impulsados.length > 0" class="text-[10px] px-2.5 py-0.5 rounded-full bg-violet-500/25 text-violet-300 font-mono font-bold flex items-center gap-1 border border-violet-500/30">
               <Rocket class="w-3 h-3 text-violet-400" />
-              <span>Booster Activo</span>
+              <span>{{ organico_vs_pauta.posts_impulsados.length }} Booster(s) Activo(s)</span>
             </span>
-            <span v-else class="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">
-              Inversión Ads
+            <span v-else class="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono border border-slate-700">
+              Sin Pauta Activa
             </span>
           </div>
 
@@ -2167,30 +2233,48 @@ onUnmounted(() => {
             </div>
             <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10">
               <span class="text-[10px] text-slate-400 block uppercase">
-                {{ organico_vs_pauta?.primer_post_impulsado?.costo_por_like ? 'Costo / Like Ganado' : 'Costo / Interacción' }}
+                {{ activeBoostedPost?.costo_por_like ? 'Costo / Like Ganado' : 'Costo / Interacción' }}
               </span>
               <span class="text-xl font-extrabold text-emerald-400">
-                {{ formatCurrency(organico_vs_pauta?.primer_post_impulsado?.costo_por_like ?? organico_vs_pauta?.costo_por_interaccion ?? 0) }}
+                {{ formatCurrency(activeBoostedPost?.costo_por_like ?? organico_vs_pauta?.costo_por_interaccion ?? 0) }}
               </span>
               <span class="text-[10px] text-slate-400 block mt-0.5">
-                {{ organico_vs_pauta?.primer_post_impulsado ? 'CPL atribuible a pauta' : 'por reacción/comentario' }}
+                {{ activeBoostedPost ? `CPL ${activeBoostedPost.plataforma}` : 'por reacción/comentario' }}
               </span>
             </div>
           </div>
 
-          <!-- SI HAY UN POST IMPULSADO CON BOOSTER: DETALLE DE AUDITORÍA (Corte Orgánico vs Ganado con Pauta) -->
-          <div v-if="organico_vs_pauta?.primer_post_impulsado" class="mt-4 p-3.5 rounded-2xl bg-slate-900/90 border border-violet-500/30 space-y-2.5">
+          <!-- Pestañas para Alternar entre Todas las Publicaciones con Booster (Instagram, Facebook, etc.) -->
+          <div v-if="organico_vs_pauta?.posts_impulsados && organico_vs_pauta.posts_impulsados.length > 1" class="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1">
+            <button
+              v-for="(postPauta, idx) in organico_vs_pauta.posts_impulsados"
+              :key="postPauta.id"
+              type="button"
+              @click="selectedBoostIndex = idx"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border shrink-0"
+              :class="selectedBoostIndex === idx
+                ? 'bg-violet-500/25 text-violet-200 border-violet-400 ring-1 ring-violet-400/40 shadow-xs'
+                : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-slate-200'"
+            >
+              <Badge :variant="postPauta.plataforma" size="sm" />
+              <span class="capitalize">{{ postPauta.plataforma }}</span>
+              <span class="text-[10px] opacity-75 font-normal">({{ formatCurrency(postPauta.monto_invertido) }})</span>
+            </button>
+          </div>
+
+          <!-- DETALLE DE AUDITORÍA DEL BOOSTER ACTIVO (Corte Orgánico vs Ganado con Pauta) -->
+          <div v-if="activeBoostedPost" class="mt-3.5 p-3.5 rounded-2xl bg-slate-900/90 border border-violet-500/30 space-y-2.5">
             <!-- Header del Post Impulsado -->
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0 flex items-center gap-2">
-                <Badge :variant="organico_vs_pauta.primer_post_impulsado.plataforma" size="sm" />
-                <span class="text-xs font-bold text-slate-200 truncate" :title="organico_vs_pauta.primer_post_impulsado.titulo">
-                  {{ organico_vs_pauta.primer_post_impulsado.titulo }}
+                <Badge :variant="activeBoostedPost.plataforma" size="sm" />
+                <span class="text-xs font-bold text-slate-200 truncate" :title="activeBoostedPost.titulo">
+                  {{ activeBoostedPost.titulo }}
                 </span>
               </div>
               <a
-                v-if="organico_vs_pauta.primer_post_impulsado.url_post"
-                :href="organico_vs_pauta.primer_post_impulsado.url_post"
+                v-if="activeBoostedPost.url_post"
+                :href="activeBoostedPost.url_post"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="text-slate-400 hover:text-cyan-400 p-1 shrink-0"
@@ -2206,10 +2290,10 @@ onUnmounted(() => {
               <div class="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
                 <span class="text-[9px] uppercase tracking-wider text-cyan-400 block font-bold">Base Orgánica (Previa)</span>
                 <span class="text-sm font-extrabold text-cyan-300">
-                  {{ formatNumber(organico_vs_pauta.primer_post_impulsado.base_organica_likes) }} likes
+                  {{ formatNumber(activeBoostedPost.base_organica_likes) }} likes
                 </span>
                 <span class="text-[9px] text-cyan-400/80 block mt-0.5">
-                  Tracción natural sin gasto ({{ organico_vs_pauta.primer_post_impulsado.pct_organico }}%)
+                  Tracción natural sin gasto ({{ activeBoostedPost.pct_organico }}%)
                 </span>
               </div>
 
@@ -2220,10 +2304,10 @@ onUnmounted(() => {
                   <span>Ganados con Pauta</span>
                 </span>
                 <span class="text-sm font-extrabold text-emerald-400">
-                  +{{ formatNumber(organico_vs_pauta.primer_post_impulsado.ganados_pauta_likes) }} likes
+                  +{{ formatNumber(activeBoostedPost.ganados_pauta_likes) }} likes
                 </span>
                 <span class="text-[9px] text-violet-300/80 block mt-0.5">
-                  Generados por Booster ({{ organico_vs_pauta.primer_post_impulsado.pct_pautado }}%)
+                  Generados por Booster ({{ activeBoostedPost.pct_pautado }}%)
                 </span>
               </div>
             </div>
@@ -2231,12 +2315,12 @@ onUnmounted(() => {
             <!-- Barra de Distribución Orgánico vs Pautado del Post -->
             <div class="space-y-1 text-xs">
               <div class="flex justify-between text-[10px] font-mono">
-                <span class="text-cyan-400 font-bold">Orgánico: {{ organico_vs_pauta.primer_post_impulsado.pct_organico }}%</span>
-                <span class="text-violet-400 font-bold">Booster: {{ organico_vs_pauta.primer_post_impulsado.pct_pautado }}%</span>
+                <span class="text-cyan-400 font-bold">Orgánico: {{ activeBoostedPost.pct_organico }}%</span>
+                <span class="text-violet-400 font-bold">Booster: {{ activeBoostedPost.pct_pautado }}%</span>
               </div>
               <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden flex">
-                <div class="bg-cyan-500 h-full transition-all" :style="{ width: `${organico_vs_pauta.primer_post_impulsado.pct_organico}%` }"></div>
-                <div class="bg-violet-500 h-full transition-all" :style="{ width: `${organico_vs_pauta.primer_post_impulsado.pct_pautado}%` }"></div>
+                <div class="bg-cyan-500 h-full transition-all" :style="{ width: `${activeBoostedPost.pct_organico}%` }"></div>
+                <div class="bg-violet-500 h-full transition-all" :style="{ width: `${activeBoostedPost.pct_pautado}%` }"></div>
               </div>
             </div>
 
@@ -2244,30 +2328,25 @@ onUnmounted(() => {
             <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/80 font-mono">
               <span class="flex items-center gap-1 text-slate-300">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Estado: <strong>{{ organico_vs_pauta.primer_post_impulsado.estado }}</strong></span>
+                <span>Estado: <strong>{{ activeBoostedPost.estado }}</strong></span>
               </span>
-              <span v-if="organico_vs_pauta.primer_post_impulsado.fecha_booster">
-                Corte: {{ organico_vs_pauta.primer_post_impulsado.fecha_booster }}
+              <span v-if="activeBoostedPost.fecha_booster">
+                Corte: {{ activeBoostedPost.fecha_booster }}
               </span>
             </div>
           </div>
 
-          <!-- SI NO HAY POST IMPULSADO: BARRA GLOBAL GENÉRICA -->
-          <div v-else class="mt-4 space-y-1.5 text-xs">
-            <div class="flex justify-between text-[11px] font-mono">
-              <span class="text-cyan-400">Orgánico: {{ organico_vs_pauta?.porcentaje_interacciones_organicas ?? organico_vs_pauta?.porcentaje_vistas_organicas ?? 100 }}%</span>
-              <span class="text-violet-400">Pautado: {{ organico_vs_pauta?.porcentaje_interacciones_pautadas ?? organico_vs_pauta?.porcentaje_vistas_pagadas ?? 0 }}%</span>
-            </div>
-            <div class="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden flex">
-              <div class="bg-cyan-500 h-full transition-all" :style="{ width: `${organico_vs_pauta?.porcentaje_interacciones_organicas ?? 100}%` }"></div>
-              <div class="bg-violet-500 h-full transition-all" :style="{ width: `${organico_vs_pauta?.porcentaje_interacciones_pautadas ?? 0}%` }"></div>
-            </div>
+          <!-- SI NO HAY POST IMPULSADO EN EL PERÍODO: MENSAJE LIMPIO -->
+          <div v-else class="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10 text-center space-y-1 text-xs text-slate-400">
+            <DollarSign class="w-5 h-5 mx-auto text-slate-500" />
+            <p class="font-bold text-slate-300">Sin anuncios con pauta en este período</p>
+            <p class="text-[11px] opacity-80">El 100% de la tracción y alcance del período proviene de fuentes orgánicas puras.</p>
           </div>
         </div>
 
         <div class="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
           <span>
-            Total Post: <strong class="text-white font-mono">{{ organico_vs_pauta?.primer_post_impulsado ? formatNumber(organico_vs_pauta.primer_post_impulsado.total_likes) + ' likes' : formatCurrency(organico_vs_pauta?.cpm_estimado ?? 0) }}</strong>
+            Total Post: <strong class="text-white font-mono">{{ activeBoostedPost ? formatNumber(activeBoostedPost.total_likes) + ' likes' : formatCurrency(organico_vs_pauta?.cpm_estimado ?? 0) }}</strong>
           </span>
           <Link href="/predictor" class="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1">
             <span>Simulador de Presupuesto</span>
