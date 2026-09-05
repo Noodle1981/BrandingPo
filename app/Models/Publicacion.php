@@ -69,7 +69,30 @@ class Publicacion extends Model
         'aprobacion_neta_pct',
         'score_impacto_organico',
         'tasa_viralidad_pct',
+        'analisis_traccion',
     ];
+
+    /**
+     * Análisis de Tracción Política Real (normalizada por Tier) y detección forense de bots.
+     */
+    public function getAnalisisTraccionAttribute(): array
+    {
+        $seguidores = $this->relationLoaded('perfilSocial') && $this->perfilSocial
+            ? (int) ($this->perfilSocial->seguidores_actuales ?? 1000)
+            : 1000;
+
+        $servicio = app(\App\Services\PoliticaEngagementService::class);
+
+        return $servicio->calcularTasaAceptacionReal([
+            'seguidores_canal' => $seguidores,
+            'likes' => (int) $this->total_likes,
+            'comentarios' => (int) $this->total_comentarios,
+            'compartidos' => (int) $this->total_compartidos,
+            'republicados' => (int) ($this->total_republicados ?? 0),
+            'es_pauta' => $this->tipo_pauta !== 'organico',
+            'plataforma' => $this->relationLoaded('perfilSocial') ? $this->perfilSocial?->plataforma : null,
+        ]);
+    }
 
     /**
      * Score de Impacto Orgánico Ponderado (1pt Like, 3pts Comentario, 5pts Compartido, 10pts Republicado).

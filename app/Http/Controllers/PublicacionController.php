@@ -418,6 +418,7 @@ class PublicacionController extends Controller
                 'total_guardados' => $p->total_guardados,
                 'score_impacto_organico' => $p->score_impacto_organico,
                 'tasa_viralidad_pct' => $p->tasa_viralidad_pct,
+                'analisis_traccion' => $p->analisis_traccion,
                 'reacciones_detalladas' => $p->reacciones_detalladas,
                 'aprobacion_neta_pct' => $p->aprobacion_neta_pct,
                 'termometro_humor_social' => $p->termometro_humor_social,

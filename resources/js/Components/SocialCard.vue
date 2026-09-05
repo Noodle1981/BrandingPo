@@ -384,14 +384,15 @@ const diasDesdePublicacion = computed(() => {
   }
 });
 
-// Estilos diferenciados de tarjeta según Estrategia de Difusión / Pauta y Score Inteligente (War Room)
+// Estilos diferenciados de tarjeta según Estrategia de Difusión / Pauta y Tracción Política Normalizada (War Room)
 const cardPautaStyles = computed(() => {
   const p = (props.post.tipo_pauta || 'organico').toLowerCase();
-  const score = scoreImpacto.value;
   const dias = diasDesdePublicacion.value;
+  // Score de Tracción Indexado (0 a 100) normalizado por el Tier de la cuenta
+  const scoreTraccion = props.post.analisis_traccion?.score_traccion_indexado ?? 50;
 
-  // 1. NIVEL DORADO / ORO (Score >= 800) -> Post Estrella Consagrado (Viral Orgánico Puro o Booster Exitoso)
-  if (score >= 800) {
+  // 1. NIVEL DORADO / ORO (Score Tracción >= 75/100) -> Post Estrella Consagrado (Tracción Sobresaliente)
+  if (scoreTraccion >= 75) {
     return {
       cardClass: 'border-amber-400/80 dark:border-amber-400/70 ring-2 ring-amber-400/40 border-t-4 border-t-amber-400 shadow-[0_4px_35px_-4px_rgba(251,191,36,0.45)] dark:shadow-[0_0_40px_-4px_rgba(251,191,36,0.50)] hover:shadow-[0_8px_45px_-2px_rgba(251,191,36,0.60)]',
       headerTint: 'bg-gradient-to-b from-amber-400/15 via-amber-400/4 to-transparent',
@@ -401,8 +402,8 @@ const cardPautaStyles = computed(() => {
     };
   }
 
-  // 2. NIVEL ROJO FUEGO (Orgánico, <= 10 días, Score >= 250) -> Oportunidad de Boost Recomendada
-  if (p === 'organico' && dias <= 10 && score >= 250) {
+  // 2. NIVEL ROJO FUEGO (Orgánico, <= 10 días, Score Tracción >= 60/100) -> Oportunidad de Boost Recomendada
+  if (p === 'organico' && dias <= 10 && scoreTraccion >= 60) {
     return {
       cardClass: 'border-rose-500/70 dark:border-rose-500/60 ring-2 ring-rose-500/30 border-t-4 border-t-rose-500 shadow-[0_4px_35px_-4px_rgba(244,63,94,0.40)] dark:shadow-[0_0_40px_-4px_rgba(244,63,94,0.45)] hover:shadow-[0_8px_45px_-2px_rgba(244,63,94,0.55)]',
       headerTint: 'bg-gradient-to-b from-rose-500/12 via-rose-500/3 to-transparent',
@@ -609,14 +610,14 @@ const cardPautaStyles = computed(() => {
           <span
             v-if="cardPautaStyles.estadoEstrategico === 'fuego'"
             class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-300 text-[10px] font-black border border-rose-500/30 animate-pulse"
-            title="Oportunidad de Boost: Publicación orgánica con tracción destacada dentro de los 10 días"
+            title="Oportunidad de Boost: Publicación orgánica con tracción destacada (Score >= 60/100) dentro de los 10 días"
           >
             <span>🔥 Oportunidad Boost</span>
           </span>
           <span
             v-else-if="cardPautaStyles.estadoEstrategico === 'dorado'"
             class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[10px] font-black border border-amber-400/40 shadow-2xs"
-            title="Post Estrella Consagrado: Máxima interacción de campaña (>= 800 pts)"
+            title="Post Estrella Consagrado: Tracción electoral sobresaliente (Score >= 75/100)"
           >
             <span>✨ Estrella ({{ (post.tipo_pauta || 'organico') === 'organico' ? 'Viral' : 'Boost' }})</span>
           </span>
@@ -791,16 +792,27 @@ const cardPautaStyles = computed(() => {
 
       <!-- Quick Metrics: Interacciones Totales, Views, Comments, Reposts, Shares -->
       <div class="flex items-center gap-3.5 flex-wrap">
-        <!-- 🔥 Score de Impacto Orgánico Ponderado (War Room) -->
+        <!-- 🎯 Tracción Política Normalizada (Indexada 0 a 100 por Tier de Seguidores) -->
         <div
-          class="flex items-center gap-1 px-2 py-0.5 rounded-lg font-mono font-bold text-xs transition-colors"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono font-bold text-xs transition-colors border"
           :class="cardPautaStyles.scoreBadge"
-          :title="`Score de Impacto: ${scoreImpacto} pts (${post.total_likes || 0} Likes [x1] + ${post.total_comentarios || 0} Comentarios [x3] + ${post.total_compartidos || 0} Compartidos [x5] + ${post.total_republicados || 0} Republicaciones [x10])`"
+          :title="`Tracción Electoral: ${post.analisis_traccion?.score_traccion_indexado ?? 50}/100 (${post.analisis_traccion?.etiqueta_calidad ?? 'Estándar Electoral'}) — Normalizado para cuenta ${post.analisis_traccion?.tier?.toUpperCase() ?? 'CANAL'}. TAP: ${post.analisis_traccion?.tap_politica_real ?? 0}%. VTP Ponderado: ${formatNumber(post.analisis_traccion?.vtp_ponderado ?? scoreImpacto)} pts.`"
         >
           <Flame v-if="cardPautaStyles.estadoEstrategico === 'fuego'" class="w-3.5 h-3.5 fill-current text-rose-500 animate-pulse" />
           <Sparkles v-else-if="cardPautaStyles.estadoEstrategico === 'dorado'" class="w-3.5 h-3.5 fill-current text-amber-500" />
-          <Flame v-else class="w-3.5 h-3.5 fill-current text-cyan-500" />
-          <span>{{ formatNumber(scoreImpacto) }} <span class="text-[10px] font-normal opacity-80">pts</span></span>
+          <Target v-else class="w-3.5 h-3.5 text-cyan-500" />
+          <span class="text-slate-800 dark:text-slate-100">{{ post.analisis_traccion?.score_traccion_indexado ?? 50 }}</span>
+          <span class="text-[10px] font-normal opacity-70">/100 Tracción</span>
+        </div>
+
+        <!-- ⚠️ Alerta Forense de Bots o Anomalía de Interacciones -->
+        <div
+          v-if="post.analisis_traccion?.sospecha_de_bots"
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[11px] font-bold shadow-2xs"
+          :title="`Auditoría Forense: ${post.analisis_traccion.alertas_forenses.join(' | ')}`"
+        >
+          <AlertCircle class="w-3.5 h-3.5 text-rose-500 shrink-0" />
+          <span>Anomalía / Posible Inflado</span>
         </div>
 
         <div class="flex items-center gap-1" title="Visualizaciones / Alcance">

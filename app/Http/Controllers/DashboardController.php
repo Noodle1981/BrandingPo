@@ -238,20 +238,22 @@ class DashboardController extends Controller
             $seguidoresNetosEstimados = $totalSeguidores;
         }
 
-        $engagementRate = $totalVistas > 0
-            ? round(($interaccionesTotales / $totalVistas) * 100, 2)
-            : ($seguidoresNetosEstimados > 0 ? round(($interaccionesTotales / $seguidoresNetosEstimados) * 100, 2) : 0);
+        // Análisis integral con PoliticaEngagementService (Follower-based equitativo)
+        $politicaEngagement = app(\App\Services\PoliticaEngagementService::class);
+        $analisisGlobal = $politicaEngagement->calcularTasaAceptacionReal([
+            'seguidores_canal' => $seguidoresNetosEstimados,
+            'likes' => (int) $publicaciones->sum('total_likes'),
+            'comentarios' => (int) $publicaciones->sum('total_comentarios'),
+            'compartidos' => (int) $publicaciones->sum('total_compartidos'),
+            'republicados' => (int) $publicaciones->sum('total_republicados'),
+            'es_pauta' => $totalPauta > 0,
+        ]);
+
+        $engagementRate = $analisisGlobal['tap_politica_real'];
+        $scoreTraccionGlobal = $analisisGlobal['score_traccion_indexado'];
+        $engagementCalidadTexto = $analisisGlobal['etiqueta_calidad'];
 
         $vistasPromedioPorPost = $totalPosts > 0 ? (int) round($totalVistas / $totalPosts) : 0;
-
-        // Diagnóstico cualitativo de Engagement Rate
-        if ($engagementRate >= 5.0) {
-            $engagementCalidadTexto = 'Alto Involucramiento';
-        } elseif ($engagementRate >= 2.5) {
-            $engagementCalidadTexto = 'Sólido';
-        } else {
-            $engagementCalidadTexto = 'Moderado';
-        }
 
         $humorPromedio = $publicaciones->whereNotNull('termometro_humor_social')->avg('termometro_humor_social');
         $humorPromedioRaw = $humorPromedio ? round((float) $humorPromedio, 1) : 5.0;
@@ -1059,6 +1061,7 @@ class DashboardController extends Controller
                 'vistas_promedio_post_raw' => $vistasPromedioPorPost,
                 'total_publicaciones' => $totalPosts,
                 'engagement_promedio' => $engagementRate.'%',
+                'score_traccion_promedio' => $scoreTraccionGlobal,
                 'engagement_calidad_texto' => $engagementCalidadTexto,
                 'inversion_pauta_total' => $totalPauta,
                 'humor_social_promedio' => $humorPromedioFormateado,

@@ -348,6 +348,8 @@ class CandidatoController extends Controller
                     'figuras_acompanantes' => $p->figuras_acompanantes,
                     'comentarios_destacados' => $p->comentarios_destacados,
                     'termometro_humor_social' => $p->termometro_humor_social,
+                    'score_impacto_organico' => $p->score_impacto_organico,
+                    'analisis_traccion' => $p->analisis_traccion,
                     'pauta_eventos' => $p->pautaEventos ? $p->pautaEventos->map(function ($ev) use ($p) {
                         $deltaLikes = max(0, (int) $p->total_likes - (int) $ev->likes_snapshot);
                         $deltaComentarios = max(0, (int) $p->total_comentarios - (int) $ev->comentarios_snapshot);
