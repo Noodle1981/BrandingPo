@@ -993,17 +993,17 @@ const formatBarChartOptions = {
   }
 };
 
-// 4. Gráfico Horizontal de Ejes Temáticos
+// 4. Gráfico Horizontal de Ejes Temáticos: Impacto Cívico Ponderado
 const ejesBarChartData = computed(() => {
   const labels = props.distribucion_ejes.map(e => e.nombre);
-  const data = props.distribucion_ejes.map(e => e.total_interacciones);
+  const data = props.distribucion_ejes.map(e => e.score_impacto_ponderado ?? e.total_interacciones ?? 0);
   const colors = props.distribucion_ejes.map(e => e.color_badge || '#06b6d4');
 
   return {
     labels,
     datasets: [
       {
-        label: 'Interacciones Totales',
+        label: 'Score de Impacto (Puntos Ponderados)',
         data,
         backgroundColor: colors,
         borderRadius: 6,
@@ -1012,7 +1012,7 @@ const ejesBarChartData = computed(() => {
   };
 });
 
-const ejesBarChartOptions = {
+const ejesBarChartOptions = computed(() => ({
   indexAxis: 'y',
   responsive: true,
   maintainAspectRatio: false,
@@ -1021,10 +1021,21 @@ const ejesBarChartOptions = {
     tooltip: {
       backgroundColor: '#0f172a',
       bodyColor: '#f8fafc',
-      padding: 10,
-      cornerRadius: 8,
+      padding: 12,
+      cornerRadius: 10,
+      borderColor: 'rgba(251, 191, 36, 0.3)',
+      borderWidth: 1,
       callbacks: {
-        label: (ctx) => ` Interacciones: ${Number(ctx.raw).toLocaleString('es-AR')}`
+        label: (ctx) => {
+          const eje = props.distribucion_ejes[ctx.dataIndex];
+          const val = Number(ctx.raw).toLocaleString('es-AR');
+          return ` Impacto: ${val} pts (${eje?.posts_count || 0} publicaciones)`;
+        },
+        afterLabel: (ctx) => {
+          const eje = props.distribucion_ejes[ctx.dataIndex];
+          if (!eje) return '';
+          return ` Tracción: ${eje.score_traccion_promedio || 50}/100 | Interacciones brutas: ${Number(eje.total_interacciones || 0).toLocaleString('es-AR')}`;
+        }
       }
     }
   },
@@ -1034,7 +1045,7 @@ const ejesBarChartOptions = {
       ticks: {
         color: '#94a3b8',
         font: { size: 10, family: 'monospace' },
-        callback: (value) => formatNumber(value)
+        callback: (value) => `${formatNumber(value)} pts`
       }
     },
     y: {
@@ -1042,7 +1053,7 @@ const ejesBarChartOptions = {
       ticks: { color: '#94a3b8', font: { size: 11, weight: 'bold' } }
     }
   }
-};
+}));
 
 // 4.B. Gráfico Horizontal de Volumen de Publicaciones por Eje Temático
 const ejesVolumenBarChartData = computed(() => {
@@ -1890,7 +1901,7 @@ onUnmounted(() => {
                 <Target class="w-4 h-4 text-amber-500" />
                 <span>Impacto por Eje Temático</span>
               </h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Interacciones logradas por cada propuesta</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Score de impacto ponderado y tracción por propuesta</p>
             </div>
 
             <button
@@ -2226,7 +2237,7 @@ onUnmounted(() => {
                     modalGraficoActivo === 'cuota' ? 'Cuota de Interacción por Red (Share of Social)' :
                     modalGraficoActivo === 'formato' ? 'Rendimiento Promedio por Formato' :
                     modalGraficoActivo === 'matriz_formatos' ? 'Matriz de Formatos por Red Social Activa' :
-                    modalGraficoActivo === 'ejes_impacto' ? 'Impacto por Eje Temático (Interacciones)' :
+                    modalGraficoActivo === 'ejes_impacto' ? 'Impacto por Eje Temático (Score Ponderado & Tracción)' :
                     'Volumen de Publicaciones por Eje Temático'
                   }}
                 </h3>

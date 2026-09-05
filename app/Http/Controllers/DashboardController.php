@@ -621,15 +621,24 @@ class DashboardController extends Controller
                 ];
             })->values();
 
-        // 4. Gráfico de Ejes Temáticos
+        // 4. Gráfico de Ejes Temáticos: Impacto Cívico Ponderado y Tracción
         $distribucionEjes = $ejes->map(function ($eje) use ($publicaciones) {
             $postsEje = $publicaciones->where('eje_tematico_id', $eje->id);
+            $count = $postsEje->count();
             $vistas = (int) $postsEje->sum('total_vistas');
             $likes = (int) $postsEje->sum('total_likes');
             $comentarios = (int) $postsEje->sum('total_comentarios');
             $compartidos = (int) $postsEje->sum('total_compartidos');
             $republicados = (int) $postsEje->sum('total_republicados');
             $intTotal = $likes + $comentarios + $compartidos + $republicados;
+
+            // Score de Impacto Ponderado: Like (1), Comentario (3), Compartido (5), Repost (10)
+            $scoreImpactoPonderado = ($likes * 1) + ($comentarios * 3) + ($compartidos * 5) + ($republicados * 10);
+
+            // Promedio de Score de Tracción Indexada (0 a 100) de las publicaciones de este eje
+            $scoreTraccionPromedio = $count > 0
+                ? (int) round($postsEje->avg(fn ($p) => $p->analisis_traccion['score_traccion_indexado'] ?? 50))
+                : 50;
 
             $humor = $postsEje->whereNotNull('termometro_humor_social')->avg('termometro_humor_social');
 
@@ -639,12 +648,14 @@ class DashboardController extends Controller
                 'nombre' => $eje->nombre,
                 'color_badge' => $eje->color_badge ?: '#06b6d4',
                 'icono' => $eje->icono,
-                'posts_count' => $postsEje->count(),
+                'posts_count' => $count,
                 'total_vistas' => $vistas,
                 'total_interacciones' => $intTotal,
+                'score_impacto_ponderado' => $scoreImpactoPonderado,
+                'score_traccion_promedio' => $scoreTraccionPromedio,
                 'humor_promedio' => $humor ? round($humor, 1) : 4.5,
             ];
-        })->filter(fn ($e) => $e['posts_count'] > 0)->values()->sortByDesc('total_interacciones')->values();
+        })->filter(fn ($e) => $e['posts_count'] > 0)->values()->sortByDesc('score_impacto_ponderado')->values();
 
         // 5. Histórico Consolidado Time-Series (Evolución sin caídas artificiales con Forward-Fill)
         $perfilesActivos = $candidato->perfilesSociales->filter(fn ($p) => (bool) $p->esta_activo || (int) $p->seguidores_actuales > 0);
