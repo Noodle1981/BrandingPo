@@ -37,7 +37,8 @@ class AppServiceProvider extends ServiceProvider
 
         // 3. Configuración de Rate Limiters de seguridad
         RateLimiter::for('auth', function (Request $request) {
-            return Limit::perMinute(5)->by($request->ip())
+            $maxAttempts = app()->isProduction() ? 5 : 30;
+            return Limit::perMinute($maxAttempts)->by($request->ip())
                 ->response(function () {
                     return back()->withErrors([
                         'email' => 'Demasiados intentos de acceso. Por seguridad, espera 1 minuto antes de reintentar.',

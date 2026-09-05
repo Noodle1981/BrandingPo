@@ -27,15 +27,28 @@ class SecurityHeaders
         }
 
         // Content Security Policy adaptado para Inertia + Vite + Google Fonts + Redes
-        $csp = [
-            "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-            "font-src 'self' https://fonts.gstatic.com data:",
-            "img-src 'self' data: blob: https:",
-            "connect-src 'self' https: ws: wss:",
-            "frame-ancestors 'self'",
-        ];
+        if (app()->environment('local', 'testing')) {
+            // En desarrollo se permite el servidor de Vite HMR (localhost / 127.0.0.1 en puertos dinámicos y WebSockets)
+            $csp = [
+                "default-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* http://127.0.0.1:*",
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com http://localhost:* http://127.0.0.1:*",
+                "font-src 'self' https://fonts.gstatic.com data: http://localhost:* http://127.0.0.1:*",
+                "img-src 'self' data: blob: https: http://localhost:* http://127.0.0.1:*",
+                "connect-src 'self' https: ws: wss: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*",
+                "frame-ancestors 'self'",
+            ];
+        } else {
+            $csp = [
+                "default-src 'self'",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+                "font-src 'self' https://fonts.gstatic.com data:",
+                "img-src 'self' data: blob: https:",
+                "connect-src 'self' https: ws: wss:",
+                "frame-ancestors 'self'",
+            ];
+        }
         $response->headers->set('Content-Security-Policy', implode('; ', $csp));
 
         return $response;
