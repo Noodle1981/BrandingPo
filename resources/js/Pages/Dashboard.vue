@@ -1107,6 +1107,82 @@ const ejesVolumenBarChartOptions = {
   }
 };
 
+// 4.C. Gráfico Horizontal de Tracción Promedio por Eje Temático (0 a 100 Indexado)
+const ejesTraccionBarChartData = computed(() => {
+  // Ordenar por Tracción Promedio descendente para destacar el eje más eficiente
+  const sorted = [...props.distribucion_ejes].sort((a, b) => (b.score_traccion_promedio || 0) - (a.score_traccion_promedio || 0));
+  const labels = sorted.map(e => e.nombre);
+  const data = sorted.map(e => e.score_traccion_promedio || 50);
+  const colors = sorted.map(e => {
+    const tr = e.score_traccion_promedio || 50;
+    if (tr >= 75) return '#f59e0b'; // Ámbar / Oro (Sobresaliente)
+    if (tr >= 60) return '#10b981'; // Esmeralda (Sólido / Favorable)
+    if (tr >= 40) return '#06b6d4'; // Cian (Estándar de Campaña)
+    return '#64748b'; // Neutro
+  });
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Tracción Electoral Promedio (/100)',
+        data,
+        backgroundColor: colors,
+        borderRadius: 6,
+      }
+    ]
+  };
+});
+
+const ejesTraccionBarChartOptions = computed(() => ({
+  indexAxis: 'y',
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#0f172a',
+      titleColor: '#f59e0b',
+      bodyColor: '#f8fafc',
+      padding: 12,
+      cornerRadius: 10,
+      borderColor: 'rgba(245, 158, 11, 0.3)',
+      borderWidth: 1,
+      callbacks: {
+        label: (ctx) => {
+          const sorted = [...props.distribucion_ejes].sort((a, b) => (b.score_traccion_promedio || 0) - (a.score_traccion_promedio || 0));
+          const eje = sorted[ctx.dataIndex];
+          const val = ctx.raw;
+          const cualidad = val >= 75 ? 'Sobresaliente / Viral' : (val >= 60 ? 'Sólida / Favorable' : (val >= 40 ? 'Estándar' : 'Bajo Rendimiento'));
+          return ` Tracción Promedio: ${val}/100 (${cualidad})`;
+        },
+        afterLabel: (ctx) => {
+          const sorted = [...props.distribucion_ejes].sort((a, b) => (b.score_traccion_promedio || 0) - (a.score_traccion_promedio || 0));
+          const eje = sorted[ctx.dataIndex];
+          if (!eje) return '';
+          return ` Publicaciones: ${eje.posts_count || 0} | Impacto Total: ${Number(eje.score_impacto_ponderado || 0).toLocaleString('es-AR')} pts`;
+        }
+      }
+    }
+  },
+  scales: {
+    x: {
+      min: 0,
+      max: 100,
+      grid: { color: 'rgba(148, 163, 184, 0.1)' },
+      ticks: {
+        color: '#94a3b8',
+        font: { size: 10, family: 'monospace' },
+        callback: (value) => `${value}/100`
+      }
+    },
+    y: {
+      grid: { display: false },
+      ticks: { color: '#94a3b8', font: { size: 11, weight: 'bold' } }
+    }
+  }
+}));
+
 // 5. Gráfico de Barras Apiladas: Matriz de Formatos por Red Social Activa
 const formatColorsMap = {
   'Reel': '#f43f5e',
@@ -1852,7 +1928,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- 3. FILA DUAL: MATRIZ DE FORMATOS EN BARRAS (6 COLS) + IMPACTO POR EJE (6 COLS) -->
+      <!-- 3. FILA DUAL: MATRIZ DE FORMATOS EN BARRAS (6 COLS) + TRACCIÓN PROMEDIO POR EJE (6 COLS) -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
         
         <!-- Matriz de Formatos por Red Social Activa (Gráfico de Barras Apiladas - 6 cols) -->
@@ -1893,7 +1969,41 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Impacto por Eje Temático (Gráfico de Barras - 6 cols) -->
+        <!-- Tracción Promedio por Eje Temático (Calidad / Eficiencia por Propuesta - 6 cols) -->
+        <div class="lg:col-span-6 p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Sparkles class="w-4 h-4 text-emerald-500" />
+                <span>Tracción Promedio por Eje</span>
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Eficiencia relativa (Score 0-100) sin sesgo de cantidad de posts</p>
+            </div>
+
+            <button
+              type="button"
+              @click="abrirModalGrafico('ejes_traccion')"
+              class="px-2 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer shrink-0"
+              title="Ampliar gráfico"
+            >
+              <Maximize2 class="w-3.5 h-3.5" />
+              <span class="text-[11px]">Ampliar</span>
+            </button>
+          </div>
+
+          <div v-if="distribucion_ejes.length > 0" class="h-64 w-full">
+            <Bar :data="ejesTraccionBarChartData" :options="ejesTraccionBarChartOptions" />
+          </div>
+          <div v-else class="h-64 flex items-center justify-center text-xs text-slate-400">
+            No hay publicaciones clasificadas por ejes temáticos todavía.
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. FILA DUAL: IMPACTO POR EJE TEMÁTICO (6 COLS) + VOLUMEN DE PUBLICACIONES POR EJE (6 COLS) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Impacto por Eje Temático (Score Ponderado Acumulado - 6 cols) -->
         <div class="lg:col-span-6 p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
           <div class="flex items-center justify-between gap-2">
             <div>
@@ -1901,7 +2011,7 @@ onUnmounted(() => {
                 <Target class="w-4 h-4 text-amber-500" />
                 <span>Impacto por Eje Temático</span>
               </h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Score de impacto ponderado y tracción por propuesta</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Score de impacto cívico ponderado total por propuesta</p>
             </div>
 
             <button
@@ -1922,38 +2032,39 @@ onUnmounted(() => {
             No hay publicaciones clasificadas por ejes temáticos todavía.
           </div>
         </div>
-      </div>
 
-      <!-- 4. FILA INFERIOR: VOLUMEN DE PUBLICACIONES POR EJE (OFICIAL) -->
-      <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Layers class="w-4 h-4 text-blue-500" />
-              <span>Volumen de Publicaciones por Eje</span>
-            </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Cantidad de publicaciones emitidas para cada propuesta de campaña
-            </p>
+        <!-- Volumen de Publicaciones por Eje (Cantidad Emitida - 6 cols) -->
+        <div class="lg:col-span-6 p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Layers class="w-4 h-4 text-blue-500" />
+                <span>Volumen de Publicaciones por Eje</span>
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Cantidad de publicaciones emitidas para cada propuesta de campaña
+              </p>
+            </div>
+
+            <button
+              type="button"
+              @click="abrirModalGrafico('ejes_volumen')"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+              title="Ampliar gráfico"
+            >
+              <Maximize2 class="w-3.5 h-3.5" />
+              <span>Ampliar</span>
+            </button>
           </div>
 
-          <button
-            type="button"
-            @click="abrirModalGrafico('ejes_volumen')"
-            class="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-            title="Ampliar gráfico"
-          >
-            <Maximize2 class="w-3.5 h-3.5" />
-            <span>Ampliar</span>
-          </button>
+          <div v-if="distribucion_ejes.length > 0" class="h-64 w-full">
+            <Bar :data="ejesVolumenBarChartData" :options="ejesVolumenBarChartOptions" />
+          </div>
+          <div v-else class="h-64 flex items-center justify-center text-xs text-slate-400">
+            No hay publicaciones clasificadas por ejes temáticos todavía.
+          </div>
         </div>
 
-        <div v-if="distribucion_ejes.length > 0" class="h-60 w-full">
-          <Bar :data="ejesVolumenBarChartData" :options="ejesVolumenBarChartOptions" />
-        </div>
-        <div v-else class="h-60 flex items-center justify-center text-xs text-slate-400">
-          No hay publicaciones clasificadas por ejes temáticos todavía.
-        </div>
       </div>
 
     </div>
@@ -2237,7 +2348,8 @@ onUnmounted(() => {
                     modalGraficoActivo === 'cuota' ? 'Cuota de Interacción por Red (Share of Social)' :
                     modalGraficoActivo === 'formato' ? 'Rendimiento Promedio por Formato' :
                     modalGraficoActivo === 'matriz_formatos' ? 'Matriz de Formatos por Red Social Activa' :
-                    modalGraficoActivo === 'ejes_impacto' ? 'Impacto por Eje Temático (Score Ponderado & Tracción)' :
+                    modalGraficoActivo === 'ejes_traccion' ? 'Tracción Promedio por Eje Temático (Eficiencia 0-100)' :
+                    modalGraficoActivo === 'ejes_impacto' ? 'Impacto por Eje Temático (Score Ponderado Acumulado)' :
                     'Volumen de Publicaciones por Eje Temático'
                   }}
                 </h3>
@@ -2381,6 +2493,7 @@ onUnmounted(() => {
               <Doughnut v-else-if="modalGraficoActivo === 'cuota'" :data="doughnutChartData" :options="doughnutChartOptions" />
               <Bar v-else-if="modalGraficoActivo === 'formato'" :data="formatBarChartData" :options="formatBarChartOptions" />
               <Bar v-else-if="modalGraficoActivo === 'matriz_formatos'" :data="matrizFormatosBarChartData" :options="matrizFormatosBarChartOptions" />
+              <Bar v-else-if="modalGraficoActivo === 'ejes_traccion'" :data="ejesTraccionBarChartData" :options="ejesTraccionBarChartOptions" />
               <Bar v-else-if="modalGraficoActivo === 'ejes_impacto'" :data="ejesBarChartData" :options="ejesBarChartOptions" />
               <Bar v-else-if="modalGraficoActivo === 'ejes_volumen'" :data="ejesVolumenBarChartData" :options="ejesVolumenBarChartOptions" />
             </div>
