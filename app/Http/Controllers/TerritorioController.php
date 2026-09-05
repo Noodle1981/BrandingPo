@@ -254,6 +254,9 @@ class TerritorioController extends Controller
      */
     public function update(Request $request, Territorio $territorio): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($territorio, $workspace);
+
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:255'],
             'tipo' => ['required', 'string', 'in:municipio,departamento,provincia,seccion'],

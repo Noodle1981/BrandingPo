@@ -8,6 +8,7 @@ use App\Models\Candidato;
 use App\Models\EventoCrisis;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -100,7 +101,7 @@ class CrisisController extends Controller
         $workspace = WorkspaceHelper::activo($request);
 
         $validated = $request->validate([
-            'candidato_id' => ['required', 'exists:candidatos,id'],
+            'candidato_id' => ['required', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
             'titulo' => ['required', 'string', 'max:255'],
             'fecha_evento' => ['required', 'date'],
             'nivel_gravedad' => ['required', 'in:leve,moderado,critico'],
@@ -131,6 +132,9 @@ class CrisisController extends Controller
      */
     public function updateCrisis(Request $request, EventoCrisis $crisis): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($crisis, $workspace);
+
         $validated = $request->validate([
             'estado' => ['required', 'in:abierto,en_contencion,resuelto'],
             'estrategia_contencion' => ['nullable', 'string'],
@@ -151,7 +155,7 @@ class CrisisController extends Controller
         $workspace = WorkspaceHelper::activo($request);
 
         $validated = $request->validate([
-            'candidato_id' => ['required', 'exists:candidatos,id'],
+            'candidato_id' => ['required', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
             'nombre_figura' => ['required', 'string', 'max:255'],
             'cargo_o_rol' => ['required', 'string', 'max:255'],
             'tipo_impacto' => ['required', 'in:suma,resta,neutro'],
@@ -170,8 +174,11 @@ class CrisisController extends Controller
     /**
      * Eliminar alianza.
      */
-    public function destroyAlianza(AlianzaPolitica $alianza): RedirectResponse
+    public function destroyAlianza(Request $request, AlianzaPolitica $alianza): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($alianza, $workspace);
+
         $alianza->delete();
 
         return redirect()->route('crisis.index')

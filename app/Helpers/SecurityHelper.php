@@ -66,6 +66,10 @@ class SecurityHelper
             'timestamp' => now()->toIso8601String(),
         ], $contexto);
 
-        Log::warning("[SEGURIDAD] {$evento}", $payload);
+        try {
+            Log::channel('security')->warning("[SEGURIDAD] {$evento}", $payload);
+        } catch (\Throwable) {
+            Log::warning("[SEGURIDAD] {$evento}", $payload);
+        }
     }
 }

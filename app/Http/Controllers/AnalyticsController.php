@@ -8,6 +8,7 @@ use App\Models\Publicacion;
 use App\Services\AdsImpactPredictorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -101,10 +102,19 @@ class AnalyticsController extends Controller
      */
     public function predictApi(Request $request): JsonResponse
     {
-        $monto = (float) $request->input('monto', 50000);
-        $formato = (string) $request->input('formato', 'Reel');
-        $plataforma = (string) $request->input('plataforma', 'instagram');
-        $candidatoId = $request->input('candidato_id') ? (int) $request->input('candidato_id') : null;
+        $workspace = WorkspaceHelper::activo($request);
+
+        $validated = $request->validate([
+            'monto' => ['nullable', 'numeric', 'min:0', 'max:1000000000'],
+            'formato' => ['nullable', 'string', 'max:100'],
+            'plataforma' => ['nullable', 'string', 'max:50'],
+            'candidato_id' => ['nullable', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
+        ]);
+
+        $monto = (float) ($validated['monto'] ?? 50000);
+        $formato = (string) ($validated['formato'] ?? 'Reel');
+        $plataforma = (string) ($validated['plataforma'] ?? 'instagram');
+        $candidatoId = isset($validated['candidato_id']) ? (int) $validated['candidato_id'] : null;
 
         $resultado = $this->predictorService->predecirImpacto($monto, $formato, $plataforma, $candidatoId);
 

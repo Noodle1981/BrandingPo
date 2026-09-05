@@ -10,6 +10,7 @@ use App\Models\EventoCalendario;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -172,9 +173,9 @@ class CalendarioController extends Controller
         $workspace = WorkspaceHelper::activo($request);
 
         $validated = $request->validate([
-            'ciclo_campana_id' => ['required', 'exists:ciclo_campanas,id'],
-            'candidato_id' => ['nullable', 'exists:candidatos,id'],
-            'eje_tematico_id' => ['nullable', 'exists:eje_tematicos,id'],
+            'ciclo_campana_id' => ['required', Rule::exists('ciclo_campanas', 'id')->where('workspace_id', $workspace->id)],
+            'candidato_id' => ['nullable', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
+            'eje_tematico_id' => ['nullable', Rule::exists('eje_tematicos', 'id')->where('workspace_id', $workspace->id)],
             'titulo' => ['required', 'string', 'max:255'],
             'fecha_inicio' => ['required', 'date'],
             'fecha_fin' => ['nullable', 'date'],
@@ -203,8 +204,11 @@ class CalendarioController extends Controller
     /**
      * Eliminar evento del calendario.
      */
-    public function destroy(EventoCalendario $evento): RedirectResponse
+    public function destroy(Request $request, EventoCalendario $evento): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($evento, $workspace);
+
         $evento->delete();
 
         return redirect()->route('calendario.index')

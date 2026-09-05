@@ -8,6 +8,7 @@ use App\Models\InformeEjecutivo;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -59,8 +60,11 @@ class BriefingController extends Controller
     /**
      * Vista imprimible / PDF-ready del briefing ejecutivo.
      */
-    public function show(InformeEjecutivo $informe): Response
+    public function show(Request $request, InformeEjecutivo $informe): Response
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($informe, $workspace);
+
         $informe->load('cicloCampana');
 
         return Inertia::render('Briefings/Show', [
@@ -85,7 +89,7 @@ class BriefingController extends Controller
         $workspace = WorkspaceHelper::activo($request);
 
         $validated = $request->validate([
-            'ciclo_campana_id' => ['required', 'exists:ciclo_campanas,id'],
+            'ciclo_campana_id' => ['required', Rule::exists('ciclo_campanas', 'id')->where('workspace_id', $workspace->id)],
             'titulo' => ['required', 'string', 'max:255'],
             'periodo_cubierto' => ['required', 'string', 'max:255'],
             'resumen_ejecutivo' => ['required', 'string'],

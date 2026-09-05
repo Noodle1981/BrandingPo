@@ -35,32 +35,27 @@ class MediaStorageService
         }
 
         try {
-            // Descargar imagen con User-Agent de crawler social para evitar bloqueos
+            // Descargar imagen con User-Agent de crawler social para evitar bloqueos (excluye SVG para prevenir XSS)
             $response = Http::withHeaders([
                 'User-Agent' => 'Twitterbot/1.0',
-                'Accept' => 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                'Accept' => 'image/avif,image/webp,image/apng,image/jpeg,image/png;q=0.9,*/*;q=0.8',
             ])->timeout(10)->get($urlExterna);
 
             if (! $response->successful()) {
                 $response = Http::withHeaders([
                     'User-Agent' => 'WhatsApp/2.21.12.21 A',
+                    'Accept' => 'image/avif,image/webp,image/apng,image/jpeg,image/png;q=0.9,*/*;q=0.8',
                 ])->timeout(10)->get($urlExterna);
             }
 
             if ($response->successful()) {
                 $body = $response->body();
+                $contentType = $response->header('Content-Type');
 
-                // Verificar que no sea un payload vacío o error HTML
-                if (strlen($body) > 300 && ! str_starts_with($body, '<!DOCTYPE html') && ! str_starts_with($body, '<html')) {
-                    // Determinar extensión según Content-Type o default jpg
-                    $contentType = $response->header('Content-Type');
-                    $extension = 'jpg';
-                    if (str_contains($contentType, 'png')) {
-                        $extension = 'png';
-                    } elseif (str_contains($contentType, 'webp')) {
-                        $extension = 'webp';
-                    }
+                // Validar binario de imagen real y obtener extensión segura
+                $extension = $this->resolverExtensionSegura($body, $contentType);
 
+                if ($extension !== null) {
                     $nombreArchivo = 'media_'.substr(md5($urlExterna), 0, 16).'_'.time().'.'.$extension;
                     $pathRelativo = 'publicaciones/'.$nombreArchivo;
 
@@ -114,26 +109,23 @@ class MediaStorageService
         try {
             $response = Http::withHeaders([
                 'User-Agent' => 'Twitterbot/1.0',
-                'Accept' => 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                'Accept' => 'image/avif,image/webp,image/apng,image/jpeg,image/png;q=0.9,*/*;q=0.8',
             ])->timeout(10)->get($urlExterna);
 
             if (! $response->successful()) {
                 $response = Http::withHeaders([
                     'User-Agent' => 'WhatsApp/2.21.12.21 A',
+                    'Accept' => 'image/avif,image/webp,image/apng,image/jpeg,image/png;q=0.9,*/*;q=0.8',
                 ])->timeout(10)->get($urlExterna);
             }
 
             if ($response->successful()) {
                 $body = $response->body();
-                if (strlen($body) > 300 && ! str_starts_with($body, '<!DOCTYPE html')) {
-                    $contentType = $response->header('Content-Type');
-                    $extension = 'jpg';
-                    if (str_contains($contentType, 'png')) {
-                        $extension = 'png';
-                    } elseif (str_contains($contentType, 'webp')) {
-                        $extension = 'webp';
-                    }
+                $contentType = $response->header('Content-Type');
 
+                $extension = $this->resolverExtensionSegura($body, $contentType);
+
+                if ($extension !== null) {
                     $nombreArchivo = $prefijo.'_'.time().'.'.$extension;
                     $pathRelativo = 'avatars/'.$nombreArchivo;
 
@@ -154,5 +146,46 @@ class MediaStorageService
         }
 
         return $rutaActual ?: $urlExterna;
+    }
+
+    /**
+     * Valida de forma estricta que el cuerpo descargado sea una imagen binaria legítima (prevención de SVG XSS y payloads maliciosos).
+     * Retorna la extensión segura ('jpg', 'png', 'webp', 'gif') o null si es inválida/insegura.
+     */
+    private function resolverExtensionSegura(string $body, ?string $contentType): ?string
+    {
+        if (strlen($body) < 100) {
+            return null;
+        }
+
+        // Rechazar si comienza con tags HTML, XML o SVG
+        $inicio = strtolower(substr(ltrim($body), 0, 50));
+        if (str_starts_with($inicio, '<!doctype') || str_starts_with($inicio, '<html') || str_starts_with($inicio, '<?xml') || str_starts_with($inicio, '<svg')) {
+            return null;
+        }
+
+        $info = @getimagesizefromstring($body);
+        if ($info && isset($info['mime'])) {
+            return match ($info['mime']) {
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                'image/gif' => 'gif',
+                default => null,
+            };
+        }
+
+        // Detección complementaria por magic bytes
+        if (str_starts_with($body, "\xFF\xD8\xFF")) {
+            return 'jpg';
+        }
+        if (str_starts_with($body, "\x89PNG\r\n\x1a\n")) {
+            return 'png';
+        }
+        if (str_starts_with($body, 'RIFF') && substr($body, 8, 4) === 'WEBP') {
+            return 'webp';
+        }
+
+        return null;
     }
 }

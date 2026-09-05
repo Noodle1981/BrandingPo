@@ -18,6 +18,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -465,8 +466,10 @@ class CandidatoController extends Controller
      */
     public function storePerfilSocial(Request $request): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+
         $validated = $request->validate([
-            'candidato_id' => ['required', 'exists:candidatos,id'],
+            'candidato_id' => ['required', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
             'plataforma' => ['required', 'string'],
             'handle_usuario' => ['required', 'string', 'max:255'],
             'url_perfil' => ['nullable', 'url', 'max:1000'],
@@ -554,6 +557,9 @@ class CandidatoController extends Controller
      */
     public function refrescarPerfilSocial(Request $request, PerfilSocial $perfilSocial, SocialProfileScraperService $scraper): JsonResponse|RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
+
         if (empty($perfilSocial->url_perfil)) {
             if ($request->expectsJson() && ! $request->header('X-Inertia')) {
                 return response()->json([
@@ -595,6 +601,9 @@ class CandidatoController extends Controller
         SocialProfileScraperService $scraper,
         MediaStorageService $mediaStorage
     ): JsonResponse {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
+
         @set_time_limit(180);
         $resultadoCanal = [
             'success' => true,
@@ -709,6 +718,9 @@ class CandidatoController extends Controller
      */
     public function updatePerfilSocial(Request $request, PerfilSocial $perfilSocial): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
+
         $validated = $request->validate([
             'handle_usuario' => ['required', 'string', 'max:255'],
             'url_perfil' => ['nullable', 'url', 'max:1000'],
@@ -738,8 +750,11 @@ class CandidatoController extends Controller
     /**
      * Eliminar perfil social.
      */
-    public function destroyPerfilSocial(PerfilSocial $perfilSocial): RedirectResponse
+    public function destroyPerfilSocial(Request $request, PerfilSocial $perfilSocial): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
+
         $plataforma = $perfilSocial->plataforma;
         $perfilSocial->delete();
 
@@ -753,6 +768,8 @@ class CandidatoController extends Controller
     public function show(Request $request, Candidato $candidato): Response
     {
         $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($candidato, $workspace);
+
         $candidato->load(['cicloCampana', 'territorio', 'perfilesSociales']);
 
         $plataformasEstandar = [
@@ -876,8 +893,8 @@ class CandidatoController extends Controller
             'partido_coalicion' => ['required', 'string', 'max:255'],
             'cargo_aspirado' => ['nullable', 'string', 'max:255'],
             'estado_politico' => ['required', 'string'],
-            'ciclo_campana_id' => ['required', 'exists:ciclo_campanas,id'],
-            'territorio_id' => ['nullable', 'exists:territorios,id'],
+            'ciclo_campana_id' => ['required', Rule::exists('ciclo_campanas', 'id')->where('workspace_id', $workspace->id)],
+            'territorio_id' => ['nullable', Rule::exists('territorios', 'id')->where('workspace_id', $workspace->id)],
             'color_hex' => ['nullable', 'string', 'max:10'],
             'avatar_url' => ['nullable', 'url', 'max:500'],
             'bio_resumen' => ['nullable', 'string'],
@@ -907,6 +924,7 @@ class CandidatoController extends Controller
     public function update(Request $request, Candidato $candidato): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($candidato, $workspace);
 
         $validated = $request->validate([
             'workspace_nombre' => ['nullable', 'string', 'max:255'],
@@ -914,7 +932,7 @@ class CandidatoController extends Controller
             'partido_coalicion' => ['required', 'string', 'max:255'],
             'cargo_aspirado' => ['nullable', 'string', 'max:255'],
             'estado_politico' => ['required', 'string'],
-            'ciclo_campana_id' => ['nullable', 'exists:ciclo_campanas,id'],
+            'ciclo_campana_id' => ['nullable', Rule::exists('ciclo_campanas', 'id')->where('workspace_id', $workspace->id)],
             'territorio_id' => ['nullable'],
             'territorio_nombre' => ['nullable', 'string', 'max:255'],
             'padron_electoral' => ['nullable', 'integer', 'min:0'],
@@ -965,8 +983,11 @@ class CandidatoController extends Controller
     /**
      * Eliminar un candidato.
      */
-    public function destroy(Candidato $candidato): RedirectResponse
+    public function destroy(Request $request, Candidato $candidato): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($candidato, $workspace);
+
         $nombre = $candidato->nombre_completo;
         $candidato->delete();
 

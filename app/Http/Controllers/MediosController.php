@@ -8,6 +8,7 @@ use App\Models\MedioPrensa;
 use App\Models\NotaPrensa;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -112,7 +113,7 @@ class MediosController extends Controller
 
         $validated = $request->validate([
             'medio_prensa_id' => ['required', 'exists:medios_prensa,id'],
-            'candidato_id' => ['nullable', 'exists:candidatos,id'],
+            'candidato_id' => ['nullable', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
             'fecha_publicacion' => ['required', 'date'],
             'titulo' => ['required', 'string', 'max:500'],
             'resumen' => ['nullable', 'string'],
@@ -144,8 +145,11 @@ class MediosController extends Controller
     /**
      * Eliminar nota de prensa.
      */
-    public function destroyNota(NotaPrensa $nota): RedirectResponse
+    public function destroyNota(Request $request, NotaPrensa $nota): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($nota, $workspace);
+
         $nota->delete();
 
         return redirect()->route('medios.index')

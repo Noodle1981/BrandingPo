@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -73,8 +74,11 @@ class PublicacionController extends Controller
     /**
      * Sincronizar en vivo una publicación individual.
      */
-    public function sincronizarIndividual(Publicacion $publicacion, SocialProfileScraperService $scraper, MediaStorageService $mediaStorage): JsonResponse
+    public function sincronizarIndividual(Request $request, Publicacion $publicacion, SocialProfileScraperService $scraper, MediaStorageService $mediaStorage): JsonResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($publicacion, $workspace);
+
         if (empty($publicacion->url_post)) {
             return response()->json(['success' => false, 'mensaje' => 'La publicación no tiene enlace URL.']);
         }
@@ -138,6 +142,9 @@ class PublicacionController extends Controller
      */
     public function sincronizarRecientes(Request $request, PerfilSocial $perfilSocial, SocialProfileScraperService $scraper, MediaStorageService $mediaStorage): RedirectResponse|JsonResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
+
         $fechaLimite = Carbon::now()->subDays(15)->startOfDay();
 
         $publicaciones = Publicacion::where('perfil_social_id', $perfilSocial->id)
@@ -480,10 +487,10 @@ class PublicacionController extends Controller
         ]);
 
         $validated = $request->validate([
-            'candidato_id' => ['required', 'exists:candidatos,id'],
+            'candidato_id' => ['required', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
             'perfil_social_id' => ['nullable', 'exists:perfil_socials,id'],
             'plataforma' => ['nullable', 'string'],
-            'eje_tematico_id' => ['nullable', 'exists:eje_tematicos,id'],
+            'eje_tematico_id' => ['nullable', Rule::exists('eje_tematicos', 'id')->where('workspace_id', $workspace->id)],
             'eje_tematico_nombre' => ['nullable', 'string', 'max:255'],
             'fecha_publicacion' => ['required', 'date'],
             'tipo_formato' => ['required', 'string'],
@@ -642,6 +649,7 @@ class PublicacionController extends Controller
     public function update(Request $request, Publicacion $publicacion, MediaStorageService $mediaStorage): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($publicacion, $workspace);
 
         $validated = $request->validate([
             'contenido_resumen' => ['required', 'string'],
@@ -666,7 +674,7 @@ class PublicacionController extends Controller
             'total_compartidos' => ['nullable', 'integer', 'min:0'],
             'total_republicados' => ['nullable', 'integer', 'min:0'],
             'total_guardados' => ['nullable', 'integer', 'min:0'],
-            'eje_tematico_id' => ['nullable', 'exists:eje_tematicos,id'],
+            'eje_tematico_id' => ['nullable', Rule::exists('eje_tematicos', 'id')->where('workspace_id', $workspace->id)],
             'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
         ]);
 
@@ -904,8 +912,11 @@ class PublicacionController extends Controller
     /**
      * Eliminar publicación.
      */
-    public function destroy(Publicacion $publicacion): RedirectResponse
+    public function destroy(Request $request, Publicacion $publicacion): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($publicacion, $workspace);
+
         $publicacion->delete();
 
         return redirect()->back()

@@ -8,6 +8,7 @@ use App\Models\CicloCampana;
 use App\Models\PresupuestoPartida;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -93,8 +94,8 @@ class PresupuestoController extends Controller
         $workspace = WorkspaceHelper::activo($request);
 
         $validated = $request->validate([
-            'ciclo_campana_id' => ['required', 'exists:ciclo_campanas,id'],
-            'candidato_id' => ['nullable', 'exists:candidatos,id'],
+            'ciclo_campana_id' => ['required', Rule::exists('ciclo_campanas', 'id')->where('workspace_id', $workspace->id)],
+            'candidato_id' => ['nullable', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
             'categoria' => ['required', 'string'],
             'monto_asignado' => ['required', 'numeric', 'min:0'],
             'monto_ejecutado' => ['nullable', 'numeric', 'min:0'],
@@ -118,8 +119,11 @@ class PresupuestoController extends Controller
     /**
      * Eliminar partida.
      */
-    public function destroy(PresupuestoPartida $partida): RedirectResponse
+    public function destroy(Request $request, PresupuestoPartida $partida): RedirectResponse
     {
+        $workspace = WorkspaceHelper::activo($request);
+        WorkspaceHelper::validarPertenencia($partida, $workspace);
+
         $partida->delete();
 
         return redirect()->route('presupuesto.index')

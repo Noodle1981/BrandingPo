@@ -55,9 +55,9 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
         Route::put('/candidatos/{candidato}', [CandidatoController::class, 'update'])->name('candidatos.update');
         Route::delete('/candidatos/{candidato}', [CandidatoController::class, 'destroy'])->name('candidatos.destroy');
         Route::post('/perfiles-sociales', [CandidatoController::class, 'storePerfilSocial'])->name('perfiles-sociales.store');
-        Route::post('/perfiles-sociales/scrape', [CandidatoController::class, 'scrapePerfilSocial'])->name('perfiles-sociales.scrape');
-        Route::post('/perfiles-sociales/{perfilSocial}/refrescar', [CandidatoController::class, 'refrescarPerfilSocial'])->name('perfiles-sociales.refrescar');
-        Route::post('/perfiles-sociales/{perfilSocial}/sincronizar-canal', [CandidatoController::class, 'sincronizarCanal'])->name('perfiles-sociales.sincronizar-canal');
+        Route::post('/perfiles-sociales/scrape', [CandidatoController::class, 'scrapePerfilSocial'])->middleware('throttle:scraping')->name('perfiles-sociales.scrape');
+        Route::post('/perfiles-sociales/{perfilSocial}/refrescar', [CandidatoController::class, 'refrescarPerfilSocial'])->middleware('throttle:scraping')->name('perfiles-sociales.refrescar');
+        Route::post('/perfiles-sociales/{perfilSocial}/sincronizar-canal', [CandidatoController::class, 'sincronizarCanal'])->middleware('throttle:scraping')->name('perfiles-sociales.sincronizar-canal');
         Route::put('/perfiles-sociales/{perfilSocial}', [CandidatoController::class, 'updatePerfilSocial'])->name('perfiles-sociales.update');
         Route::delete('/perfiles-sociales/{perfilSocial}', [CandidatoController::class, 'destroyPerfilSocial'])->name('perfiles-sociales.destroy');
     });
@@ -65,7 +65,7 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
     // Inteligencia Demográfica & Mapa de Situación Territorial
     Route::get('/territorios', [TerritorioController::class, 'index'])->name('territorios.index');
     Route::get('/territorios/impacto-electoral', [TerritorioController::class, 'impactoElectoral'])->name('territorios.impacto-electoral');
-    Route::post('/territorios/auto-detect', [TerritorioController::class, 'autoDetect'])->name('territorios.auto-detect');
+    Route::post('/territorios/auto-detect', [TerritorioController::class, 'autoDetect'])->middleware('throttle:scraping')->name('territorios.auto-detect');
     Route::middleware(['can_write'])->group(function () {
         Route::post('/territorios', [TerritorioController::class, 'store'])->name('territorios.store');
         Route::put('/territorios/{territorio}', [TerritorioController::class, 'update'])->name('territorios.update');
@@ -76,9 +76,9 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
 
     Route::middleware(['can_write'])->group(function () {
         Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
-        Route::post('/publicaciones/scrape-post', [PublicacionController::class, 'scrapePost'])->name('publicaciones.scrape-post');
-        Route::post('/publicaciones/{publicacion}/sincronizar', [PublicacionController::class, 'sincronizarIndividual'])->name('publicaciones.sincronizar');
-        Route::post('/perfiles-sociales/{perfilSocial}/sincronizar-recientes', [PublicacionController::class, 'sincronizarRecientes'])->name('perfiles-sociales.sincronizar-recientes');
+        Route::post('/publicaciones/scrape-post', [PublicacionController::class, 'scrapePost'])->middleware('throttle:scraping')->name('publicaciones.scrape-post');
+        Route::post('/publicaciones/{publicacion}/sincronizar', [PublicacionController::class, 'sincronizarIndividual'])->middleware('throttle:scraping')->name('publicaciones.sincronizar');
+        Route::post('/perfiles-sociales/{perfilSocial}/sincronizar-recientes', [PublicacionController::class, 'sincronizarRecientes'])->middleware('throttle:scraping')->name('perfiles-sociales.sincronizar-recientes');
         Route::put('/publicaciones/{publicacion}', [PublicacionController::class, 'update'])->name('publicaciones.update');
         Route::patch('/publicaciones/{publicacion}/fecha', [PublicacionController::class, 'actualizarFecha'])->name('publicaciones.fecha');
         Route::delete('/publicaciones/{publicacion}', [PublicacionController::class, 'destroy'])->name('publicaciones.destroy');

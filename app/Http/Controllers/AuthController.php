@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -60,7 +61,11 @@ class AuthController extends Controller
             abort(403, 'El acceso rápido de demostración está deshabilitado en entorno de producción.');
         }
 
-        $role = $request->input('role', 'admin');
+        $validated = $request->validate([
+            'role' => ['nullable', 'string', Rule::in(['admin', 'consultor', 'visualizador'])],
+        ]);
+
+        $role = $validated['role'] ?? 'admin';
         $user = User::where('role', $role)->first();
 
         if (! $user) {
