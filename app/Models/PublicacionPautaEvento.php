@@ -70,11 +70,12 @@ class PublicacionPautaEvento extends Model
      */
     public function getDeltaLikesAtribuiblesAttribute(): int
     {
-        if (! $this->relationLoaded('publicacion') || ! $this->publicacion) {
+        $pub = $this->relationLoaded('publicacion') ? $this->publicacion : $this->publicacion()->first();
+        if (! $pub) {
             return 0;
         }
 
-        return max(0, (int) $this->publicacion->total_likes - (int) $this->likes_snapshot);
+        return max(0, (int) $pub->total_likes - (int) $this->likes_snapshot);
     }
 
     /**
@@ -82,11 +83,12 @@ class PublicacionPautaEvento extends Model
      */
     public function getDeltaComentariosAtribuiblesAttribute(): int
     {
-        if (! $this->relationLoaded('publicacion') || ! $this->publicacion) {
+        $pub = $this->relationLoaded('publicacion') ? $this->publicacion : $this->publicacion()->first();
+        if (! $pub) {
             return 0;
         }
 
-        return max(0, (int) $this->publicacion->total_comentarios - (int) $this->comentarios_snapshot);
+        return max(0, (int) $pub->total_comentarios - (int) $this->comentarios_snapshot);
     }
 
     /**
@@ -94,11 +96,12 @@ class PublicacionPautaEvento extends Model
      */
     public function getDeltaVistasAtribuiblesAttribute(): int
     {
-        if (! $this->relationLoaded('publicacion') || ! $this->publicacion) {
+        $pub = $this->relationLoaded('publicacion') ? $this->publicacion : $this->publicacion()->first();
+        if (! $pub) {
             return 0;
         }
 
-        return max(0, (int) $this->publicacion->total_vistas - (int) $this->vistas_snapshot);
+        return max(0, (int) $pub->total_vistas - (int) $this->vistas_snapshot);
     }
 
     /**

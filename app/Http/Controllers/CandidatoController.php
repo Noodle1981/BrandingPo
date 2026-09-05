@@ -348,7 +348,13 @@ class CandidatoController extends Controller
                     'figuras_acompanantes' => $p->figuras_acompanantes,
                     'comentarios_destacados' => $p->comentarios_destacados,
                     'termometro_humor_social' => $p->termometro_humor_social,
-                    'pauta_eventos' => $p->pautaEventos ? $p->pautaEventos->map(function ($ev) {
+                    'pauta_eventos' => $p->pautaEventos ? $p->pautaEventos->map(function ($ev) use ($p) {
+                        $deltaLikes = max(0, (int) $p->total_likes - (int) $ev->likes_snapshot);
+                        $deltaComentarios = max(0, (int) $p->total_comentarios - (int) $ev->comentarios_snapshot);
+                        $costoPorLike = ($ev->monto_nuevo > 0 && $deltaLikes > 0)
+                            ? round((float) $ev->monto_nuevo / $deltaLikes, 2)
+                            : null;
+
                         return [
                             'id' => $ev->id,
                             'tipo_pauta_anterior' => $ev->tipo_pauta_anterior,
@@ -362,9 +368,9 @@ class CandidatoController extends Controller
                             'comentarios_snapshot' => (int) $ev->comentarios_snapshot,
                             'vistas_snapshot' => (int) $ev->vistas_snapshot,
                             'origen' => $ev->origen,
-                            'delta_likes_atribuibles' => $ev->delta_likes_atribuibles,
-                            'delta_comentarios_atribuibles' => $ev->delta_comentarios_atribuibles,
-                            'costo_por_like' => $ev->costo_por_like,
+                            'delta_likes_atribuibles' => $deltaLikes,
+                            'delta_comentarios_atribuibles' => $deltaComentarios,
+                            'costo_por_like' => $costoPorLike,
                             'notas' => $ev->notas,
                         ];
                     }) : [],

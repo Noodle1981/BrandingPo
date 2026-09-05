@@ -922,13 +922,17 @@ const cardPautaStyles = computed(() => {
             </div>
             <div>
               <span class="text-[9px] uppercase tracking-wider text-cyan-500 block">Ganados con Pauta:</span>
-              <span class="font-bold text-emerald-500">+{{ formatNumber(ev.delta_likes_atribuibles) }} likes</span>
+              <span class="font-bold text-emerald-500">
+                +{{ formatNumber(Math.max(0, Number(post.total_likes || 0) - Number(ev.likes_snapshot || 0))) }} likes
+              </span>
             </div>
           </div>
 
           <div v-if="ev.monto_nuevo > 0" class="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-slate-800/80 text-[10px]">
             <span class="text-slate-400">Inversión: <strong class="text-slate-800 dark:text-slate-200 font-mono">{{ formatCurrency(ev.monto_nuevo) }}</strong></span>
-            <span v-if="ev.costo_por_like" class="text-cyan-600 dark:text-cyan-400 font-bold">CPL: ${{ ev.costo_por_like }} / like atribuible</span>
+            <span v-if="Math.max(0, Number(post.total_likes || 0) - Number(ev.likes_snapshot || 0)) > 0" class="text-cyan-600 dark:text-cyan-400 font-bold">
+              CPL: ${{ (Number(ev.monto_nuevo) / Math.max(1, Number(post.total_likes || 0) - Number(ev.likes_snapshot || 0))).toFixed(2) }} / like atribuible
+            </span>
           </div>
         </div>
       </div>

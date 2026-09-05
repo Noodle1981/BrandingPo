@@ -108,4 +108,65 @@ class PautaDetectionTest extends TestCase
             'total_likes' => 203,
         ]);
     }
+
+    /**
+     * Verificar que delta_likes_atribuibles calcula correctamente la diferencia
+     * entre la métrica actual del post y el corte base del evento.
+     */
+    public function test_delta_likes_atribuibles_calcula_diferencia_correcta(): void
+    {
+        $candidato = Candidato::first();
+        $perfil = $candidato->perfilesSociales->first();
+
+        // Crear publicación con 98 likes y evento con base en 65 likes
+        $pub = Publicacion::create([
+            'workspace_id' => $candidato->workspace_id,
+            'candidato_id' => $candidato->id,
+            'perfil_social_id' => $perfil->id,
+            'fecha_publicacion' => now()->subDays(3),
+            'tipo_formato' => 'Reel',
+            'tipo_pauta' => 'organico_impulsado',
+            'monto_invertido_pauta' => 5000,
+            'url_post' => 'https://facebook.com/reel/1724495535488555',
+            'contenido_resumen' => 'Reel Facebook impulsado con corte',
+            'total_likes' => 98,
+            'total_comentarios' => 12,
+            'total_vistas' => 3500,
+        ]);
+
+        $evento = \App\Models\PublicacionPautaEvento::create([
+            'publicacion_id' => $pub->id,
+            'tipo_pauta_anterior' => 'organico',
+            'tipo_pauta_nuevo' => 'organico_impulsado',
+            'monto_anterior' => 0,
+            'monto_nuevo' => 5000,
+            'fecha_evento' => now()->subDay(),
+            'seguidores_canal_snapshot' => 1200,
+            'likes_snapshot' => 65,
+            'comentarios_snapshot' => 4,
+            'vistas_snapshot' => 1000,
+            'origen' => 'manual',
+            'notas' => 'Corte booster de prueba',
+        ]);
+
+        // Verificamos el accesor del modelo directo
+        $this->assertEquals(33, $evento->delta_likes_atribuibles);
+        $this->assertEquals(8, $evento->delta_comentarios_atribuibles);
+        $this->assertEquals(2500, $evento->delta_vistas_atribuibles);
+
+        // Verificamos respuesta en el endpoint Feed
+        $consultor = User::where('role', 'consultor')->first();
+        $response = $this->actingAs($consultor)->get('/feed');
+        $response->assertStatus(200);
+
+        // Verificar que en las props de Inertia el delta es 33
+        $page = $response->viewData('page');
+        $feedPosts = collect($page['props']['publicaciones']['data'] ?? $page['props']['publicaciones'] ?? []);
+        $postEnFeed = $feedPosts->firstWhere('id', $pub->id);
+
+        $this->assertNotNull($postEnFeed);
+        $this->assertNotEmpty($postEnFeed['pauta_eventos']);
+        $this->assertEquals(33, $postEnFeed['pauta_eventos'][0]['delta_likes_atribuibles']);
+        $this->assertEquals(65, $postEnFeed['pauta_eventos'][0]['likes_snapshot']);
+    }
 }
