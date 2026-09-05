@@ -89,6 +89,14 @@ const isTwitter = computed(() => platform.value === 'x_twitter' || platform.valu
 const isYouTube = computed(() => platform.value === 'youtube');
 const isLinkedIn = computed(() => platform.value === 'linkedin');
 
+// Distinguir si la publicación pertenece a un candidato contrincante/opositor (rival)
+const isRival = computed(() => {
+  if (props.post.candidato && props.post.candidato.es_propio !== undefined) {
+    return !props.post.candidato.es_propio;
+  }
+  return false;
+});
+
 // Detectar si la fecha de publicación coincide con la fecha en que se cargó al sistema
 // (significa que nunca se confirmó la fecha real de la red social)
 const esFechaSinConfirmar = computed(() => {
@@ -805,14 +813,14 @@ const cardPautaStyles = computed(() => {
           <span class="text-[10px] font-normal opacity-70">/100 Tracción</span>
         </div>
 
-        <!-- ⚠️ Alerta Forense de Bots o Anomalía de Interacciones -->
+        <!-- ⚠️ Alerta Forense de Bots o Anomalía de Interacciones (Exclusivo para Contrincantes / Oposición) -->
         <div
-          v-if="post.analisis_traccion?.sospecha_de_bots"
-          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[11px] font-bold shadow-2xs"
-          :title="`Auditoría Forense: ${post.analisis_traccion.alertas_forenses.join(' | ')}`"
+          v-if="isRival && post.analisis_traccion?.sospecha_de_bots"
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/30 text-[11px] font-bold shadow-2xs"
+          :title="`Auditoría Oposición: ${post.analisis_traccion.alertas_forenses.join(' | ')}`"
         >
-          <AlertCircle class="w-3.5 h-3.5 text-rose-500 shrink-0" />
-          <span>Anomalía / Posible Inflado</span>
+          <AlertCircle class="w-3.5 h-3.5 text-violet-500 shrink-0" />
+          <span>Anomalía / Posible Inflado Rival</span>
         </div>
 
         <div class="flex items-center gap-1" title="Visualizaciones / Alcance">
