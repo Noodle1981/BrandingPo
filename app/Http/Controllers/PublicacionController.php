@@ -123,9 +123,26 @@ class PublicacionController extends Controller
 
         $publicacion->update($updateFields);
 
+        // Detección heurística de pauta durante la sincronización
+        $sospechaPauta = false;
+        $motivoPauta = '';
+
+        if ($publicacion->tipo_pauta === 'organico') {
+            // Caso 1: La URL tiene o tenía parámetros publicitarios
+            if (! empty($scraped['sospecha_pauta'])) {
+                $sospechaPauta = true;
+                $motivoPauta = $scraped['motivo_sospecha_pauta'] ?? 'Se detectaron tokens de pauta activa en el enlace.';
+            }
+            // Caso 2: Crecimiento explosivo no lineal (deltaLikes >= 40 y duplicación de base previa)
+            elseif ($deltaLikes >= 40 && ($oldLikes === 0 || ($deltaLikes / max(1, $oldLikes)) >= 0.75)) {
+                $sospechaPauta = true;
+                $motivoPauta = "Salto abrupto de interacciones (+{$deltaLikes} reacciones en sincronización). Crecimiento característico de post impulsado (Boost).";
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'mensaje' => 'Sincronizado',
+            'mensaje' => 'Sincronizado exitosamente',
             'delta_likes' => $deltaLikes,
             'delta_comentarios' => $deltaComments,
             'total_likes' => $freshLikes,
@@ -133,6 +150,10 @@ class PublicacionController extends Controller
             'url_post' => $publicacion->url_post,
             'fecha' => $publicacion->fecha_publicacion?->format('d/m/Y') ?? 'Reciente',
             'resumen' => Str::limit($publicacion->contenido_resumen ?? '', 45),
+            'sospecha_pauta' => $sospechaPauta,
+            'motivo_sospecha_pauta' => $motivoPauta,
+            'tipo_pauta_actual' => $publicacion->tipo_pauta,
+            'tipo_pauta_sugerido' => $sospechaPauta ? 'organico_impulsado' : $publicacion->tipo_pauta,
         ]);
     }
 

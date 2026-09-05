@@ -189,6 +189,19 @@ const editAiSentiment = computed(() => {
   return { aprobacion: ratio, isCrisis };
 });
 
+// Detección heurística de pauta en edición manual: si el post es orgánico pero el nuevo total de likes supera en >= 40 y >= 60% la base original
+const sugerirBoostManual = computed(() => {
+  if (editForm.tipo_pauta !== 'organico') return false;
+  const originalLikes = Number(props.post.total_likes || 0);
+  const nuevoLikes = Number(editForm.total_likes || 0);
+  const delta = nuevoLikes - originalLikes;
+  return delta >= 40 && (originalLikes === 0 || (delta / Math.max(1, originalLikes)) >= 0.5);
+});
+
+const aplicarBoostManual = () => {
+  editForm.tipo_pauta = 'organico_impulsado';
+};
+
 const close = () => {
   emit('close');
 };
@@ -328,6 +341,31 @@ const tiposPauta = [
               class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-violet-500/40 text-xs font-mono font-bold text-violet-600 dark:text-violet-400 focus:ring-2 focus:ring-violet-500"
             />
           </div>
+        </div>
+
+        <!-- Sugerencia contextual si los likes ingresados superan notablemente la base orgánica -->
+        <div
+          v-if="sugerirBoostManual"
+          class="p-3 rounded-2xl bg-violet-500/15 border border-violet-500/30 text-xs flex items-center justify-between gap-3 animate-fade-in"
+        >
+          <div class="flex items-start gap-2">
+            <DollarSign class="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+            <div>
+              <p class="font-bold text-violet-900 dark:text-violet-200 text-xs">
+                💡 Crecimiento significativo de reacciones detectado (+{{ Number(editForm.total_likes) - Number(post.total_likes) }} likes)
+              </p>
+              <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                Si esta tracción se debe a un impulso publicitario, clasifícalo como Post Impulsado.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            @click="aplicarBoostManual"
+            class="px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold text-[11px] shrink-0 transition-all cursor-pointer shadow-xs"
+          >
+            ⚡ Clasificar como Boosted
+          </button>
         </div>
 
         <!-- Alerta explicativa de snapshot de corte al cambiar de pauta -->

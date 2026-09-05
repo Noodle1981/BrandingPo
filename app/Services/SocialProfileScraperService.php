@@ -661,9 +661,31 @@ class SocialProfileScraperService
             $url = $m[0];
         }
 
-        // Limpiar parámetros de tracking innecesarios
-        $cleanUrl = preg_replace('/\?(?:utm_source|igsh|igsi|utm_medium|utm_campaign|ref_src|ref_url|s)=[^&]*&?/i', '?', $url);
-        $cleanUrl = preg_replace('/(\?|&)(?:twsrc|twcamp|tweetembed|twterm|twgr|twcon)=[^&]*/i', '', $cleanUrl);
+        // Detección heurística temprana de parámetros de pauta publicitaria en la URL original
+        $tieneSospechaPauta = false;
+        $motivoSospechaPauta = '';
+
+        if (preg_match('/[\?&](?:fbclid|ad_id|adset_id|campaign_id|hsa_acc|hsa_cam|hsa_grp|hsa_ad)=([^&#\s]+)/i', $url, $adParamMatch)) {
+            $tieneSospechaPauta = true;
+            $paramName = explode('=', $adParamMatch[0])[0];
+            $motivoSospechaPauta = "URL con token publicitario activo de Meta Ads ({$paramName}).";
+        } elseif (preg_match('/utm_medium=(?:paid|cpc|ads|ad|boost|promoted)/i', $url)) {
+            $tieneSospechaPauta = true;
+            $motivoSospechaPauta = 'URL con parámetro UTM de campaña paga.';
+        } elseif (preg_match('/(?:facebook\.com|fb\.com)\/(?:ads\/experience|ad_library|boosted_post)/i', $url)) {
+            $tieneSospechaPauta = true;
+            $motivoSospechaPauta = 'Enlace directo de vista previa de anuncio de Facebook Ads.';
+        }
+
+        $result['sospecha_pauta'] = $tieneSospechaPauta;
+        $result['motivo_sospecha_pauta'] = $motivoSospechaPauta;
+        $result['tipo_pauta_sugerido'] = $tieneSospechaPauta ? 'organico_impulsado' : 'organico';
+
+        // Limpiar parámetros de tracking y de ads innecesarios de la URL canónica
+        $cleanUrl = preg_replace('/([\?&])(?:utm_source|igsh|igsi|utm_medium|utm_campaign|ref_src|ref_url|s|fbclid|ad_id|adset_id|campaign_id|hsa_acc|hsa_cam|hsa_grp|hsa_ad|twsrc|twcamp|tweetembed|twterm|twgr|twcon)=[^&#\s]*/i', '$1', $url);
+        // Limpiar separadores duplicados o terminales
+        $cleanUrl = preg_replace('/(\?|&)+/', '$1', $cleanUrl);
+        $cleanUrl = str_replace(['?&', '&&'], ['?', '&'], $cleanUrl);
         $cleanUrl = rtrim($cleanUrl, '?&');
         $result['url_post'] = $cleanUrl;
 

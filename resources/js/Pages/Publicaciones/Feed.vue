@@ -179,6 +179,7 @@ const isScraping = ref(false);
 const scrapeSuccessMsg = ref('');
 const scrapeErrorMsg = ref('');
 const duplicateDetectedPost = ref(null);
+const adDetectionAlert = ref(null); // { detectado: boolean, motivo: string, sugerido: string }
 
 const createForm = useForm({
   candidato_id: props.filtros.candidato_id || (props.candidatos[0]?.id ?? ''),
@@ -339,6 +340,7 @@ const ultimaPublicacionRegistrada = computed(() => {
 
 const openCreateModal = () => {
   duplicateDetectedPost.value = null;
+  adDetectionAlert.value = null;
   scrapeSuccessMsg.value = '';
   scrapeErrorMsg.value = '';
   // 1. Preseleccionar candidato según filtros activos
@@ -490,6 +492,16 @@ const autocompletarScrape = async () => {
         createForm.reacciones_detalladas.angry = 0;
       }
 
+      // Detección automática de sospecha de pauta publicitaria en la URL
+      if (data.data.sospecha_pauta) {
+        adDetectionAlert.value = {
+          motivo: data.data.motivo_sospecha_pauta || 'Detectados parámetros de campaña publicitaria o de anuncio en el enlace.',
+          sugerido: data.data.tipo_pauta_sugerido || 'organico_impulsado',
+        };
+      } else {
+        adDetectionAlert.value = null;
+      }
+
       scrapeSuccessMsg.value = '✅ ¡Datos, texto e imagen extraídos exitosamente!';
     } else {
       if (data.ya_registrada) {
@@ -501,6 +513,14 @@ const autocompletarScrape = async () => {
     scrapeErrorMsg.value = 'Error al consultar el lector de redes. Completa los datos a mano.';
   } finally {
     isScraping.value = false;
+  }
+};
+
+const aplicarPautaDetectada = () => {
+  if (adDetectionAlert.value?.sugerido) {
+    createForm.tipo_pauta = adDetectionAlert.value.sugerido;
+  } else {
+    createForm.tipo_pauta = 'organico_impulsado';
   }
 };
 
@@ -1001,6 +1021,42 @@ const formatCurrency = (amount) => {
                     <CheckCircle2 class="w-3.5 h-3.5 shrink-0" />
                     <span>{{ scrapeSuccessMsg }}</span>
                   </div>
+
+                  <!-- Banner Interactivo: Detección Temprana de Pauta / Boosted Post -->
+                  <div
+                    v-if="adDetectionAlert"
+                    class="p-3 rounded-xl bg-violet-500/15 border border-violet-500/40 text-violet-900 dark:text-violet-200 space-y-2 animate-fade-in"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-start gap-2">
+                        <DollarSign class="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p class="font-bold text-xs flex items-center gap-1">
+                            <span>🎯 Sospecha de Pauta Activa / Boosted Post</span>
+                            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-violet-500/20 text-violet-700 dark:text-violet-300 font-black uppercase">Detectada</span>
+                          </p>
+                          <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-snug">
+                            {{ adDetectionAlert.motivo }}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        v-if="createForm.tipo_pauta === 'organico'"
+                        type="button"
+                        @click="aplicarPautaDetectada"
+                        class="px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold text-[11px] shrink-0 transition-all shadow-xs cursor-pointer"
+                      >
+                        ⚡ Clasificar como Boosted
+                      </button>
+                      <span
+                        v-else
+                        class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0"
+                      >
+                        <CheckCircle2 class="w-3 h-3" /> Clasificada
+                      </span>
+                    </div>
+                  </div>
+
                   <div v-if="scrapeErrorMsg" class="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                     <AlertCircle class="w-3.5 h-3.5 shrink-0" />
                     <span>{{ scrapeErrorMsg }}</span>
