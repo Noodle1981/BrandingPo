@@ -169,4 +169,97 @@ class PautaDetectionTest extends TestCase
         $this->assertEquals(33, $postEnFeed['pauta_eventos'][0]['delta_likes_atribuibles']);
         $this->assertEquals(65, $postEnFeed['pauta_eventos'][0]['likes_snapshot']);
     }
+
+    /**
+     * Verificar que el analizador de huella detecta todas las redes (Meta, TikTok, X, YouTube, LinkedIn, UTMs y Copy).
+     */
+    public function test_deteccion_huella_multiplataforma_detecta_todas_las_redes(): void
+    {
+        // 1. Meta (fbclid y ad_id)
+        $meta1 = SocialProfileScraperService::analizarHuellaPauta('https://instagram.com/reel/123?fbclid=IwAR123');
+        $this->assertTrue($meta1['tiene_huella']);
+        $this->assertEquals('meta', $meta1['red']);
+
+        // 2. TikTok (ttclid)
+        $tt = SocialProfileScraperService::analizarHuellaPauta('https://tiktok.com/@user/video/456?ttclid=E.C.P.test');
+        $this->assertTrue($tt['tiene_huella']);
+        $this->assertEquals('tiktok', $tt['red']);
+
+        // 3. X / Twitter (twclid)
+        $tw = SocialProfileScraperService::analizarHuellaPauta('https://x.com/candidato/status/789?twclid=tw_test_123');
+        $this->assertTrue($tw['tiene_huella']);
+        $this->assertEquals('x_twitter', $tw['red']);
+
+        // 4. Google / YouTube (gclid)
+        $yt = SocialProfileScraperService::analizarHuellaPauta('https://youtube.com/shorts/abc?gclid=google_ad_click');
+        $this->assertTrue($yt['tiene_huella']);
+        $this->assertEquals('youtube', $yt['red']);
+
+        // 5. LinkedIn (li_fat_id)
+        $li = SocialProfileScraperService::analizarHuellaPauta('https://linkedin.com/feed/update/urn:li:activity:999?li_fat_id=12345');
+        $this->assertTrue($li['tiene_huella']);
+        $this->assertEquals('linkedin', $li['red']);
+
+        // 6. UTM Paid universal
+        $utm = SocialProfileScraperService::analizarHuellaPauta('https://instagram.com/p/test?utm_medium=boost&utm_source=meta_ads');
+        $this->assertTrue($utm['tiene_huella']);
+        $this->assertEquals('universal', $utm['red']);
+
+        // 7. Copy patrocinado
+        $copy = SocialProfileScraperService::analizarHuellaPauta('https://instagram.com/p/clean', 'Propuesta de gestión en salud pública #publicidad');
+        $this->assertTrue($copy['tiene_huella']);
+        $this->assertEquals('copy', $copy['red']);
+
+        // 8. Totalmente limpio
+        $clean = SocialProfileScraperService::analizarHuellaPauta('https://instagram.com/p/clean', 'Recorriendo los barrios junto a los vecinos');
+        $this->assertFalse($clean['tiene_huella']);
+    }
+
+    /**
+     * Verificar que el endpoint /publicaciones/detectar-huellas-pauta rastrea y retorna sospechosos.
+     */
+    public function test_endpoint_detectar_huellas_pauta_identifica_posts_organicos_con_huella(): void
+    {
+        $consultor = User::where('role', 'consultor')->first();
+        $candidato = Candidato::where('es_propio', true)->first();
+        $perfil = $candidato->perfilesSociales->first();
+
+        // Crear una publicación orgánica con token de pauta
+        $pub = Publicacion::create([
+            'workspace_id' => $candidato->workspace_id,
+            'candidato_id' => $candidato->id,
+            'perfil_social_id' => $perfil->id,
+            'fecha_publicacion' => now()->format('Y-09-10 14:00:00'),
+            'tipo_formato' => 'Reel',
+            'tipo_pauta' => 'organico',
+            'monto_invertido_pauta' => 0,
+            'url_post' => 'https://instagram.com/reel/SepPost?ad_id=987654321',
+            'contenido_resumen' => 'Reel de Septiembre con huella publicitaria',
+            'total_likes' => 120,
+            'total_comentarios' => 15,
+            'total_vistas' => 2500,
+        ]);
+
+        $response = $this->actingAs($consultor)
+            ->postJson('/publicaciones/detectar-huellas-pauta', [
+                'filtro' => 'propio',
+                'mes' => '09',
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+            ]);
+
+        $json = $response->json();
+        $this->assertGreaterThanOrEqual(1, $json['total_detectadas']);
+        $detectadosIds = collect($json['publicaciones_detectadas'])->pluck('id');
+        $this->assertTrue($detectadosIds->contains($pub->id));
+
+        // Verificar que el accesor del modelo devuelve la huella
+        $pubFresh = $pub->fresh();
+        $this->assertNotNull($pubFresh->huella_pauta);
+        $this->assertTrue($pubFresh->huella_pauta['tiene_huella']);
+        $this->assertEquals('ad_id', $pubFresh->huella_pauta['token_detectado']);
+    }
 }

@@ -70,7 +70,29 @@ class Publicacion extends Model
         'score_impacto_organico',
         'tasa_viralidad_pct',
         'analisis_traccion',
+        'huella_pauta',
     ];
+
+    /**
+     * Detección de Huella de Pauta Multi-plataforma (Meta, TikTok, X, Google/YouTube, LinkedIn, UTMs y Copy).
+     */
+    public function getHuellaPautaAttribute(): ?array
+    {
+        // 1. Si ya se guardó explícitamente en insights
+        if (! empty($this->insights_internos_propios['huella_pauta'])) {
+            return $this->insights_internos_propios['huella_pauta'];
+        }
+
+        // 2. Analizar URL y copy si el post figura como orgánico
+        if ($this->tipo_pauta === 'organico') {
+            $analisis = \App\Services\SocialProfileScraperService::analizarHuellaPauta($this->url_post, $this->contenido_resumen);
+            if ($analisis['tiene_huella']) {
+                return $analisis;
+            }
+        }
+
+        return null;
+    }
 
     /**
      * Análisis de Tracción Política Real (normalizada por Tier) y detección forense de bots.
@@ -267,7 +289,7 @@ class Publicacion extends Model
             if (! empty($parsedPath)) {
                 $segments = array_values(array_filter(explode('/', $parsedPath)));
                 $ultimoSegmento = end($segments);
-                if ($ultimoSegmento && strlen($ultimoSegmento) >= 5 && ! in_array($ultimoSegmento, ['watch', 'post', 'video', 'share', 'reel', 'p'])) {
+                if ($ultimoSegmento && strlen($ultimoSegmento) >= 5 && ! in_array($ultimoSegmento, ['watch', 'post', 'video', 'photo', 'share', 'reel', 'p'])) {
                     $encontradoPorSegmento = (clone $baseQuery)
                         ->whereNotNull('url_post')
                         ->where('url_post', 'LIKE', '%'.$ultimoSegmento.'%')
@@ -280,22 +302,41 @@ class Publicacion extends Model
             }
         }
 
-        // 2. Verificación por huella de contenido y fecha (para posts manuales o idénticos)
+        // 2. Verificación por huella de contenido y fecha (para posts manuales sin URL o idénticos)
         if ($candidatoId && $perfilSocialId && ! empty($contenido)) {
             $contenidoLimpio = trim($contenido);
-            $queryContenido = (clone $baseQuery)
-                ->where('candidato_id', $candidatoId)
-                ->where('perfil_social_id', $perfilSocialId)
-                ->where('contenido_resumen', $contenidoLimpio);
+            $genericos = [
+                'tiktok | make your day',
+                'tiktok | alégrate el día',
+                'tiktok | alegrate el dia',
+                'tiktok',
+                'instagram',
+                'facebook',
+                'sin descripción',
+                'sin descripcion',
+            ];
+            if (! in_array(mb_strtolower($contenidoLimpio), $genericos)) {
+                $queryContenido = (clone $baseQuery)
+                    ->where('candidato_id', $candidatoId)
+                    ->where('perfil_social_id', $perfilSocialId)
+                    ->where('contenido_resumen', $contenidoLimpio);
 
-            if (! empty($fecha)) {
-                $fechaDia = date('Y-m-d', strtotime($fecha));
-                $queryContenido->whereDate('fecha_publicacion', $fechaDia);
-            }
+                // Si se proveyó una URL para el nuevo post, no debe chocar con un post que tenga una URL diferente
+                if (! empty($url)) {
+                    $queryContenido->where(function ($q) use ($url) {
+                        $q->whereNull('url_post')->orWhere('url_post', '')->orWhere('url_post', $url);
+                    });
+                }
 
-            $encontradoPorContenido = $queryContenido->first();
-            if ($encontradoPorContenido) {
-                return $encontradoPorContenido;
+                if (! empty($fecha)) {
+                    $fechaDia = date('Y-m-d', strtotime($fecha));
+                    $queryContenido->whereDate('fecha_publicacion', $fechaDia);
+                }
+
+                $encontradoPorContenido = $queryContenido->first();
+                if ($encontradoPorContenido) {
+                    return $encontradoPorContenido;
+                }
             }
         }
 

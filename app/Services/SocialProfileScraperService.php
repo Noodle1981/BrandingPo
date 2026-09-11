@@ -644,7 +644,7 @@ class SocialProfileScraperService
             if (! str_starts_with($url, 'http')) {
                 $url = 'https://'.$url;
             }
-        } elseif (preg_match('/plugins\/(?:post|video)\.php\?href=([^&"\']+)/i', $input, $m)) {
+        } elseif (preg_match('/plugins\/(?:post|video)\.php\?[^"\']*href=([^&"\']+)/i', $input, $m)) {
             $url = urldecode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
         } elseif (preg_match('/data-instgrm-permalink="([^"]+)"/i', $input, $m)) {
             $url = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -661,24 +661,14 @@ class SocialProfileScraperService
             $url = $m[0];
         }
 
-        // Detección heurística temprana de parámetros de pauta publicitaria en la URL original
-        $tieneSospechaPauta = false;
-        $motivoSospechaPauta = '';
-
-        if (preg_match('/[\?&](?:fbclid|ad_id|adset_id|campaign_id|hsa_acc|hsa_cam|hsa_grp|hsa_ad)=([^&#\s]+)/i', $url, $adParamMatch)) {
-            $tieneSospechaPauta = true;
-            $paramName = explode('=', $adParamMatch[0])[0];
-            $motivoSospechaPauta = "URL con token publicitario activo de Meta Ads ({$paramName}).";
-        } elseif (preg_match('/utm_medium=(?:paid|cpc|ads|ad|boost|promoted)/i', $url)) {
-            $tieneSospechaPauta = true;
-            $motivoSospechaPauta = 'URL con parámetro UTM de campaña paga.';
-        } elseif (preg_match('/(?:facebook\.com|fb\.com)\/(?:ads\/experience|ad_library|boosted_post)/i', $url)) {
-            $tieneSospechaPauta = true;
-            $motivoSospechaPauta = 'Enlace directo de vista previa de anuncio de Facebook Ads.';
-        }
+        // Detección heurística de huella de pauta publicitaria multi-plataforma
+        $analisisHuella = self::analizarHuellaPauta($url, $input);
+        $tieneSospechaPauta = $analisisHuella['tiene_huella'];
+        $motivoSospechaPauta = $analisisHuella['motivo'];
 
         $result['sospecha_pauta'] = $tieneSospechaPauta;
         $result['motivo_sospecha_pauta'] = $motivoSospechaPauta;
+        $result['huella_pauta'] = $analisisHuella;
         $result['tipo_pauta_sugerido'] = $tieneSospechaPauta ? 'organico_impulsado' : 'organico';
 
         // Limpiar parámetros de tracking y de ads innecesarios de la URL canónica
@@ -897,34 +887,66 @@ class SocialProfileScraperService
             }
 
             // og:image
-            if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]*)"/i', $html, $mImg)) {
+            if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]*)"/i', $html, $mImg)
+                || preg_match('/<meta[^>]+content="([^"]*)"[^>]+property="og:image"/i', $html, $mImg)) {
                 $result['media_url'] = html_entity_decode($mImg[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             }
 
-            // og:title & og:description
+            // og:title & og:description & twitter meta tags
             $rawTitle = '';
-            if (preg_match('/<meta[^>]+property="og:title"[^>]+content="([^"]*)"/i', $html, $mTitle)) {
+            if (preg_match('/<meta[^>]+(?:property="og:title"|name="twitter:title")[^>]+content="([^"]*)"/i', $html, $mTitle)
+                || preg_match('/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:title"|name="twitter:title")/i', $html, $mTitle)) {
                 $rawTitle = html_entity_decode($mTitle[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             }
 
             $rawDesc = '';
-            if (preg_match('/<meta[^>]+property="og:description"[^>]+content="([^"]*)"/i', $html, $mDesc)) {
+            if (preg_match('/<meta[^>]+(?:property="og:description"|name="description")[^>]+content="([^"]*)"/i', $html, $mDesc)
+                || preg_match('/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:description"|name="description")/i', $html, $mDesc)) {
                 $rawDesc = html_entity_decode($mDesc[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             }
 
-            // Extraer Reproducciones / Vistas
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:reproducciones|views|reproducción)/iu', $rawTitle.' '.$rawDesc, $m)) {
+            // Colección de todos los textos de meta tags para extracción profunda
+            $allMetaTexts = $rawTitle . ' ' . $rawDesc;
+            if (preg_match_all('/<meta[^>]+content="([^"]*)"/i', $html, $allMetas)) {
+                $allMetaTexts .= ' ' . implode(' ', array_map(fn ($t) => html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8'), $allMetas[1]));
+            }
+
+            // Extraer Reproducciones / Vistas (desde texto o JSON interno de Facebook Reel/Video)
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:reproducciones|views|reproducción)/iu', $allMetaTexts, $m)) {
                 $result['total_vistas'] = $this->parseFormattedNumber($m[1]);
+            }
+            if (empty($result['total_vistas'])) {
+                $vViews = 0;
+                $pPlays = 0;
+                if (preg_match('/"video_view_count"\s*:\s*([0-9]+)/i', $html, $mViews)) {
+                    $vViews = (int) $mViews[1];
+                }
+                if (preg_match('/"play_count"\s*:\s*([0-9]+)/i', $html, $mPlays)) {
+                    $pPlays = (int) $mPlays[1];
+                }
+                if ($vViews > 0 || $pPlays > 0) {
+                    $result['total_vistas'] = max($vViews, $pPlays);
+                } elseif (preg_match('/"video_post_view_count"\s*:\s*([0-9]+)/i', $html, $mPostViews)) {
+                    $result['total_vistas'] = (int) $mPostViews[1];
+                }
             }
 
             // Extraer Reacciones / Likes
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:reacciones|reactions|me gusta|likes)/iu', $rawTitle.' '.$rawDesc, $m)) {
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:reacciones|reactions|me gusta|likes)/iu', $allMetaTexts, $m)) {
                 $result['total_likes'] = $this->parseFormattedNumber($m[1]);
             }
 
-            // Extraer Comentarios
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:comentarios|comments)/iu', $rawTitle.' '.$rawDesc, $m)) {
+            // Extraer Comentarios (soporta singular y plural: 'comentario', 'comentarios', 'comment', 'comments')
+            if (preg_match('/([\d\.,KMkm]+)\s*(?:comentarios?|comments?)/iu', $allMetaTexts, $m)) {
                 $result['total_comentarios'] = $this->parseFormattedNumber($m[1]);
+            }
+            // Fallback para comentarios desde payload JSON interno si meta tags no lo traían
+            if (empty($result['total_comentarios'])) {
+                if (preg_match('/"(?:total_comment_count|comment_count|comments_count|total_comments)"\s*:\s*([0-9]+)/i', $html, $mComm)) {
+                    $result['total_comentarios'] = (int) $mComm[1];
+                } elseif (preg_match('/"(?:comments|comment_count)"\s*:\s*\{\s*"(?:total_count|count)"\s*:\s*([0-9]+)/i', $html, $mComm)) {
+                    $result['total_comentarios'] = (int) $mComm[1];
+                }
             }
 
             // Extraer Autor y Copy
@@ -1055,15 +1077,15 @@ class SocialProfileScraperService
     protected function scrapeTikTokPost(string $url, array $result): array
     {
         $result['plataforma'] = 'tiktok';
-        $result['tipo_formato'] = 'Video';
+        $result['tipo_formato'] = str_contains($url, '/photo/') ? 'Carrusel' : 'Video';
 
         // 0. Limpiar URL de parámetros UTM o query strings
         $cleanUrl = strtok($url, '?');
         $result['url_post'] = $cleanUrl;
 
         try {
-            // 1. Extraer fecha nativa directa del Video ID (TikTok Snowflake Algorithm)
-            if (preg_match('/video\/(\d+)/i', $cleanUrl, $vm)) {
+            // 1. Extraer fecha nativa directa del Video/Photo ID (TikTok Snowflake Algorithm)
+            if (preg_match('/(?:video|photo|v)\/(\d+)/i', $cleanUrl, $vm)) {
                 $videoId = $vm[1];
                 $ts = (int) ($videoId >> 32);
                 if ($ts > 1000000000 && $ts < 2500000000) {
@@ -1076,8 +1098,12 @@ class SocialProfileScraperService
                 $result['handle_autor'] = '@' . ltrim($am[1], '@');
             }
 
-            // 3. Consultar endpoint oficial oEmbed de TikTok con SSL bypass y User-Agent
-            $oembedUrl = 'https://www.tiktok.com/oembed?url=' . urlencode($cleanUrl);
+            // 3. Consultar endpoint oficial oEmbed de TikTok (para fotos se convierte a /video/$id y con www. para compatibilidad con la API oEmbed)
+            $oembedTargetUrl = preg_replace('/\/photo\/(\d+)/i', '/video/$1', $cleanUrl);
+            if (str_contains($oembedTargetUrl, 'tiktok.com') && ! str_contains($oembedTargetUrl, 'www.tiktok.com')) {
+                $oembedTargetUrl = str_replace('://tiktok.com', '://www.tiktok.com', $oembedTargetUrl);
+            }
+            $oembedUrl = 'https://www.tiktok.com/oembed?url=' . urlencode($oembedTargetUrl);
             $oembedResp = Http::withoutVerifying()
                 ->timeout(10)
                 ->withHeaders([
@@ -1101,22 +1127,39 @@ class SocialProfileScraperService
                 }
             }
 
-            // 2. Intentar leer HTML con Bot Agent para extraer contadores si están disponibles
+            // 4. Intentar leer HTML con Mobile Agent (para extraer contadores completos diggCount, playCount, commentCount, shareCount, collectCount)
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)');
+            curl_setopt($ch, CURLOPT_URL, $cleanUrl);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language: es-ES,es;q=0.9,en;q=0.8',
+            ]);
             $html = curl_exec($ch);
             curl_close($ch);
+
+            // Fallback con Bot Agent si mobile no devolvió HTML suficiente
+            if (empty($html) || strlen($html) < 2000) {
+                $ch2 = curl_init();
+                curl_setopt($ch2, CURLOPT_URL, $cleanUrl);
+                curl_setopt($ch2, CURLOPT_USERAGENT, 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)');
+                curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch2, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch2, CURLOPT_TIMEOUT, 8);
+                $html = curl_exec($ch2);
+                curl_close($ch2);
+            }
 
             if (! empty($html)) {
                 // Verificar si TikTok indica explícitamente que el video no existe o fue borrado
                 if (str_contains($html, 'Video currently unavailable') || str_contains($html, 'video-unavailable') || str_contains($html, 'Couldn\'t find this video')) {
                     $result['success'] = false;
-                    $result['mensaje'] = 'El video no está disponible o fue eliminado en TikTok.';
+                    $result['mensaje'] = 'La publicación no está disponible o fue eliminada en TikTok.';
 
                     return $result;
                 }
@@ -1125,13 +1168,18 @@ class SocialProfileScraperService
                     $result['media_url'] = html_entity_decode($mImg[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 }
                 if (empty($result['contenido_resumen']) && preg_match('/<meta[^>]+property="og:description"[^>]+content="([^"]*)"/i', $html, $mDesc)) {
-                    $result['contenido_resumen'] = html_entity_decode($mDesc[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $candidateDesc = html_entity_decode($mDesc[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    if (! in_array(mb_strtolower(trim($candidateDesc)), ['tiktok | make your day', 'tiktok | alégrate el día', 'tiktok | alegrate el dia'])) {
+                        $result['contenido_resumen'] = $candidateDesc;
+                    }
                 }
 
                 // Universal Data rehydration check
                 if (preg_match('/<script[^>]+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>(.*?)<\/script>/is', $html, $mJson)) {
                     $uData = json_decode($mJson[1], true);
-                    $stats = $uData['__DEFAULT_SCOPE__']['webapp.video-detail']['itemInfo']['itemStruct']['stats'] ?? null;
+                    $stats = $uData['__DEFAULT_SCOPE__']['webapp.video-detail']['itemInfo']['itemStruct']['stats']
+                        ?? $uData['__DEFAULT_SCOPE__']['webapp.photo-detail']['itemInfo']['itemStruct']['stats']
+                        ?? null;
                     if ($stats) {
                         if (isset($stats['diggCount'])) {
                             $result['total_likes'] = (int) $stats['diggCount'];
@@ -1151,6 +1199,23 @@ class SocialProfileScraperService
                     }
                 }
 
+                // Extracción directa de métricas por regex sobre el HTML completo (SSR de TikTok)
+                if (empty($result['total_likes']) && preg_match('/"diggCount"\s*:\s*([0-9]+)/i', $html, $mD)) {
+                    $result['total_likes'] = (int) $mD[1];
+                }
+                if (empty($result['total_vistas']) && preg_match('/"playCount"\s*:\s*([0-9]+)/i', $html, $mP)) {
+                    $result['total_vistas'] = (int) $mP[1];
+                }
+                if (empty($result['total_comentarios']) && preg_match('/"commentCount"\s*:\s*([0-9]+)/i', $html, $mC)) {
+                    $result['total_comentarios'] = (int) $mC[1];
+                }
+                if (empty($result['total_compartidos']) && preg_match('/"shareCount"\s*:\s*([0-9]+)/i', $html, $mS)) {
+                    $result['total_compartidos'] = (int) $mS[1];
+                }
+                if (empty($result['total_guardados']) && preg_match('/"collectCount"\s*:\s*([0-9]+)/i', $html, $mG)) {
+                    $result['total_guardados'] = (int) $mG[1];
+                }
+
                 $extractedDate = $this->extractPublicationDate($html, 'tiktok');
                 if ($extractedDate) {
                     $result['fecha_publicacion'] = $extractedDate;
@@ -1162,8 +1227,8 @@ class SocialProfileScraperService
 
         $result['success'] = ! empty($result['contenido_resumen']) || ! empty($result['media_url']) || $result['total_likes'] > 0;
         $result['mensaje'] = $result['success']
-            ? '¡Video de TikTok extraído exitosamente!'
-            : 'TikTok protegió la lectura o el video no está disponible. Puedes completar los datos manualmente.';
+            ? '¡Publicación de TikTok extraída exitosamente!'
+            : 'TikTok protegió la lectura o la publicación no está disponible. Puedes completar los datos manualmente.';
 
         // Advertencia si la publicación es anterior al inicio de auditoría de Julio
         if ($result['success'] && ! empty($result['fecha_publicacion'])) {
@@ -1427,5 +1492,160 @@ class SocialProfileScraperService
         }
 
         return null;
+    }
+
+    /**
+     * Motor Integral de Detección de Huella de Pauta Multi-plataforma.
+     * Analiza URLs y copys en busca de identificadores de pauta de Meta, TikTok, X, Google/YouTube, LinkedIn y UTMs.
+     */
+    public static function analizarHuellaPauta(?string $url, ?string $texto = null): array
+    {
+        $result = [
+            'tiene_huella' => false,
+            'red' => null,
+            'tipo_detector' => null,
+            'token_detectado' => null,
+            'motivo' => '',
+            'tipo_pauta_sugerido' => 'organico',
+        ];
+
+        $targetUrl = trim($url ?? '');
+        $targetTexto = trim($texto ?? '');
+
+        if (empty($targetUrl) && empty($targetTexto)) {
+            return $result;
+        }
+
+        // 1. Huella Meta Ads (Instagram, Facebook, Threads)
+        if (! empty($targetUrl)) {
+            if (preg_match('/[\?&](ad_id|adset_id|campaign_id|hsa_acc|hsa_cam|hsa_grp|hsa_ad|fbclid)=([^&#\s]+)/i', $targetUrl, $m)) {
+                return [
+                    'tiene_huella' => true,
+                    'red' => 'meta',
+                    'tipo_detector' => 'parametro_url',
+                    'token_detectado' => strtolower($m[1]),
+                    'motivo' => "Token publicitario de Meta Ads detectado ({$m[1]}).",
+                    'tipo_pauta_sugerido' => 'organico_impulsado',
+                ];
+            }
+            if (preg_match('/(?:facebook\.com|fb\.com)\/(?:ads\/(?:experience|archive|library)|ad_library|boosted_post)/i', $targetUrl)) {
+                return [
+                    'tiene_huella' => true,
+                    'red' => 'meta',
+                    'tipo_detector' => 'ad_library',
+                    'token_detectado' => 'meta_ad_library',
+                    'motivo' => 'Enlace originado en la Biblioteca de Anuncios de Meta (Ad Library).',
+                    'tipo_pauta_sugerido' => 'organico_impulsado',
+                ];
+            }
+        }
+
+        // 2. Huella TikTok Ads
+        if (! empty($targetUrl)) {
+            if (preg_match('/[\?&](ttclid|tt_campaign_id|tt_ad_id|tt_medium)=([^&#\s]+)/i', $targetUrl, $m)) {
+                return [
+                    'tiene_huella' => true,
+                    'red' => 'tiktok',
+                    'tipo_detector' => 'parametro_url',
+                    'token_detectado' => strtolower($m[1]),
+                    'motivo' => "Token publicitario de TikTok Ads detectado ({$m[1]}).",
+                    'tipo_pauta_sugerido' => 'organico_impulsado',
+                ];
+            }
+            if (preg_match('/(?:library\.tiktok\.com\/ads|tiktok\.com\/business)/i', $targetUrl)) {
+                return [
+                    'tiene_huella' => true,
+                    'red' => 'tiktok',
+                    'tipo_detector' => 'ad_library',
+                    'token_detectado' => 'tiktok_commercial_library',
+                    'motivo' => 'Enlace originado en TikTok Ads Library / Comercial.',
+                    'tipo_pauta_sugerido' => 'organico_impulsado',
+                ];
+            }
+        }
+
+        // 3. Huella X / Twitter Ads
+        if (! empty($targetUrl)) {
+            if (preg_match('/[\?&](twclid)=([^&#\s]+)/i', $targetUrl, $m) || preg_match('/twsrc=(?:ads|promoted)/i', $targetUrl)) {
+                $tok = ! empty($m[1]) ? $m[1] : 'twsrc=ads';
+
+                return [
+                    'tiene_huella' => true,
+                    'red' => 'x_twitter',
+                    'tipo_detector' => 'parametro_url',
+                    'token_detectado' => $tok,
+                    'motivo' => "Token publicitario de X (Twitter Ads) detectado ({$tok}).",
+                    'tipo_pauta_sugerido' => 'organico_impulsado',
+                ];
+            }
+        }
+
+        // 4. Huella Google / YouTube Ads
+        if (! empty($targetUrl)) {
+            if (preg_match('/[\?&](gclid|wbraid|gbraid)=([^&#\s]+)/i', $targetUrl, $m)) {
+                return [
+                    'tiene_huella' => true,
+                    'red' => 'youtube',
+                    'tipo_detector' => 'parametro_url',
+                    'token_detectado' => strtolower($m[1]),
+                    'motivo' => "Click ID publicitario de Google / YouTube Ads detectado ({$m[1]}).",
+                    'tipo_pauta_sugerido' => 'organico_impulsado',
+                ];
+            }
+        }
+
+        // 5. Huella LinkedIn Ads
+        if (! empty($targetUrl)) {
+            if (preg_match('/[\?&](li_fat_id)=([^&#\s]+)/i', $targetUrl, $m)) {
+                return [
+                    'tiene_huella' => true,
+                    'red' => 'linkedin',
+                    'tipo_detector' => 'parametro_url',
+                    'token_detectado' => strtolower($m[1]),
+                    'motivo' => "Token de seguimiento publicitario de LinkedIn Ads detectado ({$m[1]}).",
+                    'tipo_pauta_sugerido' => 'organico_impulsado',
+                ];
+            }
+        }
+
+        // 6. Huella Universal por Parámetros UTM de Inversión
+        if (! empty($targetUrl)) {
+            if (preg_match('/utm_medium=(paid|cpc|ads|ad|boost|promoted|sponsored|pauta|publicidad)/i', $targetUrl, $m)) {
+                return [
+                    'tiene_huella' => true,
+                    'red' => 'universal',
+                    'tipo_detector' => 'utm_paid',
+                    'token_detectado' => 'utm_medium='.$m[1],
+                    'motivo' => "Parámetro UTM de campaña publicitaria paga (utm_medium={$m[1]}).",
+                    'tipo_pauta_sugerido' => 'organico_impulsado',
+                ];
+            }
+            if (preg_match('/utm_source=(meta_ads|facebook_ads|instagram_ads|tiktok_ads|google_ads|youtube_ads|twitter_ads|x_ads|linkedin_ads)/i', $targetUrl, $m)) {
+                return [
+                    'tiene_huella' => true,
+                    'red' => 'universal',
+                    'tipo_detector' => 'utm_source_ads',
+                    'token_detectado' => 'utm_source='.$m[1],
+                    'motivo' => "Origen de tráfico declarado como red de anuncios ({$m[1]}).",
+                    'tipo_pauta_sugerido' => 'organico_impulsado',
+                ];
+            }
+        }
+
+        // 7. Huella en Texto / Copy (Etiquetas de Patrocinio y Disclaimers Electorales)
+        if (! empty($targetTexto)) {
+            if (preg_match('/(?:#publicidad|#ad|#patrocinado|#sponsored|\bpatrocinado\b|\bcolaboraci[oó]n pagada\b|\bpaid partnership\b|\bpromoted post\b)/iu', $targetTexto, $m)) {
+                return [
+                    'tiene_huella' => true,
+                    'red' => 'copy',
+                    'tipo_detector' => 'texto_patrocinado',
+                    'token_detectado' => $m[0],
+                    'motivo' => "Mención explícita de pauta / patrocinio en el texto (\"{$m[0]}\").",
+                    'tipo_pauta_sugerido' => 'organico_impulsado',
+                ];
+            }
+        }
+
+        return $result;
     }
 }

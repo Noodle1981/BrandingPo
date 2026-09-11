@@ -90,8 +90,8 @@ class PublicacionController extends Controller
 
         $oldLikes = (int) $publicacion->total_likes;
         $oldComments = (int) $publicacion->total_comentarios;
-        $freshLikes = (int) ($scraped['total_likes'] ?? $oldLikes);
-        $freshComments = (int) ($scraped['total_comentarios'] ?? $oldComments);
+        $freshLikes = (! empty($scraped['total_likes']) && (int) $scraped['total_likes'] > 0) ? (int) $scraped['total_likes'] : $oldLikes;
+        $freshComments = (! empty($scraped['total_comentarios']) && (int) $scraped['total_comentarios'] > 0) ? (int) $scraped['total_comentarios'] : $oldComments;
 
         $deltaLikes = max(0, $freshLikes - $oldLikes);
         $deltaComments = max(0, $freshComments - $oldComments);
@@ -99,7 +99,7 @@ class PublicacionController extends Controller
         $plataforma = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
         $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes, $plataforma);
 
-        $freshVistas = (int) ($scraped['total_vistas'] ?? $publicacion->total_vistas);
+        $freshVistas = (! empty($scraped['total_vistas']) && (int) $scraped['total_vistas'] > 0) ? (int) $scraped['total_vistas'] : (int) $publicacion->total_vistas;
 
         $updateFields = [
             'total_likes' => $freshLikes,
@@ -192,8 +192,9 @@ class PublicacionController extends Controller
             if ($scraped['success']) {
                 $oldLikes = (int) $pub->total_likes;
                 $oldComments = (int) $pub->total_comentarios;
-                $freshLikes = (int) ($scraped['total_likes'] ?? $oldLikes);
-                $freshComments = (int) ($scraped['total_comentarios'] ?? $oldComments);
+                $freshLikes = (! empty($scraped['total_likes']) && (int) $scraped['total_likes'] > 0) ? (int) $scraped['total_likes'] : $oldLikes;
+                $freshComments = (! empty($scraped['total_comentarios']) && (int) $scraped['total_comentarios'] > 0) ? (int) $scraped['total_comentarios'] : $oldComments;
+                $freshVistas = (! empty($scraped['total_vistas']) && (int) $scraped['total_vistas'] > 0) ? (int) $scraped['total_vistas'] : (int) $pub->total_vistas;
 
                 // Si encontramos datos más frescos o mayores
                 if ($freshLikes > $oldLikes || $freshComments > $oldComments || $freshLikes > 0 || ! empty($scraped['media_url'])) {
@@ -212,6 +213,10 @@ class PublicacionController extends Controller
                         'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
                         'termometro_humor_social' => $aiEmocional['termometro_humor_social'],
                     ];
+
+                    if ($freshVistas > 0) {
+                        $pubUpdate['total_vistas'] = $freshVistas;
+                    }
 
                     // Guardar o actualizar la imagen localmente
                     if (! empty($scraped['media_url'])) {
@@ -245,6 +250,86 @@ class PublicacionController extends Controller
         }
 
         return redirect()->back()->with('success', $msg);
+    }
+
+    /**
+     * Escaneo proactivo y masivo de Huellas de Pauta sobre publicaciones filtradas.
+     * Analiza todas las redes (Meta, TikTok, X, YouTube, LinkedIn) buscando tokens publicitarios en posts orgánicos.
+     */
+    public function detectarHuellasPauta(Request $request): JsonResponse
+    {
+        $workspace = WorkspaceHelper::activo($request);
+        $candidatoId = $request->input('candidato_id');
+        $plataforma = $request->input('plataforma');
+        $anio = $request->input('anio');
+        $mes = $request->input('mes');
+        $filtro = $request->input('filtro'); // 'propio' | 'oposicion'
+
+        $query = Publicacion::where('workspace_id', $workspace->id)
+            ->where('tipo_pauta', 'organico');
+
+        if ($filtro === 'propio') {
+            $query->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
+        } elseif ($filtro === 'oposicion') {
+            $query->whereHas('candidato', fn ($q) => $q->where('es_propio', false));
+        }
+
+        if ($candidatoId) {
+            $query->where('candidato_id', $candidatoId);
+        }
+
+        if ($plataforma) {
+            $platforms = match ($plataforma) {
+                'x_twitter', 'twitter' => ['x_twitter', 'twitter'],
+                default => [$plataforma],
+            };
+            $query->whereHas('perfilSocial', fn ($q) => $q->whereIn('plataforma', $platforms));
+        }
+
+        if ($anio && $mes) {
+            $query->whereYear('fecha_publicacion', $anio)
+                ->whereMonth('fecha_publicacion', (int) $mes);
+        } elseif ($anio) {
+            $query->whereYear('fecha_publicacion', $anio);
+        } elseif ($mes) {
+            $query->whereMonth('fecha_publicacion', (int) $mes);
+        }
+
+        $publicaciones = $query->get();
+        $totalRevisadas = $publicaciones->count();
+        $conHuella = [];
+
+        foreach ($publicaciones as $pub) {
+            $analisis = SocialProfileScraperService::analizarHuellaPauta($pub->url_post, $pub->contenido_resumen);
+
+            if ($analisis['tiene_huella']) {
+                $insights = $pub->insights_internos_propios ?? [];
+                $insights['huella_pauta'] = $analisis;
+                $pub->update(['insights_internos_propios' => $insights]);
+
+                $conHuella[] = [
+                    'id' => $pub->id,
+                    'resumen' => Str::limit($pub->contenido_resumen ?? 'Sin descripción', 40),
+                    'plataforma' => $pub->perfilSocial?->plataforma ?? $pub->plataforma,
+                    'red' => $analisis['red'],
+                    'token' => $analisis['token_detectado'],
+                    'motivo' => $analisis['motivo'],
+                ];
+            }
+        }
+
+        $totalDetectadas = count($conHuella);
+        $mensaje = $totalDetectadas > 0
+            ? "🎯 Se escanearon {$totalRevisadas} publicaciones orgánicas: ¡Se detectaron {$totalDetectadas} con huella de pauta!"
+            : "✨ Se escanearon {$totalRevisadas} publicaciones orgánicas del filtro: ninguna presenta huella de pauta publicitaria.";
+
+        return response()->json([
+            'success' => true,
+            'total_revisadas' => $totalRevisadas,
+            'total_detectadas' => $totalDetectadas,
+            'publicaciones_detectadas' => $conHuella,
+            'mensaje' => $mensaje,
+        ]);
     }
 
     /**
@@ -334,7 +419,29 @@ class PublicacionController extends Controller
             $query->whereHas('perfilSocial', fn ($q) => $q->whereIn('plataforma', $platforms));
         }
 
-        if ($tipoPauta) {
+        if ($tipoPauta === 'con_huella' || $request->boolean('solo_huella')) {
+            $query->where('tipo_pauta', 'organico')
+                ->where(function ($q) {
+                    $q->where('url_post', 'like', '%fbclid%')
+                        ->orWhere('url_post', 'like', '%ad_id%')
+                        ->orWhere('url_post', 'like', '%adset_id%')
+                        ->orWhere('url_post', 'like', '%campaign_id%')
+                        ->orWhere('url_post', 'like', '%ttclid%')
+                        ->orWhere('url_post', 'like', '%twclid%')
+                        ->orWhere('url_post', 'like', '%gclid%')
+                        ->orWhere('url_post', 'like', '%li_fat_id%')
+                        ->orWhere('url_post', 'like', '%utm_medium=%')
+                        ->orWhere('url_post', 'like', '%facebook.com/ads%')
+                        ->orWhere('contenido_resumen', 'like', '%#publicidad%')
+                        ->orWhere('contenido_resumen', 'like', '%#ad%')
+                        ->orWhere('contenido_resumen', 'like', '%#patrocinado%')
+                        ->orWhere('contenido_resumen', 'like', '%patrocinado%')
+                        ->orWhere('contenido_resumen', 'like', '%colaboración pagada%')
+                        ->orWhere('contenido_resumen', 'like', '%colaboracion pagada%')
+                        ->orWhere('contenido_resumen', 'like', '%paid partnership%')
+                        ->orWhere('insights_internos_propios', 'like', '%huella_pauta%');
+                });
+        } elseif ($tipoPauta) {
             $query->where('tipo_pauta', $tipoPauta);
         }
 
@@ -636,6 +743,7 @@ class PublicacionController extends Controller
             'perfil_social_id' => $perfilSocialId,
             'eje_tematico_id' => $ejeId,
             'fecha_publicacion' => $validated['fecha_publicacion'],
+            'fecha_confirmada' => true,
             'tipo_formato' => $validated['tipo_formato'],
             'tipo_pauta' => $validated['tipo_pauta'],
             'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,

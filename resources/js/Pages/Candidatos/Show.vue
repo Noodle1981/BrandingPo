@@ -505,7 +505,7 @@ const getHandlePlaceholder = (key) => {
             <!-- Foto de Perfil del Rival en la Red Social -->
             <div class="relative shrink-0">
               <img
-                :src="currentRed.foto_perfil_url || candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentRed.handle_usuario || 'Rival')}&background=1e1b4b&color=a855f7`"
+                :src="currentRed.foto_perfil_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentRed.handle_usuario || currentRed.nombre || 'Rival')}&background=1e1b4b&color=a855f7`"
                 alt="Foto Canal Rival"
                 referrerpolicy="no-referrer"
                 class="w-14 h-14 rounded-2xl object-cover border-2 border-purple-500 shadow-sm"
@@ -858,7 +858,7 @@ const getHandlePlaceholder = (key) => {
             <div class="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex-wrap">
               <div class="relative shrink-0">
                 <img
-                  :src="formRed.foto_perfil_url || candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(formRed.handle_usuario || 'Rival')}&background=1e1b4b&color=a855f7`"
+                  :src="formRed.foto_perfil_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(formRed.handle_usuario || currentRed.nombre || 'Rival')}&background=1e1b4b&color=a855f7`"
                   alt="Foto Perfil"
                   referrerpolicy="no-referrer"
                   class="w-14 h-14 rounded-2xl object-cover border-2 border-purple-500 shadow-sm"

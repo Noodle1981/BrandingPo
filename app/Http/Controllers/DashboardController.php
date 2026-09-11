@@ -722,7 +722,12 @@ class DashboardController extends Controller
             ];
         })->filter(fn ($e) => $e['posts_count'] > 0)->values()->sortByDesc('score_impacto_ponderado')->values();
 
-        // 5. Histórico Consolidado Time-Series (Evolución sin caídas artificiales con Forward-Fill)
+        // 5. Histórico Consolidado Time-Series (Línea de Tiempo Continua de la Campaña)
+        // La evolución temporal acumulada (Comunidad, Tracción Score y Visualizaciones)
+        // debe reflejar la línea de tiempo histórica completa ($todasPublicacionesCandidato),
+        // de modo que filtrar por un mes específico no provoque que los meses previos caigan a 0.
+        $postsTimeline = $todasPublicacionesCandidato;
+
         $perfilesActivos = $candidato->perfilesSociales->filter(fn ($p) => (bool) $p->esta_activo || (int) $p->seguidores_actuales > 0);
         $perfilesIds = $perfilesActivos->pluck('id');
         $medicionesHistoricas = \App\Models\PerfilSocialMetrica::whereIn('perfil_social_id', $perfilesIds)
@@ -730,6 +735,7 @@ class DashboardController extends Controller
             ->get();
 
         $fechasUnicas = $medicionesHistoricas->pluck('fecha')
+            ->concat($postsTimeline->pluck('fecha_publicacion'))
             ->filter()
             ->map(fn ($f) => $f->format('Y-m-d'))
             ->unique()
@@ -764,8 +770,8 @@ class DashboardController extends Controller
                 $totalVistasDia = 0;
                 $totalInteraccionesDia = 0;
 
-                // Publicaciones acumuladas hasta esta fecha
-                $postsHastaFecha = $publicaciones->filter(function ($p) use ($fechaStr) {
+                // Publicaciones acumuladas hasta esta fecha en la campaña completa (sin caer a 0 en meses previos)
+                $postsHastaFecha = $postsTimeline->filter(function ($p) use ($fechaStr) {
                     return $p->fecha_publicacion && $p->fecha_publicacion->format('Y-m-d') <= $fechaStr;
                 });
                 $totalPuntosDia = (int) $postsHastaFecha->sum(function ($p) {
@@ -817,13 +823,21 @@ class DashboardController extends Controller
             // Progresión continua de fallback si hay menos de 2 mediciones registradas
             $diasMuestra = 7;
             $historicoAgrupado = [];
+            $totalVistasHistoricas = (int) $postsTimeline->sum('total_vistas');
+            $scoreImpactoHistorico = (int) $postsTimeline->sum(function ($p) {
+                return ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10);
+            });
+            $interaccionesHistoricas = (int) $postsTimeline->sum(function ($p) {
+                return $p->total_likes + $p->total_comentarios + $p->total_compartidos + (int) ($p->total_republicados ?? 0);
+            });
+
             for ($i = $diasMuestra - 1; $i >= 0; $i--) {
                 $f = $now->copy()->subDays($i);
                 $prog = ($diasMuestra - $i) / $diasMuestra;
                 $segStep = (int) ($totalSeguidoresPuntoCero + ($crecimientoNetoTotalSeguidores * $prog));
-                $vistasStep = (int) ($totalVistas * $prog * 0.85);
-                $intStep = (int) ($interaccionesTotales * $prog * 0.85);
-                $puntosStep = (int) ($scoreImpactoTotal * $prog * 0.85);
+                $vistasStep = (int) ($totalVistasHistoricas * $prog * 0.85);
+                $intStep = (int) ($interaccionesHistoricas * $prog * 0.85);
+                $puntosStep = (int) ($scoreImpactoHistorico * $prog * 0.85);
 
                 $fechaLabel = $f->format('d/m');
                 $historicoAgrupado[] = [

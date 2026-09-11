@@ -170,7 +170,8 @@ class PerfilSocial extends Model
             'delta_views_24h' => $vistas - (int) ($this->visualizaciones_totales ?: $this->visualizaciones_punto_cero),
         ];
 
-        if (! empty($data['foto_perfil_url'])) {
+        // Conservar foto de perfil fija; solo asignar si el perfil no tenía ninguna establecida
+        if (! empty($data['foto_perfil_url']) && empty($this->foto_perfil_url)) {
             $updateFields['foto_perfil_url'] = $data['foto_perfil_url'];
         }
 

@@ -617,6 +617,14 @@ const postsInActiveWindow = computed(() => {
 });
 
 const postsIn15DaysCount = computed(() => postsInActiveWindow.value.length);
+const facebookReelsCount = computed(() => {
+  return postsInActiveWindow.value.filter(p => {
+    const fmt = (p.tipo_formato || '').toLowerCase();
+    const u = (p.url_post || '').toLowerCase();
+    return fmt === 'reel' || fmt === 'video' || u.includes('/reel') || u.includes('/watch') || u.includes('/videos');
+  }).length;
+});
+
 const isSyncingCanal = ref(false);
 const syncCanalSummary = ref(null);
 
@@ -629,9 +637,18 @@ const sincronizarCanalCompleto = async () => {
   syncCanalSummary.value = null;
 
   const activePosts = postsInActiveWindow.value;
+  // En Facebook solo sincronizamos Reels y Videos (que sí exponen reproducciones y métricas públicas)
+  const postsParaSincronizar = currentRed.value?.key === 'facebook'
+    ? activePosts.filter(p => {
+        const fmt = (p.tipo_formato || '').toLowerCase();
+        const u = (p.url_post || '').toLowerCase();
+        return fmt === 'reel' || fmt === 'video' || u.includes('/reel') || u.includes('/watch') || u.includes('/videos');
+      })
+    : activePosts;
+
   syncProgress.value = {
     current: 0,
-    total: activePosts.length,
+    total: postsParaSincronizar.length,
     currentUrl: '',
     currentTitle: 'Iniciando Sincronización Maestra del Canal...',
     isFinished: false,
@@ -660,14 +677,18 @@ const sincronizarCanalCompleto = async () => {
     syncProgress.value.seguidoresInfo = 'Canal sin URL de perfil configurada.';
   }
 
-  // PASO 2: Sincronizar Publicaciones de a una con feedback reactivo en vivo
-  if (activePosts.length === 0) {
-    syncProgress.value.currentTitle = 'No hay publicaciones en ventana activa (≤ 15 días).';
+  // PASO 2: Sincronizar Publicaciones (en Facebook sincroniza Reels y Videos)
+  if (postsParaSincronizar.length === 0) {
+    if (currentRed.value?.key === 'facebook') {
+      syncProgress.value.currentTitle = 'Seguidores de Facebook sincronizados. (No hay Reels activos en los últimos 15 días; los posts estáticos se auditan manualmente).';
+    } else {
+      syncProgress.value.currentTitle = 'No hay publicaciones en ventana activa (≤ 15 días).';
+    }
   } else {
-    for (let i = 0; i < activePosts.length; i++) {
-      const post = activePosts[i];
+    for (let i = 0; i < postsParaSincronizar.length; i++) {
+      const post = postsParaSincronizar[i];
       syncProgress.value.currentUrl = post.url_post;
-      syncProgress.value.currentTitle = `Leyendo publicación ${i + 1} de ${activePosts.length}...`;
+      syncProgress.value.currentTitle = `Leyendo publicación ${i + 1} de ${postsParaSincronizar.length}...`;
 
       try {
         const resPost = await window.axios.post(`/publicaciones/${post.id}/sincronizar`, {}, {
@@ -833,8 +854,11 @@ const scrapePostData = async () => {
     if (response.data && response.data.success) {
       if (response.data.url_post) formPost.url_post = response.data.url_post;
       if (response.data.contenido_resumen) formPost.contenido_resumen = response.data.contenido_resumen;
-      if (response.data.total_likes > 0) formPost.total_likes = response.data.total_likes;
-      if (response.data.total_comentarios > 0) formPost.total_comentarios = response.data.total_comentarios;
+      if (response.data.total_likes > 0 || !formPost.total_likes) formPost.total_likes = response.data.total_likes || 0;
+      if (response.data.total_comentarios > 0 || !formPost.total_comentarios) formPost.total_comentarios = response.data.total_comentarios || 0;
+      if (response.data.total_vistas || response.data.vistas_organicas) {
+        formPost.vistas_organicas = response.data.total_vistas || response.data.vistas_organicas;
+      }
       if (response.data.fecha_publicacion) formPost.fecha_publicacion = response.data.fecha_publicacion;
       if (response.data.tipo_formato) formPost.tipo_formato = response.data.tipo_formato;
       if (response.data.media_url) formPost.media_url = response.data.media_url;
@@ -1075,7 +1099,7 @@ const refrescarCanal = () => {
             <!-- Foto de Perfil de la Red Social -->
             <div class="relative shrink-0">
               <img
-                :src="currentRed.foto_perfil_url || candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentRed.handle_usuario || 'User')}&background=0f172a&color=06b6d4`"
+                :src="currentRed.foto_perfil_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentRed.handle_usuario || currentRed.nombre || 'Canal')}&background=0f172a&color=06b6d4`"
                 alt="Foto Canal"
                 referrerpolicy="no-referrer"
                 class="w-14 h-14 rounded-2xl object-cover border-2 border-cyan-500 shadow-sm"
@@ -1150,18 +1174,24 @@ const refrescarCanal = () => {
               <span>Métricas & Dashboard</span>
             </Link>
 
-            <!-- Botón Único de Sincronización Maestra del Canal (Seguidores + Publicaciones) -->
+            <!-- Botón de Sincronización Maestra (Seguidores & Reels para Facebook / Canal completo para otras redes) -->
             <button
               v-if="canWrite && currentRed.perfil_id"
               type="button"
               @click="sincronizarCanalCompleto"
               :disabled="isSyncingCanal"
               class="px-4 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold font-mono flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-emerald-500/20 hover:scale-102 disabled:opacity-50"
-              :title="`Sincronizar seguidores del canal y publicaciones activas de los últimos 15 días (${postsIn15DaysCount} posts)`"
+              :title="currentRed.key === 'facebook' ? (facebookReelsCount > 0 ? `Sincronizar seguidores de Facebook y métricas de ${facebookReelsCount} Reels activos` : 'Sincronizar seguidores de la página de Facebook en vivo') : `Sincronizar seguidores del canal y publicaciones activas de los últimos 15 días (${postsIn15DaysCount} posts)`"
             >
               <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isSyncingCanal }" />
-              <span>{{ isSyncingCanal ? 'Sincronizando Canal...' : '⚡ Sincronizar Canal' }}</span>
-              <span v-if="postsIn15DaysCount > 0" class="px-1.5 py-0.2 rounded-full bg-slate-950 text-emerald-400 text-[10px] font-mono font-black">
+              <span v-if="currentRed.key === 'facebook'">
+                {{ isSyncingCanal ? 'Sincronizando...' : (facebookReelsCount > 0 ? '⚡ Sincronizar Seguidores & Reels' : '⚡ Sincronizar Seguidores') }}
+              </span>
+              <span v-else>{{ isSyncingCanal ? 'Sincronizando Canal...' : '⚡ Sincronizar Canal' }}</span>
+              <span v-if="currentRed.key === 'facebook' && facebookReelsCount > 0" class="px-1.5 py-0.2 rounded-full bg-slate-950 text-emerald-400 text-[10px] font-mono font-black">
+                {{ facebookReelsCount }} {{ facebookReelsCount === 1 ? 'reel' : 'reels' }}
+              </span>
+              <span v-else-if="currentRed.key !== 'facebook' && postsIn15DaysCount > 0" class="px-1.5 py-0.2 rounded-full bg-slate-950 text-emerald-400 text-[10px] font-mono font-black">
                 {{ postsIn15DaysCount }} posts
               </span>
             </button>
@@ -1854,7 +1884,7 @@ const refrescarCanal = () => {
             <div class="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex-wrap">
               <div class="relative shrink-0">
                 <img
-                  :src="formRed.foto_perfil_url || candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(formRed.handle_usuario || 'User')}&background=0f172a&color=06b6d4`"
+                  :src="formRed.foto_perfil_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(formRed.handle_usuario || currentRed.nombre || 'Canal')}&background=0f172a&color=06b6d4`"
                   alt="Foto Perfil"
                   referrerpolicy="no-referrer"
                   class="w-14 h-14 rounded-2xl object-cover border-2 border-cyan-500 shadow-sm"

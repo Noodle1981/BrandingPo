@@ -77,6 +77,7 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
     Route::middleware(['can_write'])->group(function () {
         Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
         Route::post('/publicaciones/scrape-post', [PublicacionController::class, 'scrapePost'])->middleware('throttle:scraping')->name('publicaciones.scrape-post');
+        Route::post('/publicaciones/detectar-huellas-pauta', [PublicacionController::class, 'detectarHuellasPauta'])->name('publicaciones.detectar-huellas-pauta');
         Route::post('/publicaciones/{publicacion}/sincronizar', [PublicacionController::class, 'sincronizarIndividual'])->middleware('throttle:scraping')->name('publicaciones.sincronizar');
         Route::post('/perfiles-sociales/{perfilSocial}/sincronizar-recientes', [PublicacionController::class, 'sincronizarRecientes'])->middleware('throttle:scraping')->name('perfiles-sociales.sincronizar-recientes');
         Route::put('/publicaciones/{publicacion}', [PublicacionController::class, 'update'])->name('publicaciones.update');

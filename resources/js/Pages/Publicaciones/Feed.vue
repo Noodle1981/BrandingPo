@@ -13,6 +13,7 @@ import {
   DollarSign,
   TrendingUp,
   Sparkles,
+  Fingerprint,
   Layers,
   Flame,
   ArrowRight,
@@ -105,9 +106,51 @@ const groupedEjes = computed(() => {
 
 const tiposPauta = [
   { key: 'organico', label: 'Orgánica Pura', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
+  { key: 'con_huella', label: '🎯 Con Huella de Pauta', color: 'bg-pink-500/10 text-pink-500 border-pink-500/20' },
   { key: 'organico_impulsado', label: 'Orgánica Impulsada (Boost)', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
   { key: 'pauta_paga', label: 'Pauta Paga / Dark Post', color: 'bg-violet-500/10 text-violet-500 border-violet-500/20' },
 ];
+
+const escaneandoHuellas = ref(false);
+const huellaScanResultado = ref(null);
+
+const detectarHuellasPauta = async () => {
+  if (escaneandoHuellas.value) return;
+  escaneandoHuellas.value = true;
+  huellaScanResultado.value = null;
+
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const resp = await fetch('/publicaciones/detectar-huellas-pauta', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken || '',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        filtro: props.filtros.filtro || undefined,
+        candidato_id: selectedCandidato.value || undefined,
+        plataforma: selectedPlataforma.value || undefined,
+        anio: selectedAnio.value || undefined,
+        mes: selectedMes.value || undefined,
+      }),
+    });
+
+    const data = await resp.json();
+    if (resp.ok && data.success) {
+      huellaScanResultado.value = data;
+      if (data.total_detectadas > 0) {
+        selectedTipoPauta.value = 'con_huella';
+        applyFilters();
+      }
+    }
+  } catch (e) {
+    console.error('Error al detectar huellas de pauta:', e);
+  } finally {
+    escaneandoHuellas.value = false;
+  }
+};
 
 const applyFilters = () => {
   router.get('/feed', {
@@ -455,8 +498,12 @@ const autocompletarScrape = async () => {
 
     if (response.ok && data.success) {
       if (data.data.tipo_formato) createForm.tipo_formato = data.data.tipo_formato;
-      if (data.data.total_likes !== undefined) createForm.total_likes = data.data.total_likes;
-      if (data.data.total_comentarios !== undefined) createForm.total_comentarios = data.data.total_comentarios;
+      if (data.data.total_likes > 0 || !createForm.total_likes) {
+        createForm.total_likes = data.data.total_likes || 0;
+      }
+      if (data.data.total_comentarios > 0 || !createForm.total_comentarios) {
+        createForm.total_comentarios = data.data.total_comentarios || 0;
+      }
       if (data.data.total_vistas || data.data.vistas_organicas) {
         createForm.vistas_organicas = data.data.total_vistas || data.data.vistas_organicas;
       }
@@ -678,10 +725,24 @@ const formatCurrency = (amount) => {
       <!-- Barra de Filtros Avanzados -->
       <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div class="flex items-center justify-between flex-wrap gap-2">
-          <span class="text-xs font-bold font-mono uppercase text-slate-500 flex items-center gap-1.5">
-            <Filter class="w-3.5 h-3.5 text-cyan-500" />
-            <span>Filtros Operativos</span>
-          </span>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-bold font-mono uppercase text-slate-500 flex items-center gap-1.5">
+              <Filter class="w-3.5 h-3.5 text-cyan-500" />
+              <span>Filtros Operativos</span>
+            </span>
+
+            <!-- Botón Detectar Huellas de Pauta (Icono Huella Dactilar) -->
+            <button
+              v-if="canWrite"
+              type="button"
+              @click="detectarHuellasPauta"
+              :disabled="escaneandoHuellas"
+              class="p-1.5 rounded-xl text-xs font-mono font-bold bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:border-pink-500/60 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 shadow-2xs"
+              title="Detectar Huellas de Pauta (Meta, TikTok, X, Google/YT, LinkedIn, UTMs)"
+            >
+              <Fingerprint class="w-4 h-4 text-pink-500" :class="escaneandoHuellas ? 'animate-spin' : ''" />
+            </button>
+          </div>
 
           <button
             v-if="selectedPlataforma || selectedTipoPauta || selectedCandidato || selectedEje || selectedAnio || selectedMes || selectedRangoAprobacion || searchQuery || (selectedOrden && selectedOrden !== 'recientes')"
@@ -750,6 +811,7 @@ const formatCurrency = (amount) => {
             class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
           >
             <option value="">Orgánico & Pauta</option>
+            <option value="con_huella">🎯 Sospechosos con Huella</option>
             <option value="organico">Orgánico Puro</option>
             <option value="organico_impulsado">Orgánico Impulsado</option>
             <option value="pauta_paga">Anuncio / Pauta</option>
@@ -811,6 +873,38 @@ const formatCurrency = (amount) => {
             <option value="interacciones">🔥 Más Interacciones</option>
           </select>
         </div>
+      </div>
+
+      <!-- Banner de Resultado de Detección de Huellas de Pauta -->
+      <div
+        v-if="huellaScanResultado"
+        class="p-4 rounded-3xl border flex items-center justify-between gap-4 text-xs shadow-md transition-all animate-fadeIn"
+        :class="huellaScanResultado.total_detectadas > 0
+          ? 'bg-pink-500/10 border-pink-500/30 text-pink-900 dark:text-pink-200'
+          : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'"
+      >
+        <div class="flex items-center gap-2.5">
+          <div
+            class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            :class="huellaScanResultado.total_detectadas > 0 ? 'bg-pink-500/20 text-pink-600 dark:text-pink-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'"
+          >
+            <Fingerprint class="w-4 h-4" />
+          </div>
+          <div>
+            <p class="font-bold text-xs">{{ huellaScanResultado.mensaje }}</p>
+            <p v-if="huellaScanResultado.total_detectadas > 0" class="text-[11px] opacity-80 mt-0.5">
+              El feed se ha filtrado automáticamente para mostrar únicamente las publicaciones sospechosas. Puedes convertirlas a Booster con 1 clic en cada tarjeta.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          @click="huellaScanResultado = null"
+          class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer font-bold"
+          title="Cerrar aviso"
+        >
+          <X class="w-4 h-4" />
+        </button>
       </div>
 
       <!-- Indicador de Orden Cronológico y Total de Posts -->

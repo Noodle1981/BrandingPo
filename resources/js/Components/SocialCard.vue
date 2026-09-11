@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Share2,
   Sparkles,
+  Fingerprint,
   DollarSign,
   Star,
   Edit3,
@@ -162,6 +163,16 @@ const confirmarFecha = () => {
 };
 
 // Sincronización en vivo individual con detección de pauta
+const puedeSincronizar = computed(() => {
+  if (!props.post.url_post) return false;
+  const plat = (props.post.plataforma || props.post.perfil_social?.plataforma || '').toLowerCase();
+  if (plat !== 'facebook') return true;
+  // En Facebook, los Reels y Videos sí exponen reproducciones y métricas públicas
+  const formato = (props.post.tipo_formato || '').toLowerCase();
+  const url = (props.post.url_post || '').toLowerCase();
+  return formato === 'reel' || formato === 'video' || url.includes('/reel') || url.includes('/watch') || url.includes('/videos');
+});
+
 const sincronizando = ref(false);
 const syncFeedback = ref('');
 const sugerenciaPautaModal = ref(null); // { visible: boolean, motivo: string, sugerido: string }
@@ -507,9 +518,9 @@ const cardPautaStyles = computed(() => {
 
           <!-- Botones de Acción -->
           <div v-if="canWrite" class="flex items-center gap-0.5 ml-1 pl-1 border-l border-slate-200 dark:border-slate-800">
-            <!-- Sincronizar en vivo métricas si tiene URL -->
+            <!-- Sincronizar en vivo métricas si tiene URL (En Facebook disponible para Reels y Videos) -->
             <button
-              v-if="post.url_post"
+              v-if="puedeSincronizar"
               type="button"
               @click="sincronizarPost"
               :disabled="sincronizando"
@@ -545,10 +556,10 @@ const cardPautaStyles = computed(() => {
       </div>
 
       <!-- Fila 2: Fecha de Origen con Semáforo de Confirmación + Pauta & Sincronización -->
-      <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/60 text-xs flex-wrap sm:flex-nowrap">
+      <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/60 text-xs">
 
         <!-- MODO VISUALIZACIÓN: Fecha con semáforo -->
-        <div v-if="!editandoFecha" class="flex items-center gap-1.5 min-w-0">
+        <div v-if="!editandoFecha" class="flex items-center gap-1.5 min-w-0 flex-wrap">
           <Calendar class="w-3.5 h-3.5 shrink-0" :class="esFechaSinConfirmar ? 'text-rose-500' : 'text-emerald-500'" />
 
           <!-- Badge de fecha: ROJO si sin confirmar, VERDE si confirmada -->
@@ -557,7 +568,7 @@ const cardPautaStyles = computed(() => {
             type="button"
             @click="abrirEdicionFecha"
             :title="esFechaSinConfirmar ? '⚠️ Fecha pendiente de confirmar — Hacer clic para corregirla' : '✅ Fecha confirmada — Hacer clic para cambiarla'"
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[11px] sm:text-xs border transition-all cursor-pointer hover:opacity-80 shrink-0"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold text-[11px] border transition-all cursor-pointer hover:opacity-80 shrink-0 whitespace-nowrap"
             :class="esFechaSinConfirmar
               ? 'bg-rose-500/10 border-rose-400/40 text-rose-700 dark:text-rose-300 animate-pulse'
               : 'bg-emerald-500/10 border-emerald-400/40 text-emerald-700 dark:text-emerald-300'"
@@ -568,12 +579,12 @@ const cardPautaStyles = computed(() => {
           </button>
 
           <!-- Solo texto para visualizadores -->
-          <span v-else class="font-bold text-[11px] sm:text-xs truncate"
+          <span v-else class="font-bold text-[11px] shrink-0 whitespace-nowrap"
             :class="esFechaSinConfirmar ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-300'">
             {{ fechaHumanaVisible }}
           </span>
 
-          <span v-if="post.fecha_relativa" class="text-[10px] text-slate-400 font-normal shrink-0 truncate">
+          <span v-if="post.fecha_relativa" class="text-[10px] text-slate-400 dark:text-slate-500 font-medium shrink-0 whitespace-nowrap">
             ({{ post.fecha_relativa }})
           </span>
         </div>
@@ -607,24 +618,45 @@ const cardPautaStyles = computed(() => {
         </div>
 
         <!-- Pauta & Estado de Sincronización (derecha) -->
-        <div class="shrink-0 flex items-center gap-1.5 font-mono">
+        <div class="flex flex-wrap items-center gap-1.5 font-mono justify-end shrink-0">
           <Badge
             variant="pauta"
             :value="post.tipo_pauta || 'organico'"
             size="sm"
           />
 
+          <!-- Badge de Huella de Pauta Detectada -->
+          <span
+            v-if="post.tipo_pauta === 'organico' && post.huella_pauta?.tiene_huella"
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-pink-500/15 text-pink-600 dark:text-pink-300 text-[10px] font-black border border-pink-500/30 whitespace-nowrap shadow-2xs animate-pulse"
+            :title="post.huella_pauta.motivo"
+          >
+            <Fingerprint class="w-3 h-3 text-pink-500" />
+            <span>Huella: {{ post.huella_pauta.token_detectado }}</span>
+          </span>
+
+          <button
+            v-if="post.tipo_pauta === 'organico' && post.huella_pauta?.tiene_huella && canWrite"
+            type="button"
+            @click="convertirAPostImpulsado"
+            class="px-2 py-0.5 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-bold shadow-xs transition-all cursor-pointer flex items-center gap-1"
+            title="Convertir a Booster (Orgánica Impulsada) y registrar punto de corte"
+          >
+            <Sparkles class="w-2.5 h-2.5" />
+            <span>Poner Booster</span>
+          </button>
+
           <!-- Badge Estratégico Especial: Fuego u Oro -->
           <span
             v-if="cardPautaStyles.estadoEstrategico === 'fuego'"
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-300 text-[10px] font-black border border-rose-500/30 animate-pulse"
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-300 text-[10px] font-black border border-rose-500/30 animate-pulse whitespace-nowrap"
             title="Oportunidad de Boost: Publicación orgánica con tracción destacada (Score >= 60/100) dentro de los 10 días"
           >
             <span>🔥 Oportunidad Boost</span>
           </span>
           <span
             v-else-if="cardPautaStyles.estadoEstrategico === 'dorado'"
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[10px] font-black border border-amber-400/40 shadow-2xs"
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[10px] font-black border border-amber-400/40 shadow-2xs whitespace-nowrap"
             title="Post Estrella Consagrado: Tracción electoral sobresaliente (Score >= 75/100)"
           >
             <span>✨ Estrella ({{ (post.tipo_pauta || 'organico') === 'organico' ? 'Viral' : 'Boost' }})</span>
@@ -632,13 +664,13 @@ const cardPautaStyles = computed(() => {
 
           <span
             v-if="esFechaSinConfirmar"
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold"
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold whitespace-nowrap"
           >
             <span>⚠️ Por confirmar</span>
           </span>
           <span
             v-else-if="isPostInActiveWindow"
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold"
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold whitespace-nowrap"
             title="En ventana de sincronización activa (menos de 15 días)"
           >
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -646,7 +678,7 @@ const cardPautaStyles = computed(() => {
           </span>
           <span
             v-else
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px]"
+            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px] whitespace-nowrap"
             title="Métrica histórica consolidada"
           >
             <span>🔒 Histórico</span>

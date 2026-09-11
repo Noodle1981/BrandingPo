@@ -257,7 +257,7 @@ class CandidatoController extends Controller
                 'esta_verificado' => $estaVerificado,
                 'handle_usuario' => $perfil?->handle_usuario ?? '',
                 'url_perfil' => $perfil?->url_perfil ?? '',
-                'foto_perfil_url' => $perfil?->foto_perfil_url ?? $candidato->avatar_url,
+                'foto_perfil_url' => $perfil?->foto_perfil_url,
                 'seguidores_actuales' => $seguidoresActuales,
                 'seguidos_actuales' => $perfil ? (int) $perfil->seguidos_actuales : 0,
                 'publicaciones_totales' => $postsActuales,
@@ -472,7 +472,7 @@ class CandidatoController extends Controller
     /**
      * Guardar o actualizar la configuración de una red social y su Punto Cero.
      */
-    public function storePerfilSocial(Request $request): RedirectResponse
+    public function storePerfilSocial(Request $request, MediaStorageService $mediaStorage): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
 
@@ -498,6 +498,17 @@ class CandidatoController extends Controller
             'notas_punto_cero' => ['nullable', 'string'],
         ]);
 
+        // Buscar si ya existe el perfil para obtener su foto previa
+        $perfilPrevio = PerfilSocial::where('candidato_id', $validated['candidato_id'])
+            ->where('plataforma', $validated['plataforma'])
+            ->first();
+
+        $fotoPerfilLocal = $validated['foto_perfil_url'] ?? null;
+        if (! empty($fotoPerfilLocal)) {
+            $prefijo = 'perfil_'.$validated['plataforma'].'_'.$validated['candidato_id'];
+            $fotoPerfilLocal = $mediaStorage->guardarAvatarLocal($fotoPerfilLocal, $prefijo, $perfilPrevio?->foto_perfil_url);
+        }
+
         $perfil = PerfilSocial::updateOrCreate(
             [
                 'candidato_id' => $validated['candidato_id'],
@@ -506,7 +517,7 @@ class CandidatoController extends Controller
             [
                 'handle_usuario' => $validated['handle_usuario'],
                 'url_perfil' => $validated['url_perfil'] ?? null,
-                'foto_perfil_url' => $validated['foto_perfil_url'] ?? null,
+                'foto_perfil_url' => $fotoPerfilLocal ?? null,
                 'esta_activo' => $validated['esta_activo'],
                 'esta_verificado' => $validated['esta_verificado'],
                 'seguidores_actuales' => (int) ($validated['seguidores_actuales'] ?? $validated['seguidores_punto_cero'] ?? 0),
@@ -523,13 +534,6 @@ class CandidatoController extends Controller
                 'notas_punto_cero' => $validated['notas_punto_cero'] ?? null,
             ]
         );
-
-        if (! empty($validated['foto_perfil_url'])) {
-            $candidato = Candidato::find($validated['candidato_id']);
-            if ($candidato) {
-                $candidato->update(['avatar_url' => $validated['foto_perfil_url']]);
-            }
-        }
 
         // Registrar medición inicial en el histórico
         $perfil->registrarMedicion([
@@ -660,8 +664,9 @@ class CandidatoController extends Controller
                 if (! empty($scrapedPost['success'])) {
                     $oldLikes = (int) $pub->total_likes;
                     $oldComments = (int) $pub->total_comentarios;
-                    $freshLikes = (int) ($scrapedPost['total_likes'] ?? $oldLikes);
-                    $freshComments = (int) ($scrapedPost['total_comentarios'] ?? $oldComments);
+                    $freshLikes = (! empty($scrapedPost['total_likes']) && (int) $scrapedPost['total_likes'] > 0) ? (int) $scrapedPost['total_likes'] : $oldLikes;
+                    $freshComments = (! empty($scrapedPost['total_comentarios']) && (int) $scrapedPost['total_comentarios'] > 0) ? (int) $scrapedPost['total_comentarios'] : $oldComments;
+                    $freshVistas = (! empty($scrapedPost['total_vistas']) && (int) $scrapedPost['total_vistas'] > 0) ? (int) $scrapedPost['total_vistas'] : (int) $pub->total_vistas;
 
                     $deltaL = max(0, $freshLikes - $oldLikes);
                     $deltaC = max(0, $freshComments - $oldComments);
@@ -673,6 +678,10 @@ class CandidatoController extends Controller
                         'total_likes' => $freshLikes,
                         'total_comentarios' => $freshComments,
                     ];
+
+                    if ($freshVistas > 0) {
+                        $pubUpdate['total_vistas'] = $freshVistas;
+                    }
 
                     // Recalcular emociones con la función pública del PublicacionController
                     $aiEmocional = app(PublicacionController::class)->calcularInteligenciaEmocional([], $freshLikes, $perfilSocial->plataforma);
@@ -837,7 +846,7 @@ class CandidatoController extends Controller
                 'esta_verificado' => $estaVerificado,
                 'handle_usuario' => $perfil?->handle_usuario ?? '',
                 'url_perfil' => $perfil?->url_perfil ?? '',
-                'foto_perfil_url' => $perfil?->foto_perfil_url ?? $candidato->avatar_url,
+                'foto_perfil_url' => $perfil?->foto_perfil_url,
                 'seguidores_actuales' => $seguidoresActuales,
                 'seguidos_actuales' => $perfil ? (int) $perfil->seguidos_actuales : 0,
                 'publicaciones_totales' => $postsActuales,
