@@ -458,15 +458,6 @@ class PublicacionController extends Controller
             $query->whereMonth('fecha_publicacion', (int) $mes);
         }
 
-        $rangoAprobacion = $request->input('rango_aprobacion');
-        if ($rangoAprobacion === 'alta') {
-            $query->where('aprobacion_neta_pct', '>=', 80);
-        } elseif ($rangoAprobacion === 'media') {
-            $query->whereBetween('aprobacion_neta_pct', [50, 79]);
-        } elseif ($rangoAprobacion === 'baja') {
-            $query->where('aprobacion_neta_pct', '<', 50);
-        }
-
         if ($search) {
             $query->where('contenido_resumen', 'like', "%{$search}%");
         }
@@ -596,7 +587,6 @@ class PublicacionController extends Controller
                 'eje_tematico_id' => $ejeTematicoId,
                 'anio' => $anio,
                 'mes' => $mes,
-                'rango_aprobacion' => $rangoAprobacion,
                 'search' => $search,
                 'orden' => $orden,
             ],

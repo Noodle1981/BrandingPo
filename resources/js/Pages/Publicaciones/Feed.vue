@@ -58,7 +58,6 @@ const selectedTipoPauta = ref(props.filtros.tipo_pauta || '');
 const selectedEje = ref(props.filtros.eje_tematico_id || '');
 const selectedAnio = ref(props.filtros.anio || '');
 const selectedMes = ref(props.filtros.mes || '');
-const selectedRangoAprobacion = ref(props.filtros.rango_aprobacion || '');
 const selectedOrden = ref(props.filtros.orden || 'recientes');
 const searchQuery = ref(props.filtros.search || '');
 
@@ -143,7 +142,6 @@ const applyFilters = () => {
     eje_tematico_id: selectedEje.value || undefined,
     anio: selectedAnio.value || undefined,
     mes: selectedMes.value || undefined,
-    rango_aprobacion: selectedRangoAprobacion.value || undefined,
     orden: selectedOrden.value !== 'recientes' ? selectedOrden.value : undefined,
     search: searchQuery.value || undefined,
   }, {
@@ -163,6 +161,7 @@ const filterByPauta = (pautaKey) => {
 };
 
 const onAnioChange = () => {
+  selectedMes.value = '';
   applyFilters();
 };
 
@@ -179,7 +178,6 @@ watch(() => props.filtros, (newFiltros) => {
   selectedPlataforma.value = newFiltros.plataforma || '';
   selectedTipoPauta.value = newFiltros.tipo_pauta || '';
   selectedEje.value = newFiltros.eje_tematico_id || '';
-  selectedRangoAprobacion.value = newFiltros.rango_aprobacion || '';
   selectedOrden.value = newFiltros.orden || 'recientes';
   searchQuery.value = newFiltros.search || '';
 }, { deep: true });
@@ -191,7 +189,6 @@ const clearFilters = () => {
   selectedEje.value = '';
   selectedAnio.value = '';
   selectedMes.value = '';
-  selectedRangoAprobacion.value = '';
   selectedOrden.value = 'recientes';
   searchQuery.value = '';
   applyFilters();
@@ -286,7 +283,7 @@ const openCreateModal = () => {
 
           <!-- Botón Limpiar Filtros -->
           <button
-            v-if="selectedCandidato || selectedPlataforma || selectedTipoPauta || selectedEje || selectedAnio || selectedMes || selectedRangoAprobacion || searchQuery"
+            v-if="selectedCandidato || selectedPlataforma || selectedTipoPauta || selectedEje || selectedAnio || selectedMes || searchQuery"
             type="button"
             @click="clearFilters"
             class="text-xs text-rose-500 hover:text-rose-400 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
@@ -401,18 +398,6 @@ const openCreateModal = () => {
             <option value="organico">Orgánico Puro</option>
             <option value="organico_impulsado">Orgánico Impulsado</option>
             <option value="pauta_paga">Anuncio / Pauta</option>
-          </select>
-
-          <!-- Selector de Aprobación Neta (%) -->
-          <select
-            v-model="selectedRangoAprobacion"
-            @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
-          >
-            <option value="">Aprobación (%)</option>
-            <option value="alta">🟢 Alta (≥ 80%)</option>
-            <option value="media">🔵 Media (50% - 79%)</option>
-            <option value="baja">🔴 Baja (&lt; 50%)</option>
           </select>
 
           <!-- Selector de Año -->

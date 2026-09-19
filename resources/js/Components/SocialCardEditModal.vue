@@ -504,14 +504,7 @@ const tiposPauta = [
               <span>Métricas de Facebook</span>
             </span>
             <div class="flex items-center gap-2">
-              <span class="text-cyan-500 font-mono text-[11px]">Total: {{ formatNumber(editTotalReacciones) }}</span>
-              <span
-                v-if="editAiSentiment.aprobacion !== null"
-                class="text-[10px] px-2 py-0.5 rounded font-mono font-bold"
-                :class="editAiSentiment.isCrisis ? 'bg-rose-500/15 text-rose-500' : 'bg-emerald-500/15 text-emerald-500'"
-              >
-                {{ editAiSentiment.aprobacion }}% Aprobación
-              </span>
+              <span class="text-cyan-500 font-mono text-xs font-bold">Total: {{ formatNumber(editTotalReacciones) }} Reacciones</span>
             </div>
           </div>
 
