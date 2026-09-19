@@ -52,14 +52,12 @@ const { formatNumber, formatCurrency } = useFormatters();
 const page = usePage();
 const canWrite = computed(() => page.props.auth?.user?.can_write ?? false);
 
-const selectedCandidato = ref(props.filtros.candidato_id || '');
 const selectedPlataforma = ref(props.filtros.plataforma || '');
 const selectedTipoPauta = ref(props.filtros.tipo_pauta || '');
 const selectedEje = ref(props.filtros.eje_tematico_id || '');
 const selectedAnio = ref(props.filtros.anio || '');
 const selectedMes = ref(props.filtros.mes || '');
 const selectedOrden = ref(props.filtros.orden || 'recientes');
-const searchQuery = ref(props.filtros.search || '');
 
 const plataformas = [
   { key: 'facebook', label: 'Facebook', color: '#1877F2' },
@@ -136,14 +134,13 @@ const detectarHuellasPauta = async () => {
 const applyFilters = () => {
   router.get('/feed', {
     filtro: props.filtros.filtro || undefined,
-    candidato_id: selectedCandidato.value || undefined,
+    candidato_id: props.filtros.candidato_id || undefined,
     plataforma: selectedPlataforma.value || undefined,
     tipo_pauta: selectedTipoPauta.value || undefined,
     eje_tematico_id: selectedEje.value || undefined,
     anio: selectedAnio.value || undefined,
     mes: selectedMes.value || undefined,
     orden: selectedOrden.value !== 'recientes' ? selectedOrden.value : undefined,
-    search: searchQuery.value || undefined,
   }, {
     preserveState: true,
     replace: true,
@@ -174,23 +171,19 @@ watch(() => props.meses_disponibles, (newMeses) => {
 watch(() => props.filtros, (newFiltros) => {
   selectedAnio.value = newFiltros.anio || '';
   selectedMes.value = newFiltros.mes || '';
-  selectedCandidato.value = newFiltros.candidato_id || '';
   selectedPlataforma.value = newFiltros.plataforma || '';
   selectedTipoPauta.value = newFiltros.tipo_pauta || '';
   selectedEje.value = newFiltros.eje_tematico_id || '';
   selectedOrden.value = newFiltros.orden || 'recientes';
-  searchQuery.value = newFiltros.search || '';
 }, { deep: true });
 
 const clearFilters = () => {
-  selectedCandidato.value = '';
   selectedPlataforma.value = '';
   selectedTipoPauta.value = '';
   selectedEje.value = '';
   selectedAnio.value = '';
   selectedMes.value = '';
   selectedOrden.value = 'recientes';
-  searchQuery.value = '';
   applyFilters();
 };
 
@@ -283,7 +276,7 @@ const openCreateModal = () => {
 
           <!-- Botón Limpiar Filtros -->
           <button
-            v-if="selectedCandidato || selectedPlataforma || selectedTipoPauta || selectedEje || selectedAnio || selectedMes || searchQuery"
+            v-if="selectedPlataforma || selectedTipoPauta || selectedEje || selectedAnio || selectedMes"
             type="button"
             @click="clearFilters"
             class="text-xs text-rose-500 hover:text-rose-400 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
@@ -346,38 +339,13 @@ const openCreateModal = () => {
           </button>
         </div>
 
-        <!-- Selectores Secundarios y Búsqueda -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          <!-- Input Búsqueda Texto -->
-          <div class="relative lg:col-span-2">
-            <Search class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              v-model="searchQuery"
-              @keyup.enter="applyFilters"
-              type="text"
-              placeholder="Buscar copy, texto, hashtag..."
-              class="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-cyan-500"
-            />
-          </div>
-
-          <!-- Selector Candidato (Si está en modo multired total) -->
-          <select
-            v-if="!filtros.candidato_id"
-            v-model="selectedCandidato"
-            @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
-          >
-            <option value="">Candidato (Todos)</option>
-            <option v-for="cand in candidatos" :key="cand.id" :value="cand.id">
-              {{ cand.es_propio ? '⭐ ' : '' }}{{ cand.nombre_completo }}
-            </option>
-          </select>
-
+        <!-- Selectores Secundarios en una sola línea (Eje, Pauta, Año, Mes, Orden) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
           <!-- Selector Eje Temático Agrupado por Pilar Estratégico -->
           <select
             v-model="selectedEje"
             @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
+            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
           >
             <option value="">Eje Temático (Todos)</option>
             <optgroup v-for="(ejesInGroup, pilar) in groupedEjes" :key="pilar" :label="pilar">
@@ -391,7 +359,7 @@ const openCreateModal = () => {
           <select
             v-model="selectedTipoPauta"
             @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
+            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
           >
             <option value="">Orgánico & Pauta</option>
             <option value="con_huella">🎯 Sospechosos con Huella</option>
@@ -404,7 +372,7 @@ const openCreateModal = () => {
           <select
             v-model="selectedAnio"
             @change="onAnioChange"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
+            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
           >
             <option value="">Año (Todos)</option>
             <option
@@ -420,7 +388,7 @@ const openCreateModal = () => {
           <select
             v-model="selectedMes"
             @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
+            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
           >
             <option value="">Mes (Todos)</option>
             <option
@@ -436,10 +404,10 @@ const openCreateModal = () => {
           <select
             v-model="selectedOrden"
             @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500"
+            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
             title="Orden de las publicaciones"
           >
-            <option value="recientes">🕒 Más Recientes (Cronológico)</option>
+            <option value="recientes">🕒 Más Recientes</option>
             <option value="antiguos">⏳ Más Antiguos</option>
             <option value="interacciones">🔥 Más Interacciones</option>
           </select>
