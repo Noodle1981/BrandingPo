@@ -490,6 +490,7 @@ const cardPautaStyles = computed(() => {
             <img
               :src="post.candidato?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.candidato?.nombre_completo || 'Candidato')}&background=0f172a&color=06b6d4`"
               :alt="post.candidato?.nombre_completo"
+              referrerpolicy="no-referrer"
               class="w-10 h-10 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700 shadow-xs"
             />
             <div
