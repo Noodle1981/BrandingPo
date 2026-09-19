@@ -25,12 +25,26 @@ const cleanUrl = computed(() => {
   const input = props.url || props.mediaUrl;
   if (!input) return null;
   const str = String(input).trim();
+
+  // Caso 1: <iframe> con plugin URL de Facebook (post.php / video.php)
+  const fbIframeMatch = str.match(/src=["']([^"']+plugins\/(?:post|video)\.php[^"']*)["']/i);
+  if (fbIframeMatch) {
+    const pluginSrc = fbIframeMatch[1].replace(/&amp;/g, '&');
+    const hrefMatch = pluginSrc.match(/\bhref=([^&"']+)/i);
+    if (hrefMatch) return decodeURIComponent(hrefMatch[1]);
+    return pluginSrc;
+  }
+
+  // Caso 2: Plugin URL directa de Facebook (sin <iframe>)
+  const fbPluginDirecto = str.match(/plugins\/(?:post|video)\.php[^"'<\s]*\bhref=([^&"'<\s]+)/i);
+  if (fbPluginDirecto) return decodeURIComponent(fbPluginDirecto[1]);
+
+  // Caso 3: <iframe src="..."> genérico — extraer el src
   if (str.includes('<iframe') || str.includes('src=')) {
     const match = str.match(/src=["']([^"']+)["']/i);
-    if (match) {
-      return match[1].replace(/&amp;/g, '&');
-    }
+    if (match) return match[1].replace(/&amp;/g, '&');
   }
+
   return str;
 });
 

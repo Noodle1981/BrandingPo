@@ -637,29 +637,10 @@ class SocialProfileScraperService
             return $result;
         }
 
-        // 1. Extraer URL limpia si el usuario pegó un <iframe>, <blockquote> o HTML embed
-        $url = $input;
-        if (preg_match('/(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/(\d+)/i', $input, $tm)) {
-            $url = $tm[0];
-            if (! str_starts_with($url, 'http')) {
-                $url = 'https://'.$url;
-            }
-        } elseif (preg_match('/plugins\/(?:post|video)\.php\?[^"\']*href=([^&"\']+)/i', $input, $m)) {
-            $url = urldecode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        } elseif (preg_match('/data-instgrm-permalink="([^"]+)"/i', $input, $m)) {
-            $url = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        } elseif (preg_match('/src="([^"]+)"/i', $input, $m)) {
-            $src = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            if (preg_match('/href=([^&]+)/i', $src, $hm)) {
-                $url = urldecode($hm[1]);
-            } else {
-                $url = $src;
-            }
-        } elseif (preg_match('/href="([^"]+)"/i', $input, $m)) {
-            $url = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        } elseif (preg_match('/https?:\/\/[^\s"\'<>]+/i', $input, $m)) {
-            $url = $m[0];
-        }
+        // 1. Extraer URL limpia si el usuario pegó un <iframe>, <blockquote> o HTML embed.
+        //    Se soportan todos los formatos: URL directa, iframe embed, blockquote de Instagram,
+        //    plugin URL de Facebook (post.php / video.php), URL corta de fb.watch, etc.
+        $url = self::extraerUrlDesdeInput($input);
 
         // Detección heurística de huella de pauta publicitaria multi-plataforma
         $analisisHuella = self::analizarHuellaPauta($url, $input);
@@ -848,11 +829,13 @@ class SocialProfileScraperService
 
     /**
      * Scraping especializado de una publicación, Reel o Video de Facebook.
+     * Soporta posts, álbumes/carruseles, reels, videos y fotos sueltas.
      */
     protected function scrapeFacebookPost(string $url, array $result): array
     {
         $result['plataforma'] = 'facebook';
 
+        // Detectar formato inicial por URL (se puede sobreescribir con datos del HTML)
         if (preg_match('/(?:\/share\/r\/|\/reel\/|\/reels\/)/i', $url)) {
             $result['tipo_formato'] = 'Reel';
         } elseif (preg_match('/(?:\/share\/v\/|\/watch\/|\/videos\/)/i', $url)) {
@@ -879,6 +862,13 @@ class SocialProfileScraperService
             $finalUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
             curl_close($ch);
 
+            if (empty($html)) {
+                $result['mensaje'] = 'Facebook no respondió. Puedes completar los datos manualmente.';
+
+                return $result;
+            }
+
+            // Actualizar URL canónica si hubo redirección
             if ($finalUrl && $finalUrl !== $url) {
                 $result['url_post'] = $finalUrl;
                 if (str_contains($finalUrl, '/reel/')) {
@@ -886,13 +876,23 @@ class SocialProfileScraperService
                 }
             }
 
-            // og:image
+            // ── 1. Texto completo del post (sin truncamiento) ─────────────────────────────
+            // Facebook incluye el texto íntegro en el payload JSON de la página bajo
+            // el nodo "message":{"text":"..."} — esto evita el "..." de los og:description
+            if (preg_match('/"message"\s*:\s*\{\s*"text"\s*:\s*"((?:\\\\.|[^"\\\\])*)"/s', $html, $mMsg)) {
+                $fullText = json_decode('"' . $mMsg[1] . '"');
+                if (! empty($fullText) && is_string($fullText)) {
+                    $result['contenido_resumen'] = trim($fullText);
+                }
+            }
+
+            // ── 2. og:image (portada / miniatura del carrusel) ───────────────────────────
             if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^"]*)"/i', $html, $mImg)
                 || preg_match('/<meta[^>]+content="([^"]*)"[^>]+property="og:image"/i', $html, $mImg)) {
                 $result['media_url'] = html_entity_decode($mImg[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             }
 
-            // og:title & og:description & twitter meta tags
+            // ── 3. og:title y og:description (metadatos primarios) ───────────────────────
             $rawTitle = '';
             if (preg_match('/<meta[^>]+(?:property="og:title"|name="twitter:title")[^>]+content="([^"]*)"/i', $html, $mTitle)
                 || preg_match('/<meta[^>]+content="([^"]*)"[^>]+(?:property="og:title"|name="twitter:title")/i', $html, $mTitle)) {
@@ -905,14 +905,60 @@ class SocialProfileScraperService
                 $rawDesc = html_entity_decode($mDesc[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             }
 
-            // Colección de todos los textos de meta tags para extracción profunda
-            $allMetaTexts = $rawTitle . ' ' . $rawDesc;
-            if (preg_match_all('/<meta[^>]+content="([^"]*)"/i', $html, $allMetas)) {
-                $allMetaTexts .= ' ' . implode(' ', array_map(fn ($t) => html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8'), $allMetas[1]));
+            // ── 4. Extracción del autor / handle ─────────────────────────────────────────
+            // og:title en Facebook puede ser: "Nombre Página | Acción" o simplemente "Nombre Página"
+            if (! empty($rawTitle)) {
+                $titleClean = trim($rawTitle);
+                // Filtrar titulos genéricos de Facebook (no son el nombre del autor)
+                $genericTitles = ['facebook', 'log in or sign up to view', 'log in or sign up', 'iniciar sesión o registrarse'];
+                if (! in_array(mb_strtolower($titleClean), $genericTitles)) {
+                    // Si tiene separador "|" → la parte final suele ser el nombre de la página
+                    if (str_contains($titleClean, '|')) {
+                        $parts = explode('|', $titleClean);
+                        $result['handle_autor'] = trim(end($parts));
+                    } elseif (str_contains($titleClean, ' - ')) {
+                        // "Feliz Día del Maestro - Federico Sisterna"
+                        $parts = explode(' - ', $titleClean);
+                        $result['handle_autor'] = trim(end($parts));
+                    } else {
+                        $result['handle_autor'] = $titleClean;
+                    }
+                }
             }
 
-            // Extraer Reproducciones / Vistas (desde texto o JSON interno de Facebook Reel/Video)
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:reproducciones|views|reproducción)/iu', $allMetaTexts, $m)) {
+            // ── 5. Fallback: si no se extrajo el texto completo del JSON, usar og:description ──
+            if (empty($result['contenido_resumen']) && ! empty($rawDesc)) {
+                $result['contenido_resumen'] = $rawDesc;
+            }
+
+            // ── 6. Detección de Carrusel / Álbum ─────────────────────────────────────────
+            // Un álbum tiene más de 1 nodo "__typename":"Photo" en el JSON de la página
+            // o incluye "all_subattachments" / "CAROUSEL" en el payload
+            if ($result['tipo_formato'] === 'Post' || $result['tipo_formato'] === 'Foto') {
+                $isCarrusel = false;
+                if (preg_match('/"all_subattachments"|"attached_story_layout"\s*:\s*"CAROUSEL"/i', $html)) {
+                    $isCarrusel = true;
+                }
+                if (! $isCarrusel && preg_match_all('/"__typename"\s*:\s*"Photo"/i', $html, $photoNodes)
+                    && count($photoNodes[0]) > 1) {
+                    $isCarrusel = true;
+                }
+                if ($isCarrusel) {
+                    $result['tipo_formato'] = 'Carrusel';
+                }
+            }
+
+            // ── 7. Colección unificada de meta textos (para extracción de métricas) ───────
+            $allMetaTexts = $rawTitle . ' ' . $rawDesc;
+            if (preg_match_all('/<meta[^>]+content="([^"]*)"/i', $html, $allMetas)) {
+                $allMetaTexts .= ' ' . implode(' ', array_map(
+                    fn ($t) => html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                    $allMetas[1]
+                ));
+            }
+
+            // ── 8. Reproducciones / Vistas ───────────────────────────────────────────────
+            if (preg_match('/(\d[\d\.,KMkm]*)\s*(?:reproducciones|views|reproducción)/iu', $allMetaTexts, $m)) {
                 $result['total_vistas'] = $this->parseFormattedNumber($m[1]);
             }
             if (empty($result['total_vistas'])) {
@@ -931,16 +977,22 @@ class SocialProfileScraperService
                 }
             }
 
-            // Extraer Reacciones / Likes
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:reacciones|reactions|me gusta|likes)/iu', $allMetaTexts, $m)) {
+            // ── 9. Reacciones / Likes ────────────────────────────────────────────────────
+            if (preg_match('/(\d[\d\.,KMkm]*)\s*(?:reacciones|reactions|me gusta|likes)/iu', $allMetaTexts, $m)) {
                 $result['total_likes'] = $this->parseFormattedNumber($m[1]);
             }
+            // Fallback JSON para reacciones totales
+            if (empty($result['total_likes'])) {
+                if (preg_match('/"reaction_count"\s*:\s*\{\s*"count"\s*:\s*([0-9]+)/i', $html, $mReact)
+                    || preg_match('/"likeCount"\s*:\s*([0-9]+)/i', $html, $mReact)) {
+                    $result['total_likes'] = (int) $mReact[1];
+                }
+            }
 
-            // Extraer Comentarios (soporta singular y plural: 'comentario', 'comentarios', 'comment', 'comments')
-            if (preg_match('/([\d\.,KMkm]+)\s*(?:comentarios?|comments?)/iu', $allMetaTexts, $m)) {
+            // ── 10. Comentarios ──────────────────────────────────────────────────────────
+            if (preg_match('/(\d[\d\.,KMkm]*)\s*(?:comentarios?|comments?)/iu', $allMetaTexts, $m)) {
                 $result['total_comentarios'] = $this->parseFormattedNumber($m[1]);
             }
-            // Fallback para comentarios desde payload JSON interno si meta tags no lo traían
             if (empty($result['total_comentarios'])) {
                 if (preg_match('/"(?:total_comment_count|comment_count|comments_count|total_comments)"\s*:\s*([0-9]+)/i', $html, $mComm)) {
                     $result['total_comentarios'] = (int) $mComm[1];
@@ -949,33 +1001,14 @@ class SocialProfileScraperService
                 }
             }
 
-            // Extraer Autor y Copy
-            if (str_contains($rawTitle, '|')) {
-                $parts = explode('|', $rawTitle);
-                if (count($parts) >= 3) {
-                    $result['handle_autor'] = trim(end($parts));
-                    $result['contenido_resumen'] = trim($parts[1]);
-                } elseif (count($parts) === 2) {
-                    if (preg_match('/(?:reproducciones|reacciones)/i', $parts[0])) {
-                        $result['contenido_resumen'] = trim($parts[1]);
-                    } else {
-                        $result['contenido_resumen'] = trim($parts[0]);
-                        $result['handle_autor'] = trim($parts[1]);
-                    }
-                }
-            }
-
-            if (empty($result['contenido_resumen']) && ! empty($rawDesc)) {
-                $result['contenido_resumen'] = $rawDesc;
-            }
-
-            // Extraer fecha real de publicación de Facebook
+            // ── 11. Fecha de publicación ─────────────────────────────────────────────────
             $extractedDate = $this->extractPublicationDate($html, 'facebook');
             if ($extractedDate) {
                 $result['fecha_publicacion'] = $extractedDate;
             }
+
         } catch (\Exception $e) {
-            // Silencioso
+            // Silencioso — el usuario puede completar manualmente
         }
 
         $result['success'] = ! empty($result['contenido_resumen']) || $result['total_likes'] > 0 || ! empty($result['media_url']);
@@ -1334,7 +1367,89 @@ class SocialProfileScraperService
     }
 
     /**
+     * Extraer y normalizar una URL limpia desde cualquier tipo de input del usuario.
+     *
+     * Soporta todos los formatos posibles de pegado en el campo Fast-Flow:
+     *  - URL directa de cualquier red social
+     *  - <iframe> embed de Facebook (plugins/post.php, plugins/video.php)
+     *  - Plugin URL de Facebook sin <iframe> (pegada directamente desde "Insertar")
+     *  - <blockquote> embed de Instagram con data-instgrm-permalink
+     *  - Código embed completo de Twitter/X con blockquote
+     *  - URL corta de fb.watch, youtu.be, vm.tiktok.com, t.co, etc.
+     *  - Cualquier URL suelta en el texto (fallback regex)
+     */
+    public static function extraerUrlDesdeInput(string $input): string
+    {
+        $input = trim($input);
+        if (empty($input)) {
+            return '';
+        }
+
+        // ── Caso 1: Twitter/X status URL (máxima prioridad para evitar confusión con otros patrones) ──
+        if (preg_match('/(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/(\d+)/i', $input, $tm)) {
+            $url = $tm[0];
+            return str_starts_with($url, 'http') ? $url : 'https://' . $url;
+        }
+
+        // ── Caso 2: Facebook plugin URL dentro de un <iframe src="..."> ──────────────
+        // Ejemplo: <iframe src="https://www.facebook.com/plugins/post.php?href=https%3A%2F%2F...
+        // El src puede tener parámetros ANTES o DESPUÉS de href (show_text=true&href=... o href=...&show_text=true)
+        if (preg_match('/src=["\']([^"\']+plugins\/(?:post|video)\.php[^"\']*)["\']/', $input, $mSrc)) {
+            $pluginSrc = html_entity_decode($mSrc[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (preg_match('/\bhref=([^&"\']+)/i', $pluginSrc, $mHref)) {
+                return urldecode($mHref[1]);
+            }
+        }
+
+        // ── Caso 3: Facebook plugin URL directa (sin <iframe> envolvente) ─────────────
+        // Ejemplo: https://www.facebook.com/plugins/post.php?href=https%3A...&show_text=true
+        if (preg_match('/plugins\/(?:post|video)\.php[^"\'<\s]*\bhref=([^&"\'<\s]+)/i', $input, $mPlugin)) {
+            return urldecode(html_entity_decode($mPlugin[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        }
+
+        // ── Caso 4: Instagram blockquote embed con data-instgrm-permalink ─────────────
+        if (preg_match('/data-instgrm-permalink="([^"]+)"/i', $input, $m)) {
+            return html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        // ── Caso 5: Twitter/X blockquote embed con href en el <a> del tweet ──────────
+        // Ejemplo: <blockquote class="twitter-tweet"><p>...<a href="https://t.co/...">
+        // La URL canónica del tweet está en el último <a href="..."> dentro del blockquote
+        if (str_contains($input, 'twitter-tweet') || str_contains($input, 'class="tweet"')) {
+            if (preg_match_all('/href="(https?:\/\/(?:twitter\.com|x\.com)\/[^"]+)"/i', $input, $tweetLinks)) {
+                $tweetUrl = end($tweetLinks[1]);
+                if (str_contains($tweetUrl, '/status/')) {
+                    return html_entity_decode($tweetUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                }
+            }
+        }
+
+        // ── Caso 6: Cualquier otro <iframe src="..."> o <frame src="..."> ─────────────
+        if (preg_match('/(?:iframe|frame)[^>]+src=["\']([^"\']+)["\']/i', $input, $mFrame)) {
+            return html_entity_decode($mFrame[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+
+        // ── Caso 7: href="..." genérico en cualquier etiqueta HTML ────────────────────
+        if (preg_match('/href=["\']([^"\']+)["\']/i', $input, $m)) {
+            $candidate = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            // Solo tomarlo si parece una URL real (no un ancla #... ni una ruta relativa)
+            if (filter_var($candidate, FILTER_VALIDATE_URL)) {
+                return $candidate;
+            }
+        }
+
+        // ── Caso 8: URL suelta en el texto (fallback universal) ───────────────────────
+        if (preg_match('/https?:\/\/[^\s"\'<>]+/i', $input, $m)) {
+            return rtrim($m[0], '.,;:)]}>');
+        }
+
+        // ── Último recurso: devolver el input limpio tal cual ─────────────────────────
+        return $input;
+    }
+
+    /**
      * Canonicalizar la URL de una publicación para garantizar unicidad absoluta en el sistema.
+     * Usa extraerUrlDesdeInput() para soportar todos los formatos de entrada.
      */
     public static function canonicalizePostUrl(?string $url): ?string
     {
@@ -1342,19 +1457,7 @@ class SocialProfileScraperService
             return null;
         }
 
-        $url = trim($url);
-        if (preg_match('/plugins\/(?:post|video)\.php\?href=([^&"\']+)/i', $url, $m)) {
-            $url = urldecode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        } elseif (preg_match('/src="([^"]+)"/i', $url, $m)) {
-            $src = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            if (preg_match('/href=([^&]+)/i', $src, $hm)) {
-                $url = urldecode($hm[1]);
-            } else {
-                $url = $src;
-            }
-        } elseif (preg_match('/https?:\/\/[^\s"\'<>]+/i', $url, $m)) {
-            $url = $m[0];
-        }
+        $url = self::extraerUrlDesdeInput(trim($url));
 
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
             return $url;
