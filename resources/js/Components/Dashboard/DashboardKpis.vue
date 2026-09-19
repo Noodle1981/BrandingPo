@@ -7,7 +7,8 @@ import {
   Sparkles,
   TrendingUp,
   TrendingDown,
-  Calendar
+  Calendar,
+  Heart
 } from '@lucide/vue';
 
 const props = defineProps({
@@ -26,14 +27,14 @@ const emit = defineEmits(['abrir-modal-grafico']);
 
 <template>
   <div class="space-y-4">
-    <!-- BLOQUE 1: AUDIENCIA, TERRITORIO & CLIMA ELECTORAL (3 TARJETAS GRANDES) -->
+    <!-- BLOQUE 1: AUDIENCIA, TERRITORIO & TRACCIÓN ELECTORAL (4 TARJETAS GRANDES) -->
     <div class="space-y-2">
       <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
         <Users class="w-3.5 h-3.5 text-cyan-500" />
-        <span>Audiencia, Territorio & Clima Social</span>
+        <span>Audiencia, Territorio & Tracción Electoral</span>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- KPI 1: Comunidad Multired & Crecimiento Neto (con Tiers) -->
         <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
           <div class="flex items-center justify-between">
@@ -44,7 +45,7 @@ const emit = defineEmits(['abrir-modal-grafico']);
           </div>
           <div class="mt-3">
             <div class="flex items-baseline justify-between gap-1">
-              <p class="text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+              <p class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
                 {{ stats.total_seguidores }}
               </p>
               <span
@@ -74,7 +75,7 @@ const emit = defineEmits(['abrir-modal-grafico']);
           </div>
           <div class="mt-3">
             <div class="flex items-baseline justify-between gap-1">
-              <p class="text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+              <p class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
                 {{ stats.ratio_penetracion }}
               </p>
               <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
@@ -97,40 +98,76 @@ const emit = defineEmits(['abrir-modal-grafico']);
           </div>
         </div>
 
-        <!-- KPI 3: Clima de Humor Social Dinámico -->
+        <!-- KPI 3: Total de Interacciones del Período -->
         <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Humor Social</span>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Interacciones Totales</span>
+            <div class="w-8 h-8 rounded-xl bg-pink-500/10 text-pink-500 flex items-center justify-center">
+              <Heart class="w-4 h-4 fill-pink-500/20" />
+            </div>
+          </div>
+          <div class="mt-3">
+            <div class="flex items-baseline justify-between gap-1">
+              <p class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                {{ stats.interacciones_totales || '0' }}
+              </p>
+              <span
+                class="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20 shrink-0"
+                title="Tasa de Aceptación Política Real sobre Seguidores"
+              >
+                {{ stats.engagement_promedio }} TAP
+              </span>
+            </div>
+            <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+              <span>👍 {{ stats.total_likes || '0' }}</span>
+              <span>💬 {{ stats.total_comentarios || '0' }}</span>
+              <span>🔄 {{ stats.total_compartidos || '0' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI 4: Tracción Política Promedio (Indexada 0-100) -->
+        <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tracción Política</span>
             <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
               <Flame class="w-4 h-4" />
             </div>
           </div>
           <div class="mt-3">
             <div class="flex items-baseline justify-between gap-1">
-              <p class="text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight flex items-center gap-1.5">
-                <span>{{ stats.humor_social_promedio }}</span>
-                <span class="text-xs text-slate-400 font-normal">/ 5.0</span>
+              <p class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight flex items-center gap-1.5">
+                <span>{{ stats.score_traccion_promedio || 50 }}</span>
+                <span class="text-xs text-slate-400 font-normal">/ 100</span>
               </p>
               <span
                 class="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md border shrink-0"
                 :class="{
-                  'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20': (stats.humor_social_promedio_raw || 5) >= 4.5,
-                  'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20': (stats.humor_social_promedio_raw || 5) >= 3.5 && (stats.humor_social_promedio_raw || 5) < 4.5,
-                  'bg-rose-500/10 text-rose-500 border-rose-500/20': (stats.humor_social_promedio_raw || 5) < 3.5
+                  'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20': (stats.score_traccion_promedio || 50) >= 60,
+                  'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20': (stats.score_traccion_promedio || 50) >= 40 && (stats.score_traccion_promedio || 50) < 60,
+                  'bg-rose-500/10 text-rose-500 border-rose-500/20': (stats.score_traccion_promedio || 50) < 40
                 }"
               >
-                {{ stats.humor_clima_texto || 'Muy Favorable' }}
+                {{ stats.engagement_calidad_texto || 'Estándar Electoral' }}
               </span>
             </div>
-            <div class="mt-2.5 flex items-center justify-between">
-              <div class="flex items-center gap-1 text-sm">
-                <span
-                  v-for="star in 5"
-                  :key="star"
-                  :class="star <= Math.round(stats.humor_social_promedio_raw || 5) ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600'"
-                >★</span>
-              </div>
-              <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">0% Rechazo</span>
+
+            <!-- Barra de Progreso de Tracción Indexada -->
+            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2.5 overflow-hidden">
+              <div
+                class="h-full rounded-full transition-all duration-500"
+                :class="{
+                  'bg-emerald-500': (stats.score_traccion_promedio || 50) >= 60,
+                  'bg-amber-500': (stats.score_traccion_promedio || 50) >= 40 && (stats.score_traccion_promedio || 50) < 60,
+                  'bg-rose-500': (stats.score_traccion_promedio || 50) < 40
+                }"
+                :style="{ width: `${Math.min(stats.score_traccion_promedio || 50, 100)}%` }"
+              ></div>
+            </div>
+
+            <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+              <span class="text-slate-700 dark:text-slate-300">VTP Ponderado x Tier</span>
+              <span class="text-slate-400">Benchmark Equitativo</span>
             </div>
           </div>
         </div>
