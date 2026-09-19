@@ -146,16 +146,23 @@ class Publicacion extends Model
 
     /**
      * Índice de Aprobación Neta (%) calculado o persistido.
+     * Retorna null si no hay un desglose emocional real verificado (ej. posts donde solo se capturan reacciones totales).
      */
-    public function getAprobacionNetaPctAttribute(): float
+    public function getAprobacionNetaPctAttribute(): ?float
     {
-        if (isset($this->insights_internos_propios['indice_aprobacion_neta'])) {
-            return (float) $this->insights_internos_propios['indice_aprobacion_neta'];
+        if (array_key_exists('indice_aprobacion_neta', $this->insights_internos_propios ?? [])) {
+            $val = $this->insights_internos_propios['indice_aprobacion_neta'];
+            return $val !== null ? (float) $val : null;
         }
 
         $r = $this->reacciones_detalladas;
         if (! $r || ! is_array($r)) {
-            return 100.0;
+            return null;
+        }
+
+        $tieneDesglose = ((int) ($r['me_encanta'] ?? 0) + (int) ($r['me_importa'] ?? 0) + (int) ($r['me_divierte'] ?? 0) + (int) ($r['me_asombra'] ?? 0) + (int) ($r['me_enoja'] ?? 0) + (int) ($r['me_entristece'] ?? 0)) > 0;
+        if (! $tieneDesglose) {
+            return null;
         }
 
         $pos = (int) ($r['me_gusta'] ?? 0) + (int) ($r['me_encanta'] ?? 0) + (int) ($r['me_importa'] ?? 0);
@@ -163,7 +170,7 @@ class Publicacion extends Model
         $tot = $pos + $neg + (int) ($r['me_divierte'] ?? 0) + (int) ($r['me_asombra'] ?? 0);
 
         if ($tot === 0) {
-            return 100.0;
+            return null;
         }
 
         return (float) round((($pos - $neg) / $tot) * 100, 1);

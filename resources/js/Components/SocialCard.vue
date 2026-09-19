@@ -162,15 +162,9 @@ const confirmarFecha = () => {
   );
 };
 
-// Sincronización en vivo individual con detección de pauta
+// Sincronización en vivo individual con detección de pauta (Universal para todas las redes y formatos)
 const puedeSincronizar = computed(() => {
-  if (!props.post.url_post) return false;
-  const plat = (props.post.plataforma || props.post.perfil_social?.plataforma || '').toLowerCase();
-  if (plat !== 'facebook') return true;
-  // En Facebook, los Reels y Videos sí exponen reproducciones y métricas públicas
-  const formato = (props.post.tipo_formato || '').toLowerCase();
-  const url = (props.post.url_post || '').toLowerCase();
-  return formato === 'reel' || formato === 'video' || url.includes('/reel') || url.includes('/watch') || url.includes('/videos');
+  return Boolean(props.post.url_post && String(props.post.url_post).trim().length > 0);
 });
 
 const sincronizando = ref(false);
@@ -326,15 +320,27 @@ const currentReacciones = computed(() => {
   return parseReacciones(props.post.reacciones_detalladas, props.post.total_likes);
 });
 
+const hasEmotionalBreakdown = computed(() => {
+  const r = currentReacciones.value;
+  const multiEmojiCount = (Number(r.me_encanta) || 0) +
+    (Number(r.me_importa) || 0) +
+    (Number(r.me_divierte) || 0) +
+    (Number(r.me_asombra) || 0) +
+    (Number(r.me_entristece) || 0) +
+    (Number(r.me_enoja) || 0);
+  return multiEmojiCount > 0;
+});
+
 const approvalPct = computed(() => {
   if (props.post.aprobacion_neta_pct !== undefined && props.post.aprobacion_neta_pct !== null) {
     return Math.round(Number(props.post.aprobacion_neta_pct));
   }
+  if (!hasEmotionalBreakdown.value) return null;
   const r = currentReacciones.value;
   const pos = (Number(r.me_gusta) || 0) + (Number(r.me_encanta) || 0) + (Number(r.me_importa) || 0);
   const neg = (Number(r.me_entristece) || 0) + (Number(r.me_enoja) || 0);
   const tot = pos + neg + (Number(r.me_divierte) || 0) + (Number(r.me_asombra) || 0);
-  if (tot === 0) return 100;
+  if (tot === 0) return null;
   return Math.round(((pos - neg) / tot) * 100);
 });
 
@@ -798,20 +804,25 @@ const cardPautaStyles = computed(() => {
         </div>
 
         <!-- FACEBOOK / MULTI-EMOJI -->
-        <div v-else class="flex items-center gap-2 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-[11px] shadow-2xs">
-          <span class="font-bold text-slate-800 dark:text-slate-200 mr-1">{{ formatNumber(post.total_likes || 0) }}</span>
-          <span v-if="currentReacciones.me_gusta" title="Me gusta" class="inline-flex items-center gap-0.5">👍 {{ formatNumber(currentReacciones.me_gusta) }}</span>
-          <span v-if="currentReacciones.me_encanta" title="Me encanta" class="inline-flex items-center gap-0.5 text-rose-500">❤️ {{ formatNumber(currentReacciones.me_encanta) }}</span>
-          <span v-if="currentReacciones.me_importa" title="Me importa" class="inline-flex items-center gap-0.5 text-amber-500">🥰 {{ formatNumber(currentReacciones.me_importa) }}</span>
-          <span v-if="currentReacciones.me_divierte" title="Me divierte" class="inline-flex items-center gap-0.5 text-amber-400">😂 {{ formatNumber(currentReacciones.me_divierte) }}</span>
-          <span v-if="currentReacciones.me_asombra" title="Me asombra" class="inline-flex items-center gap-0.5 text-blue-400">😮 {{ formatNumber(currentReacciones.me_asombra) }}</span>
-          <span v-if="currentReacciones.me_entristece" title="Me entristece" class="inline-flex items-center gap-0.5 text-blue-500">😢 {{ formatNumber(currentReacciones.me_entristece) }}</span>
-          <span v-if="currentReacciones.me_enoja" title="Me enoja" class="inline-flex items-center gap-0.5 text-rose-600 font-bold">😡 {{ formatNumber(currentReacciones.me_enoja) }}</span>
+        <div v-else class="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-[11px] shadow-2xs">
+          <span class="inline-flex items-center gap-1.5 font-bold text-blue-600 dark:text-blue-400">
+            <span class="text-xs">👍/❤️</span>
+            <span class="text-slate-800 dark:text-slate-200">{{ formatNumber(post.total_likes || 0) }}</span>
+            <span class="text-slate-400 font-normal text-[10px]">Reacciones</span>
+          </span>
+          <template v-if="hasEmotionalBreakdown">
+            <span v-if="currentReacciones.me_encanta" title="Me encanta" class="inline-flex items-center gap-0.5 text-rose-500">❤️ {{ formatNumber(currentReacciones.me_encanta) }}</span>
+            <span v-if="currentReacciones.me_importa" title="Me importa" class="inline-flex items-center gap-0.5 text-amber-500">🥰 {{ formatNumber(currentReacciones.me_importa) }}</span>
+            <span v-if="currentReacciones.me_divierte" title="Me divierte" class="inline-flex items-center gap-0.5 text-amber-400">😂 {{ formatNumber(currentReacciones.me_divierte) }}</span>
+            <span v-if="currentReacciones.me_asombra" title="Me asombra" class="inline-flex items-center gap-0.5 text-blue-400">😮 {{ formatNumber(currentReacciones.me_asombra) }}</span>
+            <span v-if="currentReacciones.me_entristece" title="Me entristece" class="inline-flex items-center gap-0.5 text-blue-500">😢 {{ formatNumber(currentReacciones.me_entristece) }}</span>
+            <span v-if="currentReacciones.me_enoja" title="Me enoja" class="inline-flex items-center gap-0.5 text-rose-600 font-bold">😡 {{ formatNumber(currentReacciones.me_enoja) }}</span>
+          </template>
         </div>
 
-        <!-- Net Approval Badge (Solo relevante para Facebook con desglose multi-emocional) -->
+        <!-- Net Approval Badge (Solo si cuenta con desglose verificado en Facebook) -->
         <span
-          v-if="isFacebook"
+          v-if="isFacebook && approvalPct !== null"
           class="text-[11px] font-mono font-black px-2 py-0.5 rounded-lg border flex items-center gap-1 shadow-2xs"
           :class="{
             'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30': approvalPct >= 80,

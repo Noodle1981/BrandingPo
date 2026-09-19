@@ -637,14 +637,8 @@ const sincronizarCanalCompleto = async () => {
   syncCanalSummary.value = null;
 
   const activePosts = postsInActiveWindow.value;
-  // En Facebook solo sincronizamos Reels y Videos (que sí exponen reproducciones y métricas públicas)
-  const postsParaSincronizar = currentRed.value?.key === 'facebook'
-    ? activePosts.filter(p => {
-        const fmt = (p.tipo_formato || '').toLowerCase();
-        const u = (p.url_post || '').toLowerCase();
-        return fmt === 'reel' || fmt === 'video' || u.includes('/reel') || u.includes('/watch') || u.includes('/videos');
-      })
-    : activePosts;
+  // Sincronización universal de publicaciones para todas las redes (incluyendo todos los formatos de Facebook: posts, fotos, carruseles, reels y videos)
+  const postsParaSincronizar = activePosts;
 
   syncProgress.value = {
     current: 0,
@@ -677,13 +671,9 @@ const sincronizarCanalCompleto = async () => {
     syncProgress.value.seguidoresInfo = 'Canal sin URL de perfil configurada.';
   }
 
-  // PASO 2: Sincronizar Publicaciones (en Facebook sincroniza Reels y Videos)
+  // PASO 2: Sincronizar Publicaciones en ventana activa (≤ 15 días)
   if (postsParaSincronizar.length === 0) {
-    if (currentRed.value?.key === 'facebook') {
-      syncProgress.value.currentTitle = 'Seguidores de Facebook sincronizados. (No hay Reels activos en los últimos 15 días; los posts estáticos se auditan manualmente).';
-    } else {
-      syncProgress.value.currentTitle = 'No hay publicaciones en ventana activa (≤ 15 días).';
-    }
+    syncProgress.value.currentTitle = 'Seguidores sincronizados. No hay publicaciones en ventana activa (≤ 15 días).';
   } else {
     for (let i = 0; i < postsParaSincronizar.length; i++) {
       const post = postsParaSincronizar[i];

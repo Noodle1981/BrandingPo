@@ -176,11 +176,22 @@ watch(editTotalReacciones, (val) => {
   }
 });
 
+const mostrarDesgloseEmojis = ref(false);
+
 const editAiSentiment = computed(() => {
   const tot = editTotalReacciones.value;
-  if (tot === 0) return { aprobacion: 100, label: 'Sin datos', isCrisis: false };
+  if (tot === 0) return { aprobacion: null, label: 'Sin datos', isCrisis: false };
   if (!isFacebook.value) {
-    return { aprobacion: 100, isCrisis: false };
+    return { aprobacion: null, isCrisis: false };
+  }
+  const multiEmoji = Number(editForm.me_encanta || 0) +
+    Number(editForm.me_importa || 0) +
+    Number(editForm.me_divierte || 0) +
+    Number(editForm.me_asombra || 0) +
+    Number(editForm.me_entristece || 0) +
+    Number(editForm.me_enoja || 0);
+  if (multiEmoji === 0) {
+    return { aprobacion: null, isCrisis: false };
   }
   const pos = Number(editForm.me_gusta || 0) + Number(editForm.me_encanta || 0) + Number(editForm.me_importa || 0);
   const neg = Number(editForm.me_enoja || 0) + Number(editForm.me_entristece || 0);
@@ -485,16 +496,17 @@ const tiposPauta = [
           </div>
         </div>
 
-        <!-- 6b. PANEL PARA FACEBOOK (DESGLOSE MULTI-EMOJI) -->
+        <!-- 6b. PANEL PARA FACEBOOK (MÉTRICAS UNIFICADAS) -->
         <div v-else-if="isFacebook" class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
           <div class="flex items-center justify-between text-xs font-bold">
             <span class="text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
               <Sparkles class="w-3.5 h-3.5 text-blue-500" />
-              <span>Reacciones de Facebook</span>
+              <span>Métricas de Facebook</span>
             </span>
             <div class="flex items-center gap-2">
               <span class="text-cyan-500 font-mono text-[11px]">Total: {{ formatNumber(editTotalReacciones) }}</span>
               <span
+                v-if="editAiSentiment.aprobacion !== null"
                 class="text-[10px] px-2 py-0.5 rounded font-mono font-bold"
                 :class="editAiSentiment.isCrisis ? 'bg-rose-500/15 text-rose-500' : 'bg-emerald-500/15 text-emerald-500'"
               >
@@ -503,58 +515,65 @@ const tiposPauta = [
             </div>
           </div>
 
-          <!-- Aviso Táctico de Carga -->
-          <div class="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-800 dark:text-blue-200 text-xs flex items-start gap-2">
-            <AlertCircle class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-            <div class="leading-snug">
-              <span class="font-bold">⚠️ Importante para Facebook:</span>
-              Ingresa o actualiza las cantidades de cada emoji (👍 ❤️ 🥰 😂 😮 😢 😡) observadas en la publicación <strong>antes de guardar</strong> para calcular el Índice de Aprobación Neta.
+          <!-- Métricas Principales Directas (Equitativas) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-center">
+            <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <label class="block text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 mb-1">👍/❤️ Reacciones</label>
+              <input v-model.number="editForm.total_likes" type="number" min="0" class="w-full text-center text-xs font-bold" />
             </div>
-          </div>
-
-          <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 font-mono text-center">
-            <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <span class="text-xs block">👍</span>
-              <input v-model.number="editForm.me_gusta" type="number" min="0" class="w-full text-center text-xs font-bold" />
-            </div>
-            <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <span class="text-xs block">❤️</span>
-              <input v-model.number="editForm.me_encanta" type="number" min="0" class="w-full text-center text-xs font-bold text-rose-500" />
-            </div>
-            <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <span class="text-xs block">🥰</span>
-              <input v-model.number="editForm.me_importa" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-500" />
-            </div>
-            <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <span class="text-xs block">😂</span>
-              <input v-model.number="editForm.me_divierte" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-400" />
-            </div>
-            <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <span class="text-xs block">😮</span>
-              <input v-model.number="editForm.me_asombra" type="number" min="0" class="w-full text-center text-xs font-bold text-blue-400" />
-            </div>
-            <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <span class="text-xs block">😢</span>
-              <input v-model.number="editForm.me_entristece" type="number" min="0" class="w-full text-center text-xs font-bold text-blue-500" />
-            </div>
-            <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <span class="text-xs block">😡</span>
-              <input v-model.number="editForm.me_enoja" type="number" min="0" class="w-full text-center text-xs font-bold text-rose-600" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-3 gap-2 pt-2">
-            <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1">👁️ Plays / Vistas</label>
-              <input v-model.number="editForm.total_vistas" type="number" min="0" class="w-full text-center text-xs font-bold" />
-            </div>
-            <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
               <label class="block text-[10px] uppercase font-bold text-blue-500 mb-1">💬 Comentarios</label>
               <input v-model.number="editForm.total_comentarios" type="number" min="0" class="w-full text-center text-xs font-bold" />
             </div>
-            <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
               <label class="block text-[10px] uppercase font-bold text-emerald-500 mb-1">🔄 Shares</label>
               <input v-model.number="editForm.total_compartidos" type="number" min="0" class="w-full text-center text-xs font-bold" />
+            </div>
+            <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <label class="block text-[10px] uppercase font-bold text-cyan-600 dark:text-cyan-400 mb-1">👁️ Plays / Vistas</label>
+              <input v-model.number="editForm.total_vistas" type="number" min="0" class="w-full text-center text-xs font-bold" />
+            </div>
+          </div>
+
+          <!-- Desglose Opcional de Emojis (Auditoría Avanzada de Crisis) -->
+          <div class="pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
+            <button
+              type="button"
+              @click="mostrarDesgloseEmojis = !mostrarDesgloseEmojis"
+              class="text-[11px] font-semibold text-slate-500 hover:text-cyan-500 dark:text-slate-400 flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <span>{{ mostrarDesgloseEmojis ? 'Ocultar desglose detallado de emojis ▲' : 'Desglose detallado por emoji (opcional) ▼' }}</span>
+            </button>
+
+            <div v-if="mostrarDesgloseEmojis" class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 font-mono text-center mt-2 animate-fade-in">
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">👍</span>
+                <input v-model.number="editForm.me_gusta" type="number" min="0" class="w-full text-center text-xs font-bold" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">❤️</span>
+                <input v-model.number="editForm.me_encanta" type="number" min="0" class="w-full text-center text-xs font-bold text-rose-500" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">🥰</span>
+                <input v-model.number="editForm.me_importa" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-500" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">😂</span>
+                <input v-model.number="editForm.me_divierte" type="number" min="0" class="w-full text-center text-xs font-bold text-amber-400" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">😮</span>
+                <input v-model.number="editForm.me_asombra" type="number" min="0" class="w-full text-center text-xs font-bold text-blue-400" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">😢</span>
+                <input v-model.number="editForm.me_entristece" type="number" min="0" class="w-full text-center text-xs font-bold text-blue-500" />
+              </div>
+              <div class="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span class="text-xs block">😡</span>
+                <input v-model.number="editForm.me_enoja" type="number" min="0" class="w-full text-center text-xs font-bold text-rose-600" />
+              </div>
             </div>
           </div>
         </div>

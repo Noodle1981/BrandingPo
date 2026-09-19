@@ -990,35 +990,42 @@ class PublicacionController extends Controller
             $meGusta = $totalLikesFallback;
         }
 
+        $tieneDesgloseEmocional = ($meEncanta + $meImporta + $meDivierte + $meAsombra + $meEntristece + $meEnoja) > 0;
+
         $positivas = $meGusta + $meEncanta + $meImporta;
         $negativas = $meEnoja + $meEntristece;
         $humorViral = $meDivierte;
 
-        $indiceAprobacion = $totalReacciones > 0
+        $indiceAprobacion = ($tieneDesgloseEmocional && $totalReacciones > 0)
             ? round((($positivas - $negativas) / $totalReacciones) * 100, 1)
-            : 100.0;
+            : null;
 
-        $ratioIndignacion = $totalReacciones > 0
+        $ratioIndignacion = ($tieneDesgloseEmocional && $totalReacciones > 0)
             ? round(($meEnoja / $totalReacciones) * 100, 1)
             : 0.0;
 
         $alertaCrisis = $ratioIndignacion >= 15.0;
 
-        if ($indiceAprobacion >= 65) {
-            $termometro = 5;
-            $sentimiento = 'positivo';
-        } elseif ($indiceAprobacion >= 30) {
-            $termometro = 4;
-            $sentimiento = 'positivo';
-        } elseif ($indiceAprobacion >= -10) {
-            $termometro = 3;
-            $sentimiento = 'neutro';
-        } elseif ($indiceAprobacion >= -40) {
-            $termometro = 2;
-            $sentimiento = 'negativo';
+        if ($indiceAprobacion !== null) {
+            if ($indiceAprobacion >= 65) {
+                $termometro = 5;
+                $sentimiento = 'positivo';
+            } elseif ($indiceAprobacion >= 30) {
+                $termometro = 4;
+                $sentimiento = 'positivo';
+            } elseif ($indiceAprobacion >= -10) {
+                $termometro = 3;
+                $sentimiento = 'neutro';
+            } elseif ($indiceAprobacion >= -40) {
+                $termometro = 2;
+                $sentimiento = 'negativo';
+            } else {
+                $termometro = 1;
+                $sentimiento = 'negativo';
+            }
         } else {
-            $termometro = 1;
-            $sentimiento = 'negativo';
+            $termometro = (int) ($data['termometro_humor_social'] ?? 5);
+            $sentimiento = 'positivo';
         }
 
         return [
@@ -1041,6 +1048,7 @@ class PublicacionController extends Controller
                 'total_reacciones_positivas' => $positivas,
                 'total_reacciones_negativas' => $negativas,
                 'total_reacciones_humor' => $humorViral,
+                'desglose_verificado' => $tieneDesgloseEmocional,
             ],
         ];
     }
