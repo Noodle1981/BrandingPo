@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: BrandingPo - API de Monitoreo de Medios, Clipping & Social Listening
+  description: |
+    Especificación OpenAPI de los endpoints de gestión de medios de prensa, autodescubrimiento, 
+    clipping editorial y cuantificación de reacciones en Facebook (Fast-Flow) de BrandingPo.
+  version: 1.1.0
+servers:
+  - url: http://brandingpo.test
+    description: Servidor de Desarrollo Local
+paths:
+  /medios:
+    get:
+      summary: Panel principal de medios y clipping
+      description: Retorna vista Inertia con directorio de medios, notas monitoreadas, matriz de sesgo y métricas de Facebook.
+      parameters:
+        - name: candidato_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: tono
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [favorable, neutro, critico]
+        - name: origen_tipo
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [web, facebook]
+        - name: pestana
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [directorio, clipping, facebook, sesgo]
+      responses:
+        '200':
+          description: Renderizado Inertia de Medios/Index
+
+    post:
+      summary: Registrar nuevo medio de prensa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MedioInput'
+      responses:
+        '302':
+          description: Redirección con medio creado
+
+  /medios/{id}:
+    put:
+      summary: Actualizar medio de prensa existente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MedioInput'
+      responses:
+        '302':
+          description: Redirección con medio actualizado
+
+    delete:
+      summary: Eliminar medio y sus notas asociadas
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '302':
+          description: Redirección tras eliminación
+
+  /medios/detectar-fuentes:
+    post:
+      summary: Autodescubrimiento de fuentes (RSS, Facebook, Favicon/Logo)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: https://www.diariodecuyo.com.ar
+      responses:
+        '200':
+          description: Fuentes autodetectadas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  feed_rss_url:
+                    type: string
+                    nullable: true
+                  url_facebook:
+                    type: string
+                    nullable: true
+                  avatar_url:
+                    type: string
+                    nullable: true
+
+  /medios/{id}/sincronizar:
+    post:
+      summary: Sincronizar un medio específico
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '302':
+          description: Sincronización finalizada con flash message de resultados
+
+  /medios/sincronizar-todos:
+    post:
+      summary: Sincronizar todos los medios registrados en el workspace activo
+      responses:
+        '302':
+          description: Sincronización masiva finalizada
+
+  /medios/clipping:
+    post:
+      summary: Registrar nota en el clipping o publicación en Facebook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotaInput'
+      responses:
+        '302':
+          description: Nota creada exitosamente
+
+  /medios/clipping/{id}:
+    put:
+      summary: Calibrar nota editorial o desglose de reacciones en Facebook
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotaInput'
+      responses:
+        '302':
+          description: Nota o reacciones calibradas exitosamente
+
+    delete:
+      summary: Eliminar nota del clipping
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '302':
+          description: Nota eliminada
+
+  # -------------------------------------------------------------
+  # FUTURA IMPLEMENTACIÓN: Sincronizador Autónomo Horario
+  # -------------------------------------------------------------
+  /medios/radar-horario:
+    post:
+      summary: '[FUTURA IMPLEMENTACIÓN] Radar horario programado'
+      description: |
+        Endpoint o comando de consola (`Schedule::command('medios:radar-horario')->hourly()`) 
+        que ejecuta la sincronización autónoma cada 1 hora sin duplicar publicaciones existentes 
+        y actualizando los recuentos de reacciones para auditar la evolución del humor social.
+      responses:
+        '200':
+          description: Reporte de ejecución horaria
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nuevas_notas_detectadas:
+                    type: integer
+                  notas_reacciones_actualizadas:
+                    type: integer
+                  alertas_crisis_disparadas:
+                    type: integer
+
+components:
+  schemas:
+    MedioInput:
+      type: object
+      required:
+        - nombre
+        - tipo_medio
+      properties:
+        nombre:
+          type: string
+          example: Diario de Cuyo
+        tipo_medio:
+          type: string
+          enum: [digital, impreso, radio, tv]
+          example: digital
+        url_sitio:
+          type: string
+          format: uri
+          nullable: true
+          example: https://www.diariodecuyo.com.ar
+        url_facebook:
+          type: string
+          format: uri
+          nullable: true
+          example: https://www.facebook.com/diariodecuyoweb
+        avatar_url:
+          type: string
+          nullable: true
+        feed_rss_url:
+          type: string
+          nullable: true
+        alcance_tipo:
+          type: string
+          enum: [local, provincial, nacional]
+          default: provincial
+        sesgo_editorial_estimado:
+          type: string
+          enum: [oficial, opositor, independiente, neutral]
+          default: neutral
+
+    ReaccionesDesglose:
+      type: object
+      properties:
+        likes:
+          type: integer
+          default: 0
+        love:
+          type: integer
+          default: 0
+        haha:
+          type: integer
+          default: 0
+        wow:
+          type: integer
+          default: 0
+        sad:
+          type: integer
+          default: 0
+        angry:
+          type: integer
+          default: 0
+
+    NotaInput:
+      type: object
+      required:
+        - medio_prensa_id
+        - titulo
+        - fecha_publicacion
+      properties:
+        medio_prensa_id:
+          type: integer
+        candidato_id:
+          type: integer
+          nullable: true
+        origen_tipo:
+          type: string
+          enum: [web, facebook]
+          default: web
+        tipo_mencion:
+          type: string
+          enum: [titular, cuerpo, etiqueta_directa]
+          default: titular
+        fecha_publicacion:
+          type: string
+          format: date
+          example: '2026-09-20'
+        titulo:
+          type: string
+          example: Presentación oficial de las nuevas propuestas de gestión
+        url_nota:
+          type: string
+          format: uri
+          nullable: true
+        resumen:
+          type: string
+          nullable: true
+        tono_mencion:
+          type: string
+          enum: [favorable, neutro, critico]
+          default: neutro
+        es_tapa_o_principal:
+          type: boolean
+          default: false
+        reacciones_desglose:
+          $ref: '#/components/schemas/ReaccionesDesglose'
+        interacciones_en_redes_del_medio:
+          type: integer
+          default: 0
+        respuesta_replica_candidato:
+          type: string
+          nullable: true

@@ -81,6 +81,11 @@ const abrirEditarMedio = (medio) => {
   isMedioModalOpen.value = true;
 };
 
+const cerrarMedioModal = () => {
+  isMedioModalOpen.value = false;
+  medioParaEditar.value = null;
+};
+
 const handleSincronizarMedio = (medio) => {
   sincronizandoMedioId.value = medio.id;
   router.post(`/medios/${medio.id}/sincronizar`, {}, {
@@ -122,6 +127,11 @@ const abrirEditarNota = (nota) => {
   isNotaModalOpen.value = true;
 };
 
+const cerrarNotaModal = () => {
+  isNotaModalOpen.value = false;
+  notaParaEditar.value = null;
+};
+
 const handleEliminarNota = (nota) => {
   if (confirm(`¿Eliminar la nota "${nota.titulo}"?`)) {
     router.delete(`/medios/clipping/${nota.id}`, {
@@ -145,8 +155,8 @@ const handleEliminarNota = (nota) => {
         @sincronizar-todos="handleSincronizarTodos"
       />
 
-      <!-- 2. Alerta Pedagógica del Umbral (Mínimo 5 Medios) -->
-      <MedioUmbralAlerta :umbral="umbral" />
+      <!-- 2. Alerta Pedagógica del Umbral (Visible únicamente mientras falten medios) -->
+      <MedioUmbralAlerta v-if="!umbral.cumple_umbral" :umbral="umbral" />
 
       <!-- 3. Navegación por Pestañas de la Sala de Situación -->
       <MedioPestanasNav
@@ -207,18 +217,20 @@ const handleEliminarNota = (nota) => {
 
     <!-- Modales -->
     <MedioFormModal
+      :key="isMedioModalOpen ? (medioParaEditar ? `editar-medio-${medioParaEditar.id}` : 'nuevo-medio') : 'medio-cerrado'"
       :is-open="isMedioModalOpen"
       :medio-editar="medioParaEditar"
-      @close="isMedioModalOpen = false"
+      @close="cerrarMedioModal"
     />
 
     <MedioNotaModal
+      :key="isNotaModalOpen ? (notaParaEditar ? `editar-nota-${notaParaEditar.id}` : 'nueva-nota') : 'nota-cerrada'"
       :is-open="isNotaModalOpen"
       :nota-editar="notaParaEditar"
       :medios="medios"
       :candidatos="candidatos"
       :initial-origen="initialOrigenNota"
-      @close="isNotaModalOpen = false"
+      @close="cerrarNotaModal"
     />
   </WarRoomLayout>
 </template>

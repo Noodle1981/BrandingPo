@@ -23,11 +23,10 @@ const progreso = computed(() => props.umbral.porcentaje_progreso);
 </script>
 
 <template>
+  <!-- La alerta pedagógica solo se muestra mientras falten medios para el umbral mínimo representativo -->
   <div
-    class="p-4 sm:p-5 rounded-2xl border transition-all shadow-xs"
-    :class="cumple 
-      ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20' 
-      : 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/30'"
+    v-if="!cumple"
+    class="p-4 sm:p-5 rounded-2xl border transition-all shadow-xs bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/30"
   >
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div class="flex items-start gap-3">

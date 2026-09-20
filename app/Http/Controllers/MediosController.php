@@ -215,7 +215,7 @@ class MediosController extends Controller
             'avatar_url' => ['nullable', 'string', 'max:1000'],
             'feed_rss_url' => ['nullable', 'url', 'max:500'],
             'alcance_tipo' => ['required', 'in:local,provincial,nacional'],
-            'sesgo_editorial_estimado' => ['required', 'in:oficialista,independiente,opositor'],
+            'sesgo_editorial_estimado' => ['required', 'in:oficialista,independiente,opositor,neutral'],
         ]);
 
         if (! empty($validated['url_sitio']) && ! SecurityHelper::esUrlSegura($validated['url_sitio'])) {
@@ -251,7 +251,7 @@ class MediosController extends Controller
             'avatar_url' => ['nullable', 'string', 'max:1000'],
             'feed_rss_url' => ['nullable', 'url', 'max:500'],
             'alcance_tipo' => ['required', 'in:local,provincial,nacional'],
-            'sesgo_editorial_estimado' => ['required', 'in:oficialista,independiente,opositor'],
+            'sesgo_editorial_estimado' => ['required', 'in:oficialista,independiente,opositor,neutral'],
         ]);
 
         if (! empty($validated['url_sitio']) && ! SecurityHelper::esUrlSegura($validated['url_sitio'])) {
@@ -383,7 +383,19 @@ class MediosController extends Controller
             'es_tapa_o_principal' => ['boolean'],
             'interacciones_en_redes_del_medio' => ['nullable', 'integer', 'min:0'],
             'respuesta_replica_candidato' => ['nullable', 'string'],
+            'reacciones_desglose' => ['nullable', 'array'],
+            'reacciones_desglose.likes' => ['nullable', 'integer', 'min:0'],
+            'reacciones_desglose.love' => ['nullable', 'integer', 'min:0'],
+            'reacciones_desglose.haha' => ['nullable', 'integer', 'min:0'],
+            'reacciones_desglose.wow' => ['nullable', 'integer', 'min:0'],
+            'reacciones_desglose.sad' => ['nullable', 'integer', 'min:0'],
+            'reacciones_desglose.angry' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        $reacciones = $request->input('reacciones_desglose');
+        $totalInteracciones = is_array($reacciones) && ! empty($reacciones)
+            ? array_sum(array_map('intval', $reacciones))
+            : (int) ($validated['interacciones_en_redes_del_medio'] ?? 0);
 
         NotaPrensa::create([
             'workspace_id' => $workspace->id,
@@ -398,7 +410,8 @@ class MediosController extends Controller
             'tono_mencion' => $validated['tono_mencion'],
             'puntuacion_sentimiento' => (float) ($validated['puntuacion_sentimiento'] ?? 0),
             'es_tapa_o_principal' => $request->boolean('es_tapa_o_principal'),
-            'interacciones_en_redes_del_medio' => (int) ($validated['interacciones_en_redes_del_medio'] ?? 0),
+            'interacciones_en_redes_del_medio' => $totalInteracciones,
+            'reacciones_desglose' => $reacciones,
             'respuesta_replica_candidato' => $validated['respuesta_replica_candidato'] ?? null,
         ]);
 
@@ -428,11 +441,24 @@ class MediosController extends Controller
             'es_tapa_o_principal' => ['boolean'],
             'interacciones_en_redes_del_medio' => ['nullable', 'integer', 'min:0'],
             'respuesta_replica_candidato' => ['nullable', 'string'],
+            'reacciones_desglose' => ['nullable', 'array'],
+            'reacciones_desglose.likes' => ['nullable', 'integer', 'min:0'],
+            'reacciones_desglose.love' => ['nullable', 'integer', 'min:0'],
+            'reacciones_desglose.haha' => ['nullable', 'integer', 'min:0'],
+            'reacciones_desglose.wow' => ['nullable', 'integer', 'min:0'],
+            'reacciones_desglose.sad' => ['nullable', 'integer', 'min:0'],
+            'reacciones_desglose.angry' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        $reacciones = $request->input('reacciones_desglose');
+        $totalInteracciones = is_array($reacciones) && ! empty($reacciones)
+            ? array_sum(array_map('intval', $reacciones))
+            : (int) ($validated['interacciones_en_redes_del_medio'] ?? $nota->interacciones_en_redes_del_medio);
 
         $nota->update(array_merge($validated, [
             'es_tapa_o_principal' => $request->boolean('es_tapa_o_principal'),
-            'interacciones_en_redes_del_medio' => (int) ($validated['interacciones_en_redes_del_medio'] ?? 0),
+            'interacciones_en_redes_del_medio' => $totalInteracciones,
+            'reacciones_desglose' => $reacciones,
             'puntuacion_sentimiento' => (float) ($validated['puntuacion_sentimiento'] ?? 0),
         ]));
 

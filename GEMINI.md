@@ -58,6 +58,12 @@ La interfaz de **BrandingPo** combina la potencia analítica de una **Sala de Si
     - 🔖 **Guardados:** Ítem propio de auditoría interna y seguimiento de campaña (separado de las métricas públicas).
   - *Referencia extensible:* Este estándar de pesos e independencia de ítems internos servirá de matriz comparativa cuando se normalicen las demás redes (Facebook, TikTok, X, YouTube, LinkedIn).
 
+- **8. Monitoreo Social de Medios (Facebook Listening & Fast-Flow):**
+  - Al sincronizar medios con Fanpage oficial (`url_facebook`), se generan réplicas de debate social en Facebook para las notas que mencionan candidatos.
+  - Desglose y calibración de reacciones: 👍 `likes`, ❤️ `love`, 😂 `haha`, 😮 `wow`, 😢 `sad`, 😡 `angry`.
+  - El umbral de representatividad (5 medios) se oculta automáticamente al ser superado.
+  - Alerta roja inmediata si 😡 > 15% del total de reacciones de la publicación.
+
 ### C. Tipografía, Espaciado y Micro-interacciones
 - Tipografía moderna (Inter o system-ui sans-serif), números tabulares monoespaciados (`font-mono`) para métricas y moneda.
 - Transiciones fluidas (`transition-all duration-200`) y micro-animaciones al alternar temas y al interactuar con el feed.
@@ -84,3 +90,14 @@ Cada Sprint debe desarrollarse de forma representativa, atómica y completa bajo
 2. **Seeders Representativos:** Crear seeders con datos realistas (candidato propio, opositores, electos, notas de medios, pauta).
 3. **Testeo y Validación:** Comprobación funcional y validación de permisos por rol.
 4. **Git Commit & Push:** Cerrar el sprint con commit descriptivo y push al repositorio.
+
+---
+
+## 🔮 4. Próximos Sprints / Backlog de Futuras Implementaciones
+
+### A. Sincronizador Horario Autónomo (Radar Continuo de Medios & Redes)
+- **Frecuencia:** Cada 1 hora mediante scheduler de Laravel (`Schedule::command('medios:radar-horario')->hourly()`).
+- **Idempotencia:** No duplicar publicaciones ya monitoreadas (mantiene histórico limpio mediante matching por `url_nota`).
+- **Actualización Progresiva de Reacciones:** Para publicaciones de Facebook preexistentes, refrescar el recuento de reacciones para registrar la evolución temporal del humor social.
+- **Incorporación de Novedades:** Agregar automáticamente al feed las nuevas noticias publicadas en el último intervalo.
+- **Alerta Temprana de Crisis:** Disparar notificación de crisis al War Room si la indignación ciudadana (😡) de una nota supera el umbral del 15% entre chequeos horarios.

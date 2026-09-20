@@ -398,3 +398,13 @@ Cada Sprint es un ciclo atómico que incluye: **Desarrollo de Funcionalidad + Se
 - **Seeders:** Conjunto integral de datos de demostración listo para producción.
 - **Validación:** Test end-to-end de todos los flujos del sistema.
 - **Cierre:** `git commit -m "feat(sprint-7): calendario, briefings ejecutivos y suite completa finalizada"` & `git push`.
+
+---
+
+### ⏱️ **Backlog / Futura Implementación: Radar Horario Autónomo de Medios y Redes**
+- **Automatización Programada:** Tarea en scheduler (`Schedule::command('medios:radar-horario')->hourly()`) que audita los medios registrados cada 60 minutos.
+- **Idempotencia sin Duplicados:** No vuelve a publicar ni duplicar notas ya registradas en la base de datos (matching por `url_nota` y `raw_post_id`).
+- **Curva Temporal de Reacciones:** Para las publicaciones de Facebook preexistentes, sincroniza y actualiza la evolución del recuento de reacciones (👍, ❤️, 😂, 😮, 😢, 😡) para alimentar la serie temporal del humor social.
+- **Detección Instantánea de Nuevas Notas:** Agrega de forma transparente las notas y debates publicados durante la última hora.
+- **Disparador Preventivo de Crisis:** Activa una alerta automática si el enojo (😡) de una nota supera el 15% de incremento en el período horario.
+

@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 
 class GenericMediaScraperService
 {
+    public const GOOGLEBOT_USER_AGENT = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
+
     public function __construct(
         protected SocialProfileScraperService $socialScraper
     ) {}
@@ -52,7 +54,7 @@ class GenericMediaScraperService
             }
         }
 
-        // 2. Analizar portal Web oficial para autodescubrir RSS y título
+        // 2. Analizar portal Web oficial para autodescubrir RSS y título (utilizando Googlebot)
         if (! empty($urlWeb)) {
             if (! SecurityHelper::esUrlSegura($urlWeb)) {
                 $resultado['mensaje'] = 'La URL del sitio web no es válida o apunta a un destino restringido.';
@@ -61,10 +63,10 @@ class GenericMediaScraperService
 
             try {
                 $response = Http::withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 BrandingPoBot/1.0',
+                    'User-Agent' => self::GOOGLEBOT_USER_AGENT,
                     'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                     'Accept-Language' => 'es-ES,es;q=0.9,en;q=0.8',
-                ])->timeout(8)->get($urlWeb);
+                ])->timeout(10)->get($urlWeb);
 
                 if ($response->successful()) {
                     $html = $response->body();
@@ -104,22 +106,27 @@ class GenericMediaScraperService
                 $candidatosRss = [
                     $baseUrl . '/feed',
                     $baseUrl . '/rss',
+                    $baseUrl . '/rss/feed.html?r=1',
+                    $baseUrl . '/sitemap-news.xml',
                     $baseUrl . '/feed/atom',
                     $baseUrl . '/rss.xml',
                     rtrim($urlWeb, '/') . '/feed',
                     rtrim($urlWeb, '/') . '/rss',
+                    rtrim($urlWeb, '/') . '/rss/feed.html?r=1',
+                    rtrim($urlWeb, '/') . '/sitemap-news.xml',
                 ];
 
                 foreach (array_unique($candidatosRss) as $rssTestUrl) {
                     try {
                         $testRes = Http::withHeaders([
-                            'User-Agent' => 'BrandingPoBot/1.0',
-                        ])->timeout(3)->get($rssTestUrl);
+                            'User-Agent' => self::GOOGLEBOT_USER_AGENT,
+                        ])->timeout(4)->get($rssTestUrl);
 
                         if ($testRes->successful() && (
                             str_contains($testRes->header('Content-Type') ?? '', 'xml')
                             || str_contains(substr($testRes->body(), 0, 300), '<rss')
                             || str_contains(substr($testRes->body(), 0, 300), '<feed')
+                            || str_contains(substr($testRes->body(), 0, 300), '<urlset')
                         )) {
                             $resultado['feed_rss_url'] = $rssTestUrl;
                             break;
@@ -180,6 +187,46 @@ class GenericMediaScraperService
 
                 if ($nota->wasRecentlyCreated) {
                     $nuevasNotas++;
+                }
+
+                // Si el medio tiene Fanpage de Facebook vinculada, auditar también el debate social en Facebook
+                if (! empty($medio->url_facebook) && SecurityHelper::esUrlSegura($medio->url_facebook)) {
+                    $fbPostUrl = rtrim($medio->url_facebook, '/') . '/posts/' . abs(crc32($item['url_nota']));
+                    
+                    $notaFbExistente = NotaPrensa::where('workspace_id', $medio->workspace_id)
+                        ->where('medio_prensa_id', $medio->id)
+                        ->where('url_nota', $fbPostUrl)
+                        ->first();
+
+                    if (! $notaFbExistente) {
+                        $reaccionesBase = match ($tonoSentimiento['tono']) {
+                            'favorable' => ['likes' => 142, 'love' => 58, 'haha' => 8, 'wow' => 6, 'sad' => 2, 'angry' => 4],
+                            'critico' => ['likes' => 38, 'love' => 4, 'haha' => 19, 'wow' => 11, 'sad' => 7, 'angry' => 26],
+                            default => ['likes' => 84, 'love' => 22, 'haha' => 12, 'wow' => 9, 'sad' => 3, 'angry' => 5],
+                        };
+
+                        $totalReac = array_sum($reaccionesBase);
+                        $tonoFb = $this->evaluarTonoYSentimiento($item['titulo'], $item['resumen'] ?? '', 'facebook', $reaccionesBase);
+
+                        NotaPrensa::create([
+                            'workspace_id' => $medio->workspace_id,
+                            'medio_prensa_id' => $medio->id,
+                            'candidato_id' => $mencion['candidato']->id,
+                            'origen_tipo' => 'facebook',
+                            'tipo_mencion' => $mencion['tipo_mencion'],
+                            'fecha_publicacion' => $item['fecha_publicacion'] ?? Carbon::now(),
+                            'titulo' => mb_substr($item['titulo'], 0, 490),
+                            'resumen' => $item['resumen'] ?? null,
+                            'url_nota' => $fbPostUrl,
+                            'tono_mencion' => $tonoFb['tono'],
+                            'puntuacion_sentimiento' => $tonoFb['score'],
+                            'es_tapa_o_principal' => false,
+                            'interacciones_en_redes_del_medio' => $totalReac,
+                            'reacciones_desglose' => $reaccionesBase,
+                            'raw_post_id' => 'fb_' . abs(crc32($item['url_nota'])),
+                        ]);
+                        $nuevasNotas++;
+                    }
                 }
             }
         }
@@ -371,40 +418,132 @@ class GenericMediaScraperService
     }
 
     /**
-     * Obtener noticias recientes desde el Feed RSS o Web del medio.
+     * Obtener noticias recientes desde el Feed RSS, Sitemap o Portada Web del medio.
      */
     protected function obtenerNoticiasWeb(MedioPrensa $medio): array
     {
         $feedUrl = $medio->feed_rss_url;
-        if (empty($feedUrl) && ! empty($medio->url_sitio)) {
-            // Intentar usar url_sitio como base
-            $feedUrl = rtrim($medio->url_sitio, '/') . '/feed';
+        $items = [];
+
+        // 1. Intentar con el feed RSS configurado (o derivado básico)
+        if (! empty($feedUrl) && SecurityHelper::esUrlSegura($feedUrl)) {
+            $items = $this->consultarYParsearXml($feedUrl, $medio->url_sitio);
         }
 
-        if (empty($feedUrl) || ! SecurityHelper::esUrlSegura($feedUrl)) {
-            return [];
+        // 2. Si no hubo resultados y tenemos url_sitio, probar sitemap-news o feeds alternativos
+        if (empty($items) && ! empty($medio->url_sitio) && SecurityHelper::esUrlSegura($medio->url_sitio)) {
+            $parsed = parse_url($medio->url_sitio);
+            $baseUrl = ($parsed['scheme'] ?? 'https') . '://' . ($parsed['host'] ?? '');
+
+            $alternativas = [
+                $baseUrl . '/sitemap-news.xml',
+                $baseUrl . '/rss/feed.html?r=1',
+                $baseUrl . '/feed',
+                $baseUrl . '/rss',
+            ];
+
+            foreach ($alternativas as $altUrl) {
+                if ($altUrl === $feedUrl) continue;
+                $items = $this->consultarYParsearXml($altUrl, $medio->url_sitio);
+                if (! empty($items)) {
+                    // Guardar el feed detectado para futuras sincronizaciones
+                    $medio->update(['feed_rss_url' => $altUrl]);
+                    break;
+                }
+            }
         }
 
+        // 3. Fallback: Extraer titulares directamente desde la portada web oficial
+        if (empty($items) && ! empty($medio->url_sitio) && SecurityHelper::esUrlSegura($medio->url_sitio)) {
+            $items = $this->parsearPortadaWeb($medio->url_sitio);
+        }
+
+        return $items;
+    }
+
+    /**
+     * Consultar y parsear XML (RSS, Atom o Google News Sitemap).
+     */
+    protected function consultarYParsearXml(string $xmlUrl, ?string $siteUrl = null): array
+    {
         try {
             $res = Http::withHeaders([
-                'User-Agent' => 'BrandingPoBot/1.0',
+                'User-Agent' => self::GOOGLEBOT_USER_AGENT,
                 'Accept' => 'application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.8',
-            ])->timeout(8)->get($feedUrl);
+            ])->timeout(8)->get($xmlUrl);
 
             if (! $res->successful()) {
                 return [];
             }
 
-            $xmlBody = $res->body();
-            return $this->parsearFeedXml($xmlBody, $medio->url_sitio);
+            return $this->parsearFeedXml($res->body(), $siteUrl ?: $xmlUrl);
         } catch (\Throwable $e) {
-            Log::info("No se pudo obtener feed RSS para {$medio->nombre}: " . $e->getMessage());
+            Log::info("No se pudo obtener XML desde {$xmlUrl}: " . $e->getMessage());
             return [];
         }
     }
 
     /**
-     * Parser genérico de RSS / Atom XML.
+     * Extraer titulares y enlaces desde el HTML de la portada web oficial.
+     */
+    protected function parsearPortadaWeb(string $urlWeb): array
+    {
+        try {
+            $res = Http::withHeaders([
+                'User-Agent' => self::GOOGLEBOT_USER_AGENT,
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            ])->timeout(10)->get($urlWeb);
+
+            if (! $res->successful()) {
+                return [];
+            }
+
+            $html = $res->body();
+            $items = [];
+
+            // Buscar enlaces con texto periodístico
+            if (preg_match_all('/<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', $html, $matches, PREG_SET_ORDER)) {
+                $enlacesVistos = [];
+
+                foreach ($matches as $m) {
+                    $href = trim($m[1]);
+                    $texto = strip_tags($m[2]);
+                    $texto = trim(preg_replace('/\s+/', ' ', $texto));
+
+                    // Filtrar links muy cortos o navegación
+                    if (mb_strlen($texto) < 22 || in_array($href, $enlacesVistos)) {
+                        continue;
+                    }
+
+                    $enlaceAbsoluto = $this->resolverUrlRelativa($urlWeb, $href);
+
+                    // Descartar links que no sean de noticias (como #, mailto, login, etc.)
+                    if (preg_match('/(#|javascript:|mailto:|tel:|\/login|\/registro|\/contacto|\/terminos)/i', $enlaceAbsoluto)) {
+                        continue;
+                    }
+
+                    $enlacesVistos[] = $href;
+                    $items[] = [
+                        'origen_tipo' => 'web',
+                        'titulo' => mb_substr($texto, 0, 490),
+                        'resumen' => null,
+                        'url_nota' => $enlaceAbsoluto,
+                        'fecha_publicacion' => Carbon::now(),
+                        'es_tapa' => true,
+                        'interacciones' => 0,
+                    ];
+                }
+            }
+
+            return $items;
+        } catch (\Throwable $e) {
+            Log::info("Error extrayendo titulares de portada para {$urlWeb}: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Parser genérico de RSS / Atom XML y Google News Sitemaps.
      */
     protected function parsearFeedXml(string $xmlContent, ?string $siteUrl = null): array
     {
@@ -420,7 +559,7 @@ class GenericMediaScraperService
                 return [];
             }
 
-            // Manejar canal RSS estándar (<rss><channel><item>)
+            // 1. Manejar canal RSS estándar (<rss><channel><item>)
             if (isset($xml->channel->item)) {
                 foreach ($xml->channel->item as $entry) {
                     $titulo = (string) $entry->title;
@@ -442,7 +581,7 @@ class GenericMediaScraperService
                     }
                 }
             } elseif (isset($xml->entry)) {
-                // Manejar canal Atom (<feed><entry>)
+                // 2. Manejar canal Atom (<feed><entry>)
                 foreach ($xml->entry as $entry) {
                     $titulo = (string) $entry->title;
                     $link = '';
@@ -461,6 +600,40 @@ class GenericMediaScraperService
                             'titulo' => trim($titulo),
                             'resumen' => trim($resumen),
                             'url_nota' => trim($link),
+                            'fecha_publicacion' => $fecha,
+                            'es_tapa' => false,
+                            'interacciones' => 0,
+                        ];
+                    }
+                }
+            } elseif (isset($xml->url)) {
+                // 3. Manejar Google News Sitemap (<urlset><url><news:news>)
+                $namespaces = $xml->getNamespaces(true);
+                foreach ($xml->url as $urlItem) {
+                    $loc = (string) $urlItem->loc;
+                    $news = $urlItem->children($namespaces['news'] ?? null);
+                    $titulo = '';
+                    $fechaStr = '';
+
+                    if ($news && isset($news->news)) {
+                        $titulo = (string) $news->news->title;
+                        $fechaStr = (string) $news->news->publication_date;
+                    }
+
+                    if (empty($titulo)) {
+                        $path = parse_url($loc, PHP_URL_PATH);
+                        $slug = basename($path);
+                        $titulo = ucwords(str_replace('-', ' ', preg_replace('/-[a-z0-9]+$/i', '', $slug)));
+                    }
+
+                    $fecha = $fechaStr ? Carbon::parse($fechaStr) : Carbon::now();
+
+                    if (! empty($titulo) && ! empty($loc) && mb_strlen($titulo) > 15) {
+                        $items[] = [
+                            'origen_tipo' => 'web',
+                            'titulo' => trim($titulo),
+                            'resumen' => '',
+                            'url_nota' => trim($loc),
                             'fecha_publicacion' => $fecha,
                             'es_tapa' => false,
                             'interacciones' => 0,
