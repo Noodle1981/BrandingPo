@@ -18,7 +18,6 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             PoliticaSeeder::class,
             PublicacionSeeder::class,
-            MediosAndCrisisSeeder::class,
             CalendarioAndBriefingSeeder::class,
         ]);
     }

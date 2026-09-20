@@ -16,6 +16,8 @@ class NotaPrensa extends Model
         'workspace_id',
         'medio_prensa_id',
         'candidato_id',
+        'origen_tipo',
+        'tipo_mencion',
         'fecha_publicacion',
         'titulo',
         'url_nota',
@@ -23,6 +25,9 @@ class NotaPrensa extends Model
         'tono_mencion',
         'es_tapa_o_principal',
         'interacciones_en_redes_del_medio',
+        'reacciones_desglose',
+        'puntuacion_sentimiento',
+        'raw_post_id',
         'respuesta_replica_candidato',
     ];
 
@@ -30,6 +35,8 @@ class NotaPrensa extends Model
         'fecha_publicacion' => 'date',
         'es_tapa_o_principal' => 'boolean',
         'interacciones_en_redes_del_medio' => 'integer',
+        'reacciones_desglose' => 'array',
+        'puntuacion_sentimiento' => 'float',
     ];
 
     public function workspace(): BelongsTo

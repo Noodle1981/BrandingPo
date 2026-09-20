@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Candidato;
 use App\Models\CicloCampana;
 use App\Models\EjeTematico;
-use App\Models\MedioPrensa;
 use App\Models\PerfilSocial;
 use App\Models\Territorio;
 use App\Models\User;
@@ -323,62 +322,7 @@ class CleanCampanaBaseSeeder extends Seeder
         }
 
         // ─────────────────────────────────────────────────────────
-        // 6. MEDIOS DE PRENSA LOCALES (Para Observatorio y Clipping)
-        // ─────────────────────────────────────────────────────────
-        $medios = [
-            [
-                'nombre' => 'Diario de Cuyo',
-                'tipo_medio' => 'digital',
-                'alcance_tipo' => 'provincial',
-                'sesgo_editorial_estimado' => 'independiente',
-                'url_sitio' => 'https://www.diariodecuyo.com.ar',
-            ],
-            [
-                'nombre' => 'Tiempo de San Juan',
-                'tipo_medio' => 'digital',
-                'alcance_tipo' => 'provincial',
-                'sesgo_editorial_estimado' => 'independiente',
-                'url_sitio' => 'https://www.tiempodesanjuan.com',
-            ],
-            [
-                'nombre' => 'Telesol Diario',
-                'tipo_medio' => 'tv',
-                'alcance_tipo' => 'provincial',
-                'sesgo_editorial_estimado' => 'independiente',
-                'url_sitio' => 'https://telesoldiario.com',
-            ],
-            [
-                'nombre' => 'Radio Sarmiento (AM 1120 / FM 104.7)',
-                'tipo_medio' => 'radio',
-                'alcance_tipo' => 'provincial',
-                'sesgo_editorial_estimado' => 'independiente',
-                'url_sitio' => 'https://www.sarmiento.com.ar',
-            ],
-            [
-                'nombre' => 'Canal 13 San Juan TV',
-                'tipo_medio' => 'tv',
-                'alcance_tipo' => 'provincial',
-                'sesgo_editorial_estimado' => 'independiente',
-                'url_sitio' => 'https://www.canal13sanjuan.com',
-            ],
-            [
-                'nombre' => 'Huarpe Digital',
-                'tipo_medio' => 'digital',
-                'alcance_tipo' => 'provincial',
-                'sesgo_editorial_estimado' => 'independiente',
-                'url_sitio' => 'https://www.diariohuarpe.com',
-            ],
-        ];
-
-        foreach ($medios as $m) {
-            MedioPrensa::updateOrCreate(
-                ['nombre' => $m['nombre'], 'workspace_id' => $workspace->id],
-                $m
-            );
-        }
-
-        // ─────────────────────────────────────────────────────────
-        // 7. CANDIDATO PROPIO (Base en Blanco — Listo para Punto Cero)
+        // 6. CANDIDATO PROPIO (Base en Blanco — Listo para Punto Cero)
         // ─────────────────────────────────────────────────────────
         $propio = Candidato::updateOrCreate(
             [

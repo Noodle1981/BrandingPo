@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Candidato;
 use App\Models\User;
 use App\Services\AdsImpactPredictorService;
-use Database\Seeders\MediosAndCrisisSeeder;
 use Database\Seeders\PoliticaSeeder;
 use Database\Seeders\PublicacionSeeder;
 use Database\Seeders\UserSeeder;
@@ -23,7 +22,6 @@ class AnalyticsAndPredictorTest extends TestCase
             UserSeeder::class,
             PoliticaSeeder::class,
             PublicacionSeeder::class,
-            MediosAndCrisisSeeder::class,
         ]);
     }
 

@@ -19,8 +19,18 @@ class MedioPrensa extends Model
         'nombre',
         'tipo_medio',
         'url_sitio',
+        'url_facebook',
+        'avatar_url',
+        'feed_rss_url',
+        'configuracion_scraping',
+        'ultima_sincronizacion_at',
         'alcance_tipo',
         'sesgo_editorial_estimado',
+    ];
+
+    protected $casts = [
+        'configuracion_scraping' => 'array',
+        'ultima_sincronizacion_at' => 'datetime',
     ];
 
     public function workspace(): BelongsTo

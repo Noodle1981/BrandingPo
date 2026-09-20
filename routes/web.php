@@ -88,7 +88,19 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
     // Observatorio de Medios & Clipping
     Route::get('/medios', [MediosController::class, 'index'])->name('medios.index');
     Route::middleware(['can_write'])->group(function () {
+        // Gestión de Medios (CRUD)
+        Route::post('/medios', [MediosController::class, 'storeMedio'])->name('medios.store');
+        Route::put('/medios/{medio}', [MediosController::class, 'updateMedio'])->name('medios.update');
+        Route::delete('/medios/{medio}', [MediosController::class, 'destroyMedio'])->name('medios.destroy');
+
+        // Autodescubrimiento y Sincronismo de Menciones
+        Route::post('/medios/detectar-fuentes', [MediosController::class, 'detectarFuentes'])->name('medios.detectar-fuentes');
+        Route::post('/medios/{medio}/sincronizar', [MediosController::class, 'sincronizarMedio'])->name('medios.sincronizar');
+        Route::post('/medios/sincronizar-todos', [MediosController::class, 'sincronizarTodos'])->name('medios.sincronizar-todos');
+
+        // Clipping de Notas
         Route::post('/medios/clipping', [MediosController::class, 'storeNota'])->name('medios.clipping.store');
+        Route::put('/medios/clipping/{nota}', [MediosController::class, 'updateNota'])->name('medios.clipping.update');
         Route::delete('/medios/clipping/{nota}', [MediosController::class, 'destroyNota'])->name('medios.clipping.destroy');
     });
 

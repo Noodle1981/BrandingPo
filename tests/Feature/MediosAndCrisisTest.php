@@ -5,8 +5,9 @@ namespace Tests\Feature;
 use App\Models\Candidato;
 use App\Models\EventoCrisis;
 use App\Models\MedioPrensa;
+use App\Models\NotaPrensa;
 use App\Models\User;
-use Database\Seeders\MediosAndCrisisSeeder;
+use App\Models\Workspace;
 use Database\Seeders\PoliticaSeeder;
 use Database\Seeders\PublicacionSeeder;
 use Database\Seeders\UserSeeder;
@@ -24,7 +25,33 @@ class MediosAndCrisisTest extends TestCase
             UserSeeder::class,
             PoliticaSeeder::class,
             PublicacionSeeder::class,
-            MediosAndCrisisSeeder::class,
+        ]);
+
+        $workspace = Workspace::first();
+        $candidato = Candidato::first();
+
+        $medio = MedioPrensa::create([
+            'workspace_id' => $workspace?->id,
+            'nombre' => 'Diario Test Local',
+            'tipo_medio' => 'digital',
+            'sesgo_editorial_estimado' => 'independiente',
+        ]);
+
+        NotaPrensa::create([
+            'workspace_id' => $workspace?->id,
+            'medio_prensa_id' => $medio->id,
+            'candidato_id' => $candidato?->id,
+            'fecha_publicacion' => now(),
+            'titulo' => 'Nota Test Favorable',
+            'tono_mencion' => 'favorable',
+        ]);
+
+        EventoCrisis::create([
+            'candidato_id' => $candidato?->id,
+            'titulo' => 'Crisis Test Crítica',
+            'fecha_evento' => now(),
+            'nivel_gravedad' => 'critico',
+            'estado' => 'activo',
         ]);
     }
 
@@ -36,7 +63,7 @@ class MediosAndCrisisTest extends TestCase
         $response->assertStatus(200);
 
         $this->assertDatabaseHas('medios_prensa', [
-            'nombre' => 'La Voz del Interior',
+            'nombre' => 'Diario Test Local',
         ]);
 
         $this->assertDatabaseHas('notas_prensa', [

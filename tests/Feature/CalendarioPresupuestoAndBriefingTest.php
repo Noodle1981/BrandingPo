@@ -6,7 +6,6 @@ use App\Models\CicloCampana;
 use App\Models\InformeEjecutivo;
 use App\Models\User;
 use Database\Seeders\CalendarioAndBriefingSeeder;
-use Database\Seeders\MediosAndCrisisSeeder;
 use Database\Seeders\PoliticaSeeder;
 use Database\Seeders\PublicacionSeeder;
 use Database\Seeders\UserSeeder;
@@ -24,7 +23,6 @@ class CalendarioPresupuestoAndBriefingTest extends TestCase
             UserSeeder::class,
             PoliticaSeeder::class,
             PublicacionSeeder::class,
-            MediosAndCrisisSeeder::class,
             CalendarioAndBriefingSeeder::class,
         ]);
     }
