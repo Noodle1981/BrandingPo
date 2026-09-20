@@ -194,6 +194,18 @@ class CandidatoController extends Controller
             $candidato->load(['perfilesSociales', 'territorio', 'cicloCampana']);
         }
 
+        return Inertia::render('Candidatos/MiPerfil', $this->prepararPayloadDetalleCandidato($candidato, $request));
+    }
+
+    /**
+     * Preparar payload homogéneo para la ficha de detalle (Candidato Propio o Rival Opositor).
+     * Garantiza paridad analítica total: canales, Punto Cero, Tiers, padrón, feed y ejes.
+     */
+    private function prepararPayloadDetalleCandidato(Candidato $candidato, Request $request): array
+    {
+        $workspace = WorkspaceHelper::activo($request);
+        $candidato->loadMissing(['perfilesSociales', 'territorio', 'cicloCampana']);
+
         // Plataformas estándar a auditar
         $plataformasEstandar = [
             'instagram' => ['nombre' => 'Instagram', 'formato_default' => 'Reel'],
@@ -205,7 +217,7 @@ class CandidatoController extends Controller
             'linkedin' => ['nombre' => 'LinkedIn', 'formato_default' => 'Artículo'],
         ];
 
-        // Mapear cada plataforma asegurando que exista en la vista (con semáforo de 4 estados: Verde=Activa, Rojo=Inactiva, Gris=Sin Uso/Configurar, Azul=Verificada)
+        // Mapear cada plataforma asegurando que exista en la vista (con semáforo de 4 estados: Azul, Verde, Rojo, Gris)
         $redesMapeadas = collect($plataformasEstandar)->map(function ($info, $key) use ($candidato) {
             $perfil = $candidato->perfilesSociales->firstWhere('plataforma', $key);
 
@@ -251,6 +263,7 @@ class CandidatoController extends Controller
                 'key' => $key,
                 'nombre' => $info['nombre'],
                 'color_estado' => $colorEstado,
+                'estado_texto' => $estadoTexto,
                 'perfil_id' => $perfil?->id,
                 'existe' => (bool) $perfil,
                 'esta_activo' => $estaActivo,
@@ -306,7 +319,7 @@ class CandidatoController extends Controller
                         'nombre_completo' => $candidato->nombre_completo,
                         'partido_coalicion' => $candidato->partido_coalicion,
                         'estado_politico' => $candidato->estado_politico,
-                        'es_propio' => true,
+                        'es_propio' => (bool) $candidato->es_propio,
                         'color_hex' => $candidato->color_hex,
                         'avatar_url' => $candidato->avatar_url,
                     ],
@@ -436,20 +449,21 @@ class CandidatoController extends Controller
             $seguidoresNetosEstimados = $totalSeguidoresBruto;
         }
 
-        $padronElectoral = (int) ($candidato->territorio?->padron_electoral ?? 0);
+        $padronElectoral = (int) ($candidato->territorio?->padron_electoral ?: ($candidato->padron_electoral ?? 0));
         $penetracionNetaPct = $padronElectoral > 0 ? round(($seguidoresNetosEstimados / $padronElectoral) * 100, 1) : 0;
         $penetracionBrutaPct = $padronElectoral > 0 ? round(($totalSeguidoresBruto / $padronElectoral) * 100, 1) : 0;
 
-        return Inertia::render('Candidatos/MiPerfil', [
+        return [
             'candidato' => [
                 'id' => $candidato->id,
                 'nombre_completo' => $candidato->nombre_completo,
                 'partido_coalicion' => $candidato->partido_coalicion,
                 'cargo_aspirado' => $candidato->cargo_aspirado,
                 'estado_politico' => $candidato->estado_politico,
-                'color_hex' => $candidato->color_hex,
+                'color_hex' => $candidato->color_hex ?? ($candidato->es_propio ? '#06b6d4' : '#8b5cf6'),
                 'avatar_url' => $candidato->avatar_url,
                 'bio_resumen' => $candidato->bio_resumen,
+                'es_propio' => (bool) $candidato->es_propio,
                 'ciclo_campana_id' => $candidato->ciclo_campana_id,
                 'territorio_id' => $candidato->territorio_id,
                 'territorio' => $candidato->territorio,
@@ -460,13 +474,22 @@ class CandidatoController extends Controller
                 'penetracion_bruta_pct' => $penetracionBrutaPct,
                 'tiers_desglose' => $tiersDesglose,
                 'total_publicaciones' => $candidato->perfilesSociales->where('esta_activo', true)->sum('publicaciones_totales'),
+                'perfiles_count' => $candidato->perfilesSociales->count(),
+                'perfiles' => $candidato->perfilesSociales->map(fn ($p) => [
+                    'id' => $p->id,
+                    'plataforma' => $p->plataforma,
+                    'handle_usuario' => $p->handle_usuario,
+                    'seguidores_actuales' => $p->seguidores_actuales,
+                    'esta_verificado' => $p->esta_verificado,
+                    'esta_activo' => $p->esta_activo,
+                ]),
             ],
             'redes' => $redesMapeadas,
             'ciclos' => $ciclos,
             'territorios' => $territorios,
             'publicaciones' => $publicaciones,
             'ejes' => $ejes,
-        ]);
+        ];
     }
 
     /**
@@ -787,115 +810,7 @@ class CandidatoController extends Controller
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($candidato, $workspace);
 
-        $candidato->load(['cicloCampana', 'territorio', 'perfilesSociales']);
-
-        $plataformasEstandar = [
-            'instagram' => ['nombre' => 'Instagram', 'formato_default' => 'Reel'],
-            'facebook' => ['nombre' => 'Facebook', 'formato_default' => 'Post/Foto'],
-            'threads' => ['nombre' => 'Threads', 'formato_default' => 'Post'],
-            'tiktok' => ['nombre' => 'TikTok', 'formato_default' => 'Video Corto'],
-            'x_twitter' => ['nombre' => 'X (Twitter)', 'formato_default' => 'Tweet'],
-            'youtube' => ['nombre' => 'YouTube', 'formato_default' => 'Video/Shorts'],
-            'linkedin' => ['nombre' => 'LinkedIn', 'formato_default' => 'Artículo'],
-        ];
-
-        $redesMapeadas = collect($plataformasEstandar)->map(function ($info, $key) use ($candidato) {
-            $perfil = $candidato->perfilesSociales->firstWhere('plataforma', $key);
-
-            $existe = (bool) $perfil && ! empty($perfil->handle_usuario);
-            $estaActivo = $perfil ? (bool) $perfil->esta_activo : false;
-            $estaVerificado = $perfil ? (bool) $perfil->esta_verificado : false;
-
-            if (! $existe) {
-                // ⚪ Sin uso / No configurada (Gris)
-                $colorEstado = 'gris';
-            } elseif ($estaVerificado) {
-                // 🔵 Certificada / Verificada (Azul)
-                $colorEstado = 'azul';
-            } elseif ($estaActivo) {
-                // 🟢 Activa con movimiento de campaña (Verde)
-                $colorEstado = 'verde';
-            } else {
-                // 🔴 Inactiva / Sin movimiento (Rojo)
-                $colorEstado = 'rojo';
-            }
-
-            $seguidoresActuales = $perfil ? (int) $perfil->seguidores_actuales : 0;
-            $seguidoresBaseline = $perfil ? (int) $perfil->seguidores_punto_cero : 0;
-            $crecimientoSeguidores = $seguidoresActuales - $seguidoresBaseline;
-
-            $postsActuales = $perfil ? (int) $perfil->publicaciones_totales : 0;
-            $postsBaseline = $perfil ? (int) $perfil->publicaciones_punto_cero : 0;
-            $crecimientoPosts = $postsActuales - $postsBaseline;
-
-            $meGustaActuales = $perfil ? (int) $perfil->me_gusta_totales : 0;
-            $meGustaBaseline = $perfil ? (int) $perfil->me_gusta_punto_cero : 0;
-            $crecimientoMeGusta = $meGustaActuales - $meGustaBaseline;
-
-            $viewsActuales = $perfil ? (int) $perfil->visualizaciones_totales : 0;
-            $viewsBaseline = $perfil ? (int) $perfil->visualizaciones_punto_cero : 0;
-            $crecimientoViews = $viewsActuales - $viewsBaseline;
-
-            return [
-                'key' => $key,
-                'nombre' => $info['nombre'],
-                'color_estado' => $colorEstado,
-                'perfil_id' => $perfil?->id,
-                'existe' => (bool) $perfil,
-                'esta_activo' => $estaActivo,
-                'esta_verificado' => $estaVerificado,
-                'handle_usuario' => $perfil?->handle_usuario ?? '',
-                'url_perfil' => $perfil?->url_perfil ?? '',
-                'foto_perfil_url' => $perfil?->foto_perfil_url,
-                'seguidores_actuales' => $seguidoresActuales,
-                'seguidos_actuales' => $perfil ? (int) $perfil->seguidos_actuales : 0,
-                'publicaciones_totales' => $postsActuales,
-                'me_gusta_totales' => $meGustaActuales,
-                'visualizaciones_totales' => $viewsActuales,
-                // Punto Cero (Baseline Inicial)
-                'fecha_punto_cero' => $perfil?->fecha_punto_cero ? $perfil->fecha_punto_cero->format('Y-m-d') : date('Y-m-d'),
-                'seguidores_punto_cero' => $seguidoresBaseline,
-                'seguidos_punto_cero' => $perfil ? (int) $perfil->seguidos_punto_cero : 0,
-                'publicaciones_punto_cero' => $postsBaseline,
-                'me_gusta_punto_cero' => $meGustaBaseline,
-                'visualizaciones_punto_cero' => $viewsBaseline,
-                'notas_punto_cero' => $perfil?->notas_punto_cero ?? '',
-                'crecimiento_neto_seguidores' => $crecimientoSeguidores,
-                'crecimiento_neto_posts' => $crecimientoPosts,
-                'crecimiento_neto_me_gusta' => $crecimientoMeGusta,
-                'crecimiento_neto_visualizaciones' => $crecimientoViews,
-            ];
-        })->values();
-
-        $ciclos = CicloCampana::where('workspace_id', $workspace->id)
-            ->orderByDesc('anio')
-            ->get(['id', 'anio', 'nombre', 'es_activo']);
-
-        $territorios = Territorio::where('workspace_id', $workspace->id)
-            ->orderBy('nombre')
-            ->get(['id', 'nombre', 'tipo', 'poblacion_total', 'padron_electoral']);
-
-        return Inertia::render('Candidatos/Show', [
-            'candidato' => [
-                'id' => $candidato->id,
-                'nombre_completo' => $candidato->nombre_completo,
-                'partido_coalicion' => $candidato->partido_coalicion,
-                'cargo_aspirado' => $candidato->cargo_aspirado,
-                'estado_politico' => $candidato->estado_politico,
-                'color_hex' => $candidato->color_hex,
-                'es_propio' => $candidato->es_propio,
-                'avatar_url' => $candidato->avatar_url,
-                'bio_resumen' => $candidato->bio_resumen,
-                'ciclo_campana_id' => $candidato->ciclo_campana_id,
-                'territorio_id' => $candidato->territorio_id,
-                'territorio' => $candidato->territorio,
-                'total_seguidores' => $candidato->perfilesSociales->where('esta_activo', true)->sum('seguidores_actuales'),
-                'total_publicaciones' => $candidato->perfilesSociales->where('esta_activo', true)->sum('publicaciones_totales'),
-            ],
-            'redes' => $redesMapeadas,
-            'ciclos' => $ciclos,
-            'territorios' => $territorios,
-        ]);
+        return Inertia::render('Candidatos/Show', $this->prepararPayloadDetalleCandidato($candidato, $request));
     }
 
     /**
