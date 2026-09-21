@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, usePage, router } from '@inertiajs/vue3';
 import {
   ExternalLink,
   Settings,
@@ -8,7 +8,8 @@ import {
   Zap,
   BarChart3,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  X
 } from '@lucide/vue';
 import { tabBadgeStyle } from '../../Utils/socialConstants';
 
@@ -33,16 +34,52 @@ const page = usePage();
 const canWrite = computed(() => page.props.auth?.user?.can_write ?? true);
 const esPropio = computed(() => props.tema === 'propio' || props.candidato?.es_propio);
 
-const isSyncing = ref(false);
-const syncMessage = ref('');
+const isSyncModalOpen = ref(false);
+const isSyncingCanal = ref(false);
+const syncProgress = ref({
+  current: 0,
+  total: 0,
+  percent: 10,
+  currentUrl: '',
+  isFinished: false,
+  totalNewLikes: 0,
+  totalNewComments: 0,
+  seguidoresInfo: '',
+});
+const syncLogs = ref([]);
+let progressInterval = null;
+
 const isRefreshing = ref(false);
 const refreshMessage = ref('');
 
-// Sincronización Maestra (Seguidores + Posts activos ventana <=15 días)
+// Sincronización Maestra (Seguidores + Posts activos ventana <=15 días con Modal de Progreso)
 const sincronizarCanal = async () => {
-  if (!props.red.perfil_id) return;
-  isSyncing.value = true;
-  syncMessage.value = 'Sincronizando canal y publicaciones activas...';
+  if (!props.red.perfil_id || isSyncingCanal.value) return;
+
+  isSyncModalOpen.value = true;
+  isSyncingCanal.value = true;
+  syncProgress.value = {
+    current: 0,
+    total: 0,
+    percent: 15,
+    currentUrl: 'Conectando con la red social y auditando seguidores...',
+    isFinished: false,
+    totalNewLikes: 0,
+    totalNewComments: 0,
+    seguidoresInfo: 'Auditando seguidores del canal en vivo...',
+  };
+  syncLogs.value = [];
+
+  // Simulación de avance visual fluido mientras el servidor procesa las publicaciones
+  if (progressInterval) clearInterval(progressInterval);
+  progressInterval = setInterval(() => {
+    if (syncProgress.value.percent < 85) {
+      syncProgress.value.percent += 5;
+      if (syncProgress.value.percent > 30 && syncProgress.value.currentUrl.includes('seguidores')) {
+        syncProgress.value.currentUrl = 'Escaneando publicaciones en ventana activa (≤ 15 días)...';
+      }
+    }
+  }, 400);
 
   try {
     const response = await fetch(`/perfiles-sociales/${props.red.perfil_id}/sincronizar-canal`, {
@@ -53,27 +90,47 @@ const sincronizarCanal = async () => {
         'Accept': 'application/json',
       },
     });
+
     const data = await response.json();
+    if (progressInterval) clearInterval(progressInterval);
+
     if (data.success) {
-      syncMessage.value = `¡Sincronización completada! ${data.mensaje_seguidores || ''} (${data.posts_actualizados || 0} posts actualizados).`;
-      setTimeout(() => {
-        window.location.reload();
-      }, 1200);
+      syncProgress.value.percent = 100;
+      syncProgress.value.current = data.posts_actualizados || 0;
+      syncProgress.value.total = data.posts_total || 0;
+      syncProgress.value.seguidoresInfo = data.mensaje_seguidores || 'Seguidores actualizados correctamente';
+      syncProgress.value.totalNewLikes = data.nuevos_likes || 0;
+      syncProgress.value.totalNewComments = data.nuevos_comentarios || 0;
+      syncLogs.value = data.logs || [];
+      syncProgress.value.currentUrl = '';
+      syncProgress.value.isFinished = true;
     } else {
-      syncMessage.value = data.mensaje || 'Hubo un inconveniente al sincronizar.';
+      syncProgress.value.seguidoresInfo = data.mensaje || 'Hubo un inconveniente al sincronizar.';
+      syncProgress.value.currentUrl = '';
+      syncProgress.value.isFinished = true;
     }
   } catch (e) {
-    syncMessage.value = 'Error al comunicarse con el servidor.';
+    if (progressInterval) clearInterval(progressInterval);
+    syncProgress.value.seguidoresInfo = 'Error al comunicarse con el servidor.';
+    syncProgress.value.currentUrl = '';
+    syncProgress.value.isFinished = true;
   } finally {
-    isSyncing.value = false;
+    isSyncingCanal.value = false;
   }
 };
 
-// Re-auditar en vivo
+const cerrarSyncModal = () => {
+  isSyncModalOpen.value = false;
+  if (syncProgress.value.isFinished) {
+    router.reload({ preserveScroll: true });
+  }
+};
+
+// Re-auditar en vivo (únicamente seguidores y datos de cabecera del canal)
 const reauditarCanal = async () => {
-  if (!props.red.perfil_id) return;
+  if (!props.red.perfil_id || isRefreshing.value) return;
   isRefreshing.value = true;
-  refreshMessage.value = 'Re-escaneando métricas en vivo...';
+  refreshMessage.value = 'Re-escaneando seguidores en vivo...';
 
   try {
     const response = await fetch(`/perfiles-sociales/${props.red.perfil_id}/refrescar`, {
@@ -87,9 +144,15 @@ const reauditarCanal = async () => {
     const data = await response.json();
     if (data.success) {
       refreshMessage.value = data.mensaje || '¡Canal re-auditado con éxito!';
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      // Refresco reactivo mediante Inertia sin descarga de DOM ni pantalla azul
+      router.reload({
+        preserveScroll: true,
+        onSuccess: () => {
+          setTimeout(() => {
+            refreshMessage.value = '';
+          }, 4000);
+        }
+      });
     } else {
       refreshMessage.value = data.mensaje || 'No se pudo re-auditar el canal.';
     }
@@ -180,30 +243,30 @@ const reauditarCanal = async () => {
           <span>Dashboard Canal</span>
         </Link>
 
-        <!-- 2. Sincronización Maestra -->
+        <!-- 2. Sincronización Maestra con Modal de Progreso -->
         <button
           v-if="canWrite && red.perfil_id"
           type="button"
           @click="sincronizarCanal"
-          :disabled="isSyncing"
+          :disabled="isSyncingCanal"
           class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold font-mono flex items-center gap-1.5 transition-all shadow-xs cursor-pointer hover:scale-102 disabled:opacity-50"
-          :title="`Sincronizar seguidores y posts de ${red.nombre} en <=15 días`"
+          :title="`Sincronización Maestra: audita seguidores y todas las publicaciones de ${red.nombre} en ventana activa (≤ 15 días) con progreso en vivo`"
         >
-          <Zap class="w-4 h-4" :class="[isSyncing ? 'animate-bounce text-amber-500' : (esPropio ? 'text-cyan-500' : 'text-purple-500')]" />
-          <span>{{ isSyncing ? 'Sincronizando...' : 'Sincronizar Canal' }}</span>
+          <Zap class="w-4 h-4" :class="[isSyncingCanal ? 'animate-bounce text-amber-500' : (esPropio ? 'text-cyan-500' : 'text-purple-500')]" />
+          <span>{{ isSyncingCanal ? 'Sincronizando...' : 'Sincronizar Canal' }}</span>
         </button>
 
-        <!-- 3. Re-auditar en Vivo -->
+        <!-- 3. Re-auditar Seguidores en Vivo -->
         <button
           v-if="canWrite && red.perfil_id"
           type="button"
           @click="reauditarCanal"
           :disabled="isRefreshing"
           class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold font-mono flex items-center gap-1.5 transition-all shadow-xs cursor-pointer hover:scale-102 disabled:opacity-50"
-          :title="`Re-escanear métricas públicas en vivo de ${red.nombre}`"
+          :title="`Auditoría rápida: actualiza únicamente el número de seguidores y datos de cabecera de ${red.nombre}`"
         >
           <RefreshCw class="w-4 h-4" :class="[isRefreshing ? 'animate-spin text-cyan-500' : 'text-slate-400']" />
-          <span>{{ isRefreshing ? 'Leyendo...' : 'Re-auditar' }}</span>
+          <span>{{ isRefreshing ? 'Leyendo...' : 'Re-auditar Seguidores' }}</span>
         </button>
 
         <!-- 4. Configurar Punto Cero -->
@@ -220,12 +283,7 @@ const reauditarCanal = async () => {
       </div>
     </div>
 
-    <!-- Mensajes de feedback de sincronización -->
-    <div v-if="syncMessage" class="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 text-xs font-mono flex items-center gap-2">
-      <CheckCircle class="w-4 h-4 shrink-0" />
-      <span>{{ syncMessage }}</span>
-    </div>
-
+    <!-- Mensaje de feedback de re-auditar seguidores -->
     <div v-if="refreshMessage" class="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-600 dark:text-purple-400 text-xs font-mono flex items-center gap-2">
       <CheckCircle class="w-4 h-4 shrink-0" />
       <span>{{ refreshMessage }}</span>
@@ -382,6 +440,157 @@ const reauditarCanal = async () => {
       >
         Configurar Ahora
       </button>
+    </div>
+
+    <!-- MODAL DE SINCRONIZACIÓN EN VIVO (VENTANA 15 DÍAS) -->
+    <div
+      v-if="isSyncModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs"
+    >
+      <div class="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-cyan-500/15 text-cyan-500 flex items-center justify-center shadow-xs">
+              <RefreshCw class="w-5 h-5" :class="{ 'animate-spin': isSyncingCanal }" />
+            </div>
+            <div>
+              <h3 class="font-extrabold text-base sm:text-lg text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span>⚡ Sincronización Maestra</span>
+                <span class="px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-500 text-xs font-mono font-bold">
+                  {{ red.nombre }}
+                </span>
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Auditando seguidores de {{ red.nombre }} y publicaciones en ventana activa (≤ 15 días).
+              </p>
+            </div>
+          </div>
+
+          <button
+            v-if="!isSyncingCanal"
+            type="button"
+            @click="cerrarSyncModal"
+            class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+
+        <!-- Paso 1: Estado de Seguidores del Canal -->
+        <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-mono">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+              PASO 1
+            </span>
+            <span class="font-bold text-slate-800 dark:text-slate-200">
+              👥 Seguidores del Canal:
+            </span>
+          </div>
+          <span class="font-bold text-emerald-600 dark:text-emerald-400">
+            {{ syncProgress.seguidoresInfo || (isSyncingCanal ? 'Auditando seguidores en vivo...' : 'Seguidores al día') }}
+          </span>
+        </div>
+
+        <!-- Paso 2: Barra de Progreso y Estado de Publicaciones -->
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5">
+          <div class="flex items-center justify-between text-xs font-mono">
+            <span class="text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-1.5">
+              <RefreshCw v-if="isSyncingCanal" class="w-3.5 h-3.5 animate-spin text-cyan-500" />
+              <CheckCircle v-else class="w-3.5 h-3.5 text-emerald-500" />
+              <span>{{ isSyncingCanal ? 'PASO 2: Sincronizando publicaciones activas...' : 'PASO 2: Publicaciones Sincronizadas' }}</span>
+            </span>
+            <span class="font-bold text-slate-900 dark:text-slate-100">
+              {{ syncProgress.current }} / {{ syncProgress.total }} publicaciones
+            </span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+            <div
+              class="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-300 rounded-full"
+              :style="{ width: `${syncProgress.percent}%` }"
+            ></div>
+          </div>
+
+          <!-- Enlace actual en lectura -->
+          <div v-if="isSyncingCanal && syncProgress.currentUrl" class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cyan-500/20 text-xs font-mono">
+            <span class="text-[10px] text-cyan-500 font-bold block">🔗 ESTADO:</span>
+            <p class="text-slate-700 dark:text-slate-300 truncate text-[11px] mt-0.5">
+              {{ syncProgress.currentUrl }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Resumen de Resultados si finalizó -->
+        <div v-if="syncProgress.isFinished" class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2.5">
+            <CheckCircle class="w-5 h-5 text-emerald-500 shrink-0" />
+            <div>
+              <span class="text-xs font-extrabold text-emerald-800 dark:text-emerald-300 block">
+                ¡Sincronización Maestra finalizada con éxito!
+              </span>
+              <span class="text-[11px] text-emerald-700 dark:text-emerald-400 font-mono">
+                {{ syncProgress.seguidoresInfo }} &bull; +{{ syncProgress.totalNewLikes }} likes y +{{ syncProgress.totalNewComments }} comentarios actualizados.
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            @click="cerrarSyncModal"
+            class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-xs cursor-pointer"
+          >
+            Aceptar
+          </button>
+        </div>
+
+        <!-- Log / Lista en Vivo de Publicaciones Procesadas -->
+        <div class="space-y-2">
+          <span class="text-xs font-bold text-slate-700 dark:text-slate-300 font-mono block">
+            📋 Registro de Publicaciones Procesadas:
+          </span>
+
+          <div class="max-h-60 overflow-y-auto space-y-2 pr-1 font-mono text-xs">
+            <div
+              v-for="(log, idx) in syncLogs"
+              :key="idx"
+              class="p-3 rounded-xl border flex items-start justify-between gap-3 transition-all"
+              :class="log.status === 'success' ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800' : 'bg-amber-500/10 border-amber-500/20'"
+            >
+              <div class="space-y-0.5 flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold">
+                    {{ log.fecha || 'Reciente' }}
+                  </span>
+                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate block">
+                    {{ log.resumen }}
+                  </span>
+                </div>
+                <p class="text-[10px] text-slate-400 truncate">{{ log.url }}</p>
+              </div>
+
+              <div v-if="log.status === 'success'" class="text-right shrink-0">
+                <span class="text-xs font-extrabold text-cyan-600 dark:text-cyan-400 block">
+                  ❤️ {{ log.likes }} <span v-if="log.deltaLikes > 0" class="text-emerald-500 font-bold">(+{{ log.deltaLikes }})</span>
+                </span>
+                <span class="text-[10px] text-slate-500 dark:text-slate-400 block">
+                  💬 {{ log.comments }} <span v-if="log.deltaComments > 0" class="text-blue-500 font-bold">(+{{ log.deltaComments }})</span>
+                </span>
+              </div>
+              <div v-else class="text-right shrink-0 text-amber-500 text-[11px] font-bold">
+                ⚠️ {{ log.error }}
+              </div>
+            </div>
+
+            <div v-if="!syncLogs.length && isSyncingCanal" class="p-6 text-center text-slate-400 text-xs">
+              Iniciando lectura de publicaciones...
+            </div>
+            <div v-else-if="!syncLogs.length && !isSyncingCanal" class="p-6 text-center text-slate-400 text-xs">
+              No se encontraron publicaciones en la ventana activa de 15 días.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
