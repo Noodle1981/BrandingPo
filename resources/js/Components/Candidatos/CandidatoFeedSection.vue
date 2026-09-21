@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';
 import SocialCard from '../SocialCard.vue';
-import SocialCardEditModal from '../SocialCardEditModal.vue';
 import FeedFastFlowModal from '../Feed/FeedFastFlowModal.vue';
 import {
   Film,
@@ -46,20 +45,6 @@ const filterOrden = ref('recientes');
 
 // Modal Fast-Flow para Nueva Publicación
 const isFastFlowOpen = ref(false);
-
-// Modal Edición de Publicación
-const editingPost = ref(null);
-const isEditModalOpen = ref(false);
-
-const openEditModal = (post) => {
-  editingPost.value = post;
-  isEditModalOpen.value = true;
-};
-
-const closeEditModal = () => {
-  isEditModalOpen.value = false;
-  editingPost.value = null;
-};
 
 // Filtrado de Publicaciones
 const filteredPublicaciones = computed(() => {
@@ -227,9 +212,9 @@ const candidatosListaParaModal = computed(() => {
       <SocialCard
         v-for="post in filteredPublicaciones"
         :key="post.id"
-        :publicacion="post"
+        :post="post"
+        :ejes="ejes"
         :can-write="canWrite"
-        @edit="openEditModal(post)"
       />
     </div>
 
@@ -272,15 +257,6 @@ const candidatosListaParaModal = computed(() => {
       :candidato-preseleccionado-id="candidato.id"
       @close="isFastFlowOpen = false"
       @saved="isFastFlowOpen = false"
-    />
-
-    <!-- Modal Editar Publicación -->
-    <SocialCardEditModal
-      :show="isEditModalOpen"
-      :publicacion="editingPost"
-      :ejes="ejes"
-      @close="closeEditModal"
-      @saved="closeEditModal"
     />
   </div>
 </template>

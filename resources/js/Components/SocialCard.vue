@@ -32,7 +32,7 @@ import SocialCardEditModal from './SocialCardEditModal.vue';
 const props = defineProps({
   post: {
     type: Object,
-    required: true,
+    default: () => ({}),
   },
   canWrite: {
     type: Boolean,
@@ -75,13 +75,13 @@ const fechaConfirmadaLocalmente = ref(false);
 const fechaHumanaLocal = ref(null); // Fecha humanizada actualizada localmente tras confirmar
 const isTextExpanded = ref(false);
 const isLongText = computed(() => {
-  const txt = (props.post.contenido_resumen || '').trim();
+  const txt = (props.post?.contenido_resumen || '').trim();
   // Estándar de tamaño ideal: posts de hasta ~420 caracteres u 8 renglones/saltos no necesitan 'Ver más'
   const saltosDeLinea = (txt.match(/\n/g) || []).length;
   return txt.length > 420 || saltosDeLinea > 8;
 });
 
-const platform = computed(() => (props.post.plataforma || props.post.perfil_social?.plataforma || 'instagram').toLowerCase());
+const platform = computed(() => (props.post?.plataforma || props.post?.perfil_social?.plataforma || 'instagram').toLowerCase());
 const isInstagram = computed(() => platform.value === 'instagram');
 const isFacebook = computed(() => platform.value === 'facebook');
 const isThreads = computed(() => platform.value === 'threads');
@@ -92,7 +92,7 @@ const isLinkedIn = computed(() => platform.value === 'linkedin');
 
 // Distinguir si la publicación pertenece a un candidato contrincante/opositor (rival)
 const isRival = computed(() => {
-  if (props.post.candidato && props.post.candidato.es_propio !== undefined) {
+  if (props.post?.candidato && props.post.candidato.es_propio !== undefined) {
     return !props.post.candidato.es_propio;
   }
   return false;
@@ -101,6 +101,7 @@ const isRival = computed(() => {
 // Detectar si la fecha de publicación coincide con la fecha en que se cargó al sistema
 // (significa que nunca se confirmó la fecha real de la red social)
 const esFechaSinConfirmar = computed(() => {
+  if (!props.post) return false;
   // Si ya fue confirmada (en base de datos o en esta sesión), es una fecha validada
   if (props.post.fecha_confirmada || fechaConfirmadaLocalmente.value) return false;
   if (!props.post.fecha_publicacion_raw || !props.post.fecha_carga) return false;
@@ -110,7 +111,7 @@ const esFechaSinConfirmar = computed(() => {
 
 // Fecha humanizada: priorizar la actualizada localmente
 const fechaHumanaVisible = computed(() => {
-  return fechaHumanaLocal.value || props.post.fecha_publicacion_humana || props.post.fecha_publicacion;
+  return fechaHumanaLocal.value || props.post?.fecha_publicacion_humana || props.post?.fecha_publicacion || '';
 });
 
 // Formatear una fecha YYYY-MM-DD al formato legible estilo Facebook en español
@@ -317,7 +318,7 @@ const formatCurrency = (amount) => {
 };
 
 const currentReacciones = computed(() => {
-  return parseReacciones(props.post.reacciones_detalladas, props.post.total_likes);
+  return parseReacciones(props.post?.reacciones_detalladas, props.post?.total_likes);
 });
 
 const hasEmotionalBreakdown = computed(() => {
@@ -332,34 +333,34 @@ const hasEmotionalBreakdown = computed(() => {
 });
 
 const totalInteracciones = computed(() => {
-  return Number(props.post.total_likes || 0) +
-    Number(props.post.total_comentarios || 0) +
-    Number(props.post.total_republicados || 0) +
-    Number(props.post.total_compartidos || 0);
+  return Number(props.post?.total_likes || 0) +
+    Number(props.post?.total_comentarios || 0) +
+    Number(props.post?.total_republicados || 0) +
+    Number(props.post?.total_compartidos || 0);
 });
 
 const scoreImpacto = computed(() => {
-  if (props.post.score_impacto_organico !== undefined && props.post.score_impacto_organico !== null) {
+  if (props.post?.score_impacto_organico !== undefined && props.post?.score_impacto_organico !== null) {
     return Number(props.post.score_impacto_organico);
   }
-  const lk = Number(props.post.total_likes || 0);
-  const cm = Number(props.post.total_comentarios || 0) * 3;
-  const sh = Number(props.post.total_compartidos || 0) * 5;
-  const rp = Number(props.post.total_republicados || 0) * 10;
+  const lk = Number(props.post?.total_likes || 0);
+  const cm = Number(props.post?.total_comentarios || 0) * 3;
+  const sh = Number(props.post?.total_compartidos || 0) * 5;
+  const rp = Number(props.post?.total_republicados || 0) * 10;
   return lk + cm + sh + rp;
 });
 
 const tasaViralidad = computed(() => {
-  if (props.post.tasa_viralidad_pct !== undefined && props.post.tasa_viralidad_pct !== null) {
+  if (props.post?.tasa_viralidad_pct !== undefined && props.post?.tasa_viralidad_pct !== null) {
     return Number(props.post.tasa_viralidad_pct);
   }
-  const views = Number(props.post.total_vistas || 0);
+  const views = Number(props.post?.total_vistas || 0);
   if (views <= 0) return 0;
   return Number(((scoreImpacto.value / views) * 100).toFixed(2));
 });
 
 const isPostInActiveWindow = computed(() => {
-  const raw = props.post.fecha_publicacion_raw || props.post.fecha_publicacion;
+  const raw = props.post?.fecha_publicacion_raw || props.post?.fecha_publicacion;
   if (!raw) return false;
   try {
     let d;
@@ -378,7 +379,7 @@ const isPostInActiveWindow = computed(() => {
 
 // Días transcurridos desde la fecha de publicación
 const diasDesdePublicacion = computed(() => {
-  const raw = props.post.fecha_publicacion_raw || props.post.fecha_publicacion;
+  const raw = props.post?.fecha_publicacion_raw || props.post?.fecha_publicacion;
   if (!raw) return 999;
   try {
     let d;
@@ -398,10 +399,10 @@ const diasDesdePublicacion = computed(() => {
 
 // Estilos diferenciados de tarjeta según Estrategia de Difusión / Pauta y Tracción Política Normalizada (War Room)
 const cardPautaStyles = computed(() => {
-  const p = (props.post.tipo_pauta || 'organico').toLowerCase();
+  const p = (props.post?.tipo_pauta || 'organico').toLowerCase();
   const dias = diasDesdePublicacion.value;
   // Score de Tracción Indexado (0 a 100) normalizado por el Tier de la cuenta
-  const scoreTraccion = props.post.analisis_traccion?.score_traccion_indexado ?? 50;
+  const scoreTraccion = props.post?.analisis_traccion?.score_traccion_indexado ?? 50;
 
   // 1. NIVEL DORADO / ORO (Score Tracción >= 75/100) -> Post Estrella Consagrado (Tracción Sobresaliente)
   if (scoreTraccion >= 75) {
