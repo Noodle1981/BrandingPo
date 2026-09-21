@@ -226,7 +226,7 @@ const getTonoBadgeClass = (tono) => {
         </div>
 
         <!-- Post Title / Text -->
-        <p class="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 mt-1 leading-snug">
+        <p class="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 mt-1 leading-snug break-words">
           {{ nota.titulo }}
         </p>
 

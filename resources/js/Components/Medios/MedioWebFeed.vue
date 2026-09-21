@@ -187,18 +187,18 @@ const getTipoMencionLabel = (tipo) => {
         </div>
 
         <!-- Headline & Link -->
-        <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-slate-100 mt-1 leading-snug">
+        <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-slate-100 mt-1 leading-snug break-words">
           <a
             v-if="nota.url_nota"
             :href="nota.url_nota"
             target="_blank"
             rel="noopener noreferrer"
-            class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors inline-flex items-baseline gap-1"
+            class="hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors inline-flex items-baseline gap-1 break-words"
           >
-            <span>{{ nota.titulo }}</span>
-            <ExternalLink class="w-3.5 h-3.5 text-slate-400 shrink-0 inline" />
+            <span class="break-words">{{ nota.titulo }}</span>
+            <ExternalLink class="w-3.5 h-3.5 text-slate-400 shrink-0 inline ml-1 self-center" />
           </a>
-          <span v-else>{{ nota.titulo }}</span>
+          <span v-else class="break-words">{{ nota.titulo }}</span>
         </h3>
 
         <!-- Summary -->

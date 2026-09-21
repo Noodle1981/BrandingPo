@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import { 
   Globe, 
   Rss, 
@@ -14,7 +15,7 @@ import {
 } from '@lucide/vue';
 import SocialPlatformIcon from '../SocialPlatformIcon.vue';
 
-defineProps({
+const props = defineProps({
   medios: {
     type: Array,
     default: () => [],
@@ -27,6 +28,14 @@ defineProps({
     type: Number,
     default: null,
   },
+  filtros: {
+    type: Object,
+    default: () => ({}),
+  },
+});
+
+const hayFiltroActivo = computed(() => {
+  return !!(props.filtros?.anio || props.filtros?.mes || props.filtros?.candidato_id || props.filtros?.tono || props.filtros?.medio_id);
 });
 
 const emit = defineEmits(['sincronizar-medio', 'editar-medio', 'eliminar-medio', 'open-create-modal']);
@@ -88,7 +97,7 @@ const getSesgoBadgeClass = (sesgo) => {
         <div>
           <!-- Top Row: Avatar & Badges -->
           <div class="flex items-start justify-between gap-3">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
               <!-- Avatar (Facebook prioritario) -->
               <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center shadow-xs">
                 <img
@@ -105,11 +114,14 @@ const getSesgoBadgeClass = (sesgo) => {
                 />
               </div>
 
-              <div class="min-w-0">
-                <h3 class="font-extrabold text-slate-900 dark:text-slate-100 text-sm truncate">
+              <div class="min-w-0 flex-1">
+                <h3
+                  class="font-extrabold text-slate-900 dark:text-slate-100 text-sm leading-snug break-words line-clamp-2"
+                  :title="m.nombre"
+                >
                   {{ m.nombre }}
                 </h3>
-                <div class="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-400 font-mono">
+                <div class="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-400 font-mono truncate">
                   <span class="capitalize">{{ m.tipo_medio }}</span>
                   <span>•</span>
                   <span class="capitalize">{{ m.alcance_tipo }}</span>
@@ -119,7 +131,7 @@ const getSesgoBadgeClass = (sesgo) => {
 
             <!-- Bias Badge -->
             <span
-              class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border shrink-0"
+              class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase border shrink-0 mt-0.5 whitespace-nowrap"
               :class="getSesgoBadgeClass(m.sesgo_editorial_estimado)"
             >
               {{ m.sesgo_editorial_estimado }}
@@ -129,16 +141,16 @@ const getSesgoBadgeClass = (sesgo) => {
           <!-- Links & Feeds Status -->
           <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
             <!-- Web Link -->
-            <div v-if="m.url_sitio" class="flex items-center justify-between text-xs">
-              <span class="text-slate-400 flex items-center gap-1.5">
-                <Globe class="w-3.5 h-3.5 text-cyan-500" />
+            <div v-if="m.url_sitio" class="flex items-center justify-between text-xs gap-2">
+              <span class="text-slate-400 flex items-center gap-1.5 shrink-0">
+                <Globe class="w-3.5 h-3.5 text-cyan-500 shrink-0" />
                 <span>Web Oficial:</span>
               </span>
               <a
                 :href="m.url_sitio"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="font-mono text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 truncate max-w-[180px]"
+                class="font-mono text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 min-w-0 truncate"
               >
                 <span class="truncate">{{ m.url_sitio.replace(/^https?:\/\/(www\.)?/, '') }}</span>
                 <ExternalLink class="w-3 h-3 shrink-0" />
@@ -146,8 +158,8 @@ const getSesgoBadgeClass = (sesgo) => {
             </div>
 
             <!-- Facebook Link -->
-            <div v-if="m.url_facebook" class="flex items-center justify-between text-xs">
-              <span class="text-slate-400 flex items-center gap-1.5">
+            <div v-if="m.url_facebook" class="flex items-center justify-between text-xs gap-2">
+              <span class="text-slate-400 flex items-center gap-1.5 shrink-0">
                 <SocialPlatformIcon platform="facebook" size="xs" />
                 <span>Fanpage:</span>
               </span>
@@ -155,9 +167,9 @@ const getSesgoBadgeClass = (sesgo) => {
                 :href="m.url_facebook"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="font-mono text-[#1877F2] hover:underline flex items-center gap-1 truncate max-w-[180px]"
+                class="font-mono text-[#1877F2] hover:underline flex items-center gap-1 min-w-0 truncate"
               >
-                <span>Facebook</span>
+                <span class="truncate">Facebook</span>
                 <ExternalLink class="w-3 h-3 shrink-0" />
               </a>
             </div>
@@ -180,9 +192,11 @@ const getSesgoBadgeClass = (sesgo) => {
           <!-- Notes Counters (Web vs Facebook) -->
           <div class="mt-3 grid grid-cols-3 gap-2 p-2 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800 text-center font-mono">
             <div>
-              <span class="text-[10px] text-slate-400 block font-semibold">Total</span>
-              <span class="text-sm font-extrabold text-slate-900 dark:text-slate-100">
-                {{ m.notas_prensa_count }}
+              <span class="text-[10px] text-slate-400 block font-semibold">
+                {{ hayFiltroActivo ? 'En Período' : 'Total' }}
+              </span>
+              <span class="text-sm font-extrabold" :class="hayFiltroActivo ? 'text-cyan-600 dark:text-cyan-400' : 'text-slate-900 dark:text-slate-100'">
+                {{ hayFiltroActivo && m.notas_filtradas_count !== undefined ? m.notas_filtradas_count : m.notas_prensa_count }}
               </span>
             </div>
             <div>

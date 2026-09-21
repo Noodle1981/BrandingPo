@@ -7,6 +7,7 @@ import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import MedioHeader from '../../Components/Medios/MedioHeader.vue';
 import MedioUmbralAlerta from '../../Components/Medios/MedioUmbralAlerta.vue';
 import MedioPestanasNav from '../../Components/Medios/MedioPestanasNav.vue';
+import MedioFiltrosBar from '../../Components/Medios/MedioFiltrosBar.vue';
 import MedioDirectorioGrid from '../../Components/Medios/MedioDirectorioGrid.vue';
 import MedioWebFeed from '../../Components/Medios/MedioWebFeed.vue';
 import MedioFacebookFeed from '../../Components/Medios/MedioFacebookFeed.vue';
@@ -35,6 +36,14 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  anios_disponibles: {
+    type: Array,
+    default: () => [],
+  },
+  meses_disponibles: {
+    type: Array,
+    default: () => [],
+  },
   umbral: {
     type: Object,
     required: true,
@@ -56,6 +65,39 @@ const canWrite = computed(() => page.props.auth?.user?.can_write ?? false);
 const pestana = ref(props.pestana_activa || 'directorio');
 const cambiarPestana = (nuevaPestana) => {
   pestana.value = nuevaPestana;
+  const currentParams = { ...props.filtros, pestana: nuevaPestana };
+  Object.keys(currentParams).forEach(k => {
+    if (!currentParams[k]) delete currentParams[k];
+  });
+  router.get('/medios', currentParams, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+  });
+};
+
+const handleFilterChange = (nuevosFiltros) => {
+  const params = {
+    ...props.filtros,
+    ...nuevosFiltros,
+    pestana: pestana.value,
+  };
+  Object.keys(params).forEach(k => {
+    if (!params[k]) delete params[k];
+  });
+  router.get('/medios', params, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+  });
+};
+
+const handleClearFilters = () => {
+  router.get('/medios', { pestana: pestana.value }, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+  });
 };
 
 // Estado de Modales
@@ -168,11 +210,23 @@ const handleEliminarNota = (nota) => {
         @cambiar-pestana="cambiarPestana"
       />
 
-      <!-- 4. Contenido Dinámico según la Pestaña Activa -->
+      <!-- 4. Barra Transversal de Filtros (Históricos, Mensuales, Candidatos, Portales y Tonos) -->
+      <MedioFiltrosBar
+        :candidatos="candidatos"
+        :medios="medios"
+        :anios-disponibles="anios_disponibles"
+        :meses-disponibles="meses_disponibles"
+        :filtros="filtros"
+        @filter-change="handleFilterChange"
+        @clear-filters="handleClearFilters"
+      />
+
+      <!-- 5. Contenido Dinámico según la Pestaña Activa -->
       <!-- Pestaña 1: Directorio & Gestión de Medios -->
       <MedioDirectorioGrid
         v-if="pestana === 'directorio'"
         :medios="medios"
+        :filtros="filtros"
         :can-write="canWrite"
         :sincronizando-id="sincronizandoMedioId"
         @open-create-modal="abrirCrearMedio"

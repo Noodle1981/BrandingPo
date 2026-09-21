@@ -8,6 +8,7 @@ use App\Models\Candidato;
 use App\Models\MedioPrensa;
 use App\Models\NotaPrensa;
 use App\Services\GenericMediaScraperService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,13 +33,73 @@ class MediosController extends Controller
         $medioId = $request->input('medio_id');
         $origenTipo = $request->input('origen_tipo');
         $pestanaActiva = $request->input('pestana', 'directorio');
+        $anio = $request->input('anio');
+        $mes = $request->input('mes');
 
-        // 1. Consulta de Medios del Workspace con conteos
+        // 1. Obtener Años y Meses reales registrados en las notas de este workspace
+        $baseFechasQuery = NotaPrensa::where('workspace_id', $workspace->id)
+            ->whereNotNull('fecha_publicacion');
+
+        if ($candidatoId) {
+            $baseFechasQuery->where('candidato_id', $candidatoId);
+        }
+        if ($medioId) {
+            $baseFechasQuery->where('medio_prensa_id', $medioId);
+        }
+        if ($tono) {
+            $baseFechasQuery->where('tono_mencion', $tono);
+        }
+        if ($origenTipo) {
+            $baseFechasQuery->where('origen_tipo', $origenTipo);
+        }
+
+        $nombresMeses = [
+            '01' => 'Enero', '02' => 'Febrero', '03' => 'Marzo', '04' => 'Abril',
+            '05' => 'Mayo', '06' => 'Junio', '07' => 'Julio', '08' => 'Agosto',
+            '09' => 'Septiembre', '10' => 'Octubre', '11' => 'Noviembre', '12' => 'Diciembre',
+        ];
+
+        $aniosDisponibles = (clone $baseFechasQuery)->pluck('fecha_publicacion')
+            ->map(fn ($f) => Carbon::parse($f)->format('Y'))
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $fechasMesesQuery = clone $baseFechasQuery;
+        if ($anio) {
+            $fechasMesesQuery->whereYear('fecha_publicacion', $anio);
+        }
+
+        $mesesDisponibles = $fechasMesesQuery->pluck('fecha_publicacion')
+            ->map(function ($f) use ($nombresMeses) {
+                $numMes = Carbon::parse($f)->format('m');
+                return [
+                    'numero' => $numMes,
+                    'nombre' => $nombresMeses[$numMes] ?? $numMes,
+                ];
+            })->unique('numero')->sortBy('numero')->values();
+
+        // 2. Consulta de Medios del Workspace con conteos globales y conteo filtrado del período
         $medios = MedioPrensa::where('workspace_id', $workspace->id)
             ->withCount([
                 'notasPrensa',
                 'notasPrensa as notas_web_count' => fn ($q) => $q->where('origen_tipo', 'web'),
                 'notasPrensa as notas_fb_count' => fn ($q) => $q->where('origen_tipo', 'facebook'),
+                'notasPrensa as notas_filtradas_count' => function ($q) use ($anio, $mes, $candidatoId, $tono) {
+                    if ($anio && $mes) {
+                        $q->whereYear('fecha_publicacion', $anio)->whereMonth('fecha_publicacion', (int) $mes);
+                    } elseif ($anio) {
+                        $q->whereYear('fecha_publicacion', $anio);
+                    } elseif ($mes) {
+                        $q->whereMonth('fecha_publicacion', (int) $mes);
+                    }
+                    if ($candidatoId) {
+                        $q->where('candidato_id', $candidatoId);
+                    }
+                    if ($tono) {
+                        $q->where('tono_mencion', $tono);
+                    }
+                },
             ])
             ->orderBy('nombre')
             ->get()
@@ -56,19 +117,20 @@ class MediosController extends Controller
                     'notas_prensa_count' => $m->notas_prensa_count,
                     'notas_web_count' => $m->notas_web_count,
                     'notas_fb_count' => $m->notas_fb_count,
+                    'notas_filtradas_count' => $m->notas_filtradas_count,
                     'ultima_sincronizacion_at' => $m->ultima_sincronizacion_at?->format('d/m/Y H:i'),
                     'ultima_sincronizacion_diff' => $m->ultima_sincronizacion_at?->diffForHumans(),
                 ];
             });
 
-        // 2. Consulta de Candidatos para filtros y asignación de menciones
+        // 3. Consulta de Candidatos para filtros y asignación de menciones
         $candidatos = Candidato::where('workspace_id', $workspace->id)
             ->with('perfilesSociales')
             ->orderByDesc('es_propio')
             ->orderBy('nombre_completo')
             ->get(['id', 'nombre_completo', 'es_propio', 'avatar_url', 'color_hex', 'cargo_aspirado']);
 
-        // 3. Consulta de Notas de Prensa con filtros aplicados
+        // 4. Consulta de Notas de Prensa con filtros aplicados
         $query = NotaPrensa::where('workspace_id', $workspace->id)
             ->with(['medioPrensa', 'candidato'])
             ->orderByDesc('fecha_publicacion');
@@ -87,6 +149,14 @@ class MediosController extends Controller
 
         if ($origenTipo) {
             $query->where('origen_tipo', $origenTipo);
+        }
+
+        if ($anio && $mes) {
+            $query->whereYear('fecha_publicacion', $anio)->whereMonth('fecha_publicacion', (int) $mes);
+        } elseif ($anio) {
+            $query->whereYear('fecha_publicacion', $anio);
+        } elseif ($mes) {
+            $query->whereMonth('fecha_publicacion', (int) $mes);
         }
 
         $notas = $query->get()->map(function ($n) {
@@ -122,16 +192,31 @@ class MediosController extends Controller
             ];
         });
 
-        // 4. Estadísticas Globales del Observatorio
-        $todasNotas = NotaPrensa::where('workspace_id', $workspace->id)->get();
-        $totalFavorables = $todasNotas->where('tono_mencion', 'favorable')->count();
-        $totalNeutras = $todasNotas->where('tono_mencion', 'neutro')->count();
-        $totalCriticas = $todasNotas->where('tono_mencion', 'critico')->count();
-        $totalWeb = $todasNotas->where('origen_tipo', 'web')->count();
-        $totalFacebook = $todasNotas->where('origen_tipo', 'facebook')->count();
+        // 5. Estadísticas del Observatorio según el período y filtros aplicados
+        $queryStats = NotaPrensa::where('workspace_id', $workspace->id);
+        if ($candidatoId) {
+            $queryStats->where('candidato_id', $candidatoId);
+        }
+        if ($medioId) {
+            $queryStats->where('medio_prensa_id', $medioId);
+        }
+        if ($anio && $mes) {
+            $queryStats->whereYear('fecha_publicacion', $anio)->whereMonth('fecha_publicacion', (int) $mes);
+        } elseif ($anio) {
+            $queryStats->whereYear('fecha_publicacion', $anio);
+        } elseif ($mes) {
+            $queryStats->whereMonth('fecha_publicacion', (int) $mes);
+        }
 
-        // 5. Agregación de Sentimientos en Facebook
-        $notasFb = $todasNotas->where('origen_tipo', 'facebook');
+        $notasStats = $queryStats->get();
+        $totalFavorables = $notasStats->where('tono_mencion', 'favorable')->count();
+        $totalNeutras = $notasStats->where('tono_mencion', 'neutro')->count();
+        $totalCriticas = $notasStats->where('tono_mencion', 'critico')->count();
+        $totalWeb = $notasStats->where('origen_tipo', 'web')->count();
+        $totalFacebook = $notasStats->where('origen_tipo', 'facebook')->count();
+
+        // 6. Agregación de Sentimientos en Facebook para el período y filtros
+        $notasFb = $notasStats->where('origen_tipo', 'facebook');
         $sumLikes = 0;
         $sumLove = 0;
         $sumHaha = 0;
@@ -155,7 +240,7 @@ class MediosController extends Controller
         $porcentajeEnojoFb = $totalReaccionesFb > 0 ? round(($sumAngry / $totalReaccionesFb) * 100, 1) : 0;
         $alertaCrisisFb = $porcentajeEnojoFb >= 15.0;
 
-        // 6. Umbral Operativo (Mínimo 5 Medios)
+        // 7. Umbral Operativo (Mínimo 5 Medios)
         $totalMediosRegistrados = $medios->count();
         $cumpleUmbral = $totalMediosRegistrados >= 5;
         $progresoUmbral = min(100, round(($totalMediosRegistrados / 5) * 100));
@@ -166,11 +251,15 @@ class MediosController extends Controller
             'candidatos' => $candidatos,
             'pestana_activa' => $pestanaActiva,
             'filtros' => [
-                'candidato_id' => $candidatoId,
-                'tono' => $tono,
-                'medio_id' => $medioId,
-                'origen_tipo' => $origenTipo,
+                'candidato_id' => $candidatoId ? (int) $candidatoId : null,
+                'tono' => $tono ?: null,
+                'medio_id' => $medioId ? (int) $medioId : null,
+                'origen_tipo' => $origenTipo ?: null,
+                'anio' => $anio ? (string) $anio : null,
+                'mes' => $mes ? (string) $mes : null,
             ],
+            'anios_disponibles' => $aniosDisponibles,
+            'meses_disponibles' => $mesesDisponibles,
             'umbral' => [
                 'total_medios' => $totalMediosRegistrados,
                 'minimo_requerido' => 5,
@@ -182,7 +271,7 @@ class MediosController extends Controller
                 'favorables' => $totalFavorables,
                 'neutras' => $totalNeutras,
                 'criticas' => $totalCriticas,
-                'total' => $todasNotas->count(),
+                'total' => $notasStats->count(),
                 'web_count' => $totalWeb,
                 'facebook_count' => $totalFacebook,
             ],
