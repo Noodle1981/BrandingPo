@@ -52,6 +52,7 @@ const { formatNumber, formatCurrency } = useFormatters();
 const page = usePage();
 const canWrite = computed(() => page.props.auth?.user?.can_write ?? false);
 
+const selectedCandidato = ref(props.filtros.candidato_id || '');
 const selectedPlataforma = ref(props.filtros.plataforma || '');
 const selectedTipoPauta = ref(props.filtros.tipo_pauta || '');
 const selectedEje = ref(props.filtros.eje_tematico_id || '');
@@ -134,7 +135,7 @@ const detectarHuellasPauta = async () => {
 const applyFilters = () => {
   router.get('/feed', {
     filtro: props.filtros.filtro || undefined,
-    candidato_id: props.filtros.candidato_id || undefined,
+    candidato_id: selectedCandidato.value || undefined,
     plataforma: selectedPlataforma.value || undefined,
     tipo_pauta: selectedTipoPauta.value || undefined,
     eje_tematico_id: selectedEje.value || undefined,
@@ -169,6 +170,7 @@ watch(() => props.meses_disponibles, (newMeses) => {
 });
 
 watch(() => props.filtros, (newFiltros) => {
+  selectedCandidato.value = newFiltros.candidato_id || '';
   selectedAnio.value = newFiltros.anio || '';
   selectedMes.value = newFiltros.mes || '';
   selectedPlataforma.value = newFiltros.plataforma || '';
@@ -178,6 +180,7 @@ watch(() => props.filtros, (newFiltros) => {
 }, { deep: true });
 
 const clearFilters = () => {
+  selectedCandidato.value = '';
   selectedPlataforma.value = '';
   selectedTipoPauta.value = '';
   selectedEje.value = '';
@@ -276,7 +279,7 @@ const openCreateModal = () => {
 
           <!-- Botón Limpiar Filtros -->
           <button
-            v-if="selectedPlataforma || selectedTipoPauta || selectedEje || selectedAnio || selectedMes"
+            v-if="selectedCandidato || selectedPlataforma || selectedTipoPauta || selectedEje || selectedAnio || selectedMes"
             type="button"
             @click="clearFilters"
             class="text-xs text-rose-500 hover:text-rose-400 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
@@ -339,8 +342,21 @@ const openCreateModal = () => {
           </button>
         </div>
 
-        <!-- Selectores Secundarios en una sola línea (Eje, Pauta, Año, Mes, Orden) -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        <!-- Selectores Secundarios en una sola línea (Candidato, Eje, Pauta, Año, Mes, Orden) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" :class="candidatos.length > 1 ? 'lg:grid-cols-6' : 'lg:grid-cols-5'">
+          <!-- Selector Candidato (si hay más de 1 candidato) -->
+          <select
+            v-if="candidatos.length > 1"
+            v-model="selectedCandidato"
+            @change="applyFilters"
+            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
+          >
+            <option value="">👤 Candidato (Todos)</option>
+            <option v-for="c in candidatos" :key="c.id" :value="c.id">
+              {{ c.nombre_completo }} {{ c.es_propio ? '(Propio)' : '(Rival)' }}
+            </option>
+          </select>
+
           <!-- Selector Eje Temático Agrupado por Pilar Estratégico -->
           <select
             v-model="selectedEje"
