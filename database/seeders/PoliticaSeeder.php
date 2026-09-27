@@ -333,7 +333,7 @@ class PoliticaSeeder extends Seeder
                 'estado_politico' => 'candidato',
                 'color_hex' => '#06b6d4',
                 'es_propio' => true,
-                'avatar_url' => 'https://scontent.cdninstagram.com/v/t51.82787-19/541928148_18336738628206464_5488714422900118483_n.jpg?stp=dst-jpg_s100x100_tt6&_nc_cat=108&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=3mQFxO7NnK4Q7kNvwFw4QeW&_nc_oc=Adod8T-HS0B_BkCVPoo2_FImtN4Y0lf0TeMr5jMEhUNep3dnRnYnEXT2wTMikDkzl2M&_nc_zt=24&_nc_ht=scontent.cdninstagram.com&_nc_gid=FnkUXnCqw-YKKl56nsQKXw&_nc_ss=7ba02&oh=00_AQGKUir4NYPBzJIu1gzxWnAOpDQe6WFLCgQanRsIrCthdA&oe=6A8D181F',
+                'avatar_url' => '/storage/avatars/perfil_24_1788316700.jpg',
                 'bio_resumen' => 'Espacio "Ahora Albardón", alternativa ciudadana para transformar el departamento con obras, producción y cercanía vecinal.',
             ]
         );
@@ -412,7 +412,7 @@ class PoliticaSeeder extends Seeder
                 'plataforma' => 'facebook',
                 'handle_usuario' => '@ahoraalbardon',
                 'url_perfil' => 'https://www.facebook.com/ahoraalbardon',
-                'foto_perfil_url' => 'https://scontent.fmdz5-1.fna.fbcdn.net/v/t39.30808-1/518116244_620360811093741_2988785287798278700_n.jpg',
+                'foto_perfil_url' => '/storage/avatars/perfil_24_1788316700.jpg',
                 'esta_activo' => true,
                 'esta_verificado' => false,
                 'seguidores_actuales' => 9466,

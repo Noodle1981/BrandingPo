@@ -486,14 +486,8 @@ const cardPautaStyles = computed(() => {
               :alt="post.candidato?.nombre_completo"
               referrerpolicy="no-referrer"
               class="w-10 h-10 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700 shadow-xs"
+              @error="$event.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(post.candidato?.nombre_completo || 'Candidato')}&background=0f172a&color=06b6d4&size=128&bold=true`"
             />
-            <div
-              v-if="post.candidato?.es_propio"
-              class="absolute -bottom-1 -right-1 bg-cyan-500 text-slate-950 p-0.5 rounded-full ring-2 ring-white dark:ring-slate-900"
-              title="Candidato Propio"
-            >
-              <Sparkles class="w-2.5 h-2.5 fill-current" />
-            </div>
           </div>
 
           <!-- Nombre y Handle -->

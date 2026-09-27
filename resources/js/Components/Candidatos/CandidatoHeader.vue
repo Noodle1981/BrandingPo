@@ -59,12 +59,6 @@ const colorAcentoHex = computed(() => {
               :style="{ borderColor: colorAcentoHex }"
               @error="$event.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(candidato.nombre_completo)}&background=${esPropio ? '082f49' : '1e1b4b'}&color=${esPropio ? '38bdf8' : 'a855f7'}&size=256&bold=true`"
             />
-            <div
-              class="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-white font-extrabold text-[10px] uppercase font-mono tracking-wider shadow-sm"
-              :class="esPropio ? 'bg-cyan-600' : 'bg-purple-600'"
-            >
-              {{ esPropio ? 'CANDIDATO PROPIO' : 'RIVAL OPOSITOR' }}
-            </div>
           </div>
 
           <div>

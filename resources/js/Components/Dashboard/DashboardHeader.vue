@@ -60,13 +60,8 @@ const periodoActivoNombre = computed(() => {
               referrerpolicy="no-referrer"
               class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 shadow-md"
               :style="{ borderColor: candidato.color_hex || '#06b6d4' }"
+              @error="$event.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(candidato.nombre_completo)}&background=0f172a&color=06b6d4&size=256&bold=true`"
             />
-            <span
-              v-if="candidato.es_propio"
-              class="absolute -bottom-1.5 -right-1.5 px-2 py-0.5 rounded-md bg-cyan-500 text-slate-950 font-extrabold text-[10px] uppercase shadow-xs tracking-wider"
-            >
-              Propio
-            </span>
           </div>
 
           <div>
@@ -108,7 +103,7 @@ const periodoActivoNombre = computed(() => {
               class="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-xl pl-3 pr-8 py-2.5 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all cursor-pointer shadow-2xs"
             >
               <option v-for="cand in candidatosLista" :key="cand.id" :value="cand.id">
-                {{ cand.es_propio ? '⭐ ' : '' }}{{ cand.nombre_completo }} ({{ cand.cargo_aspirado }})
+                {{ cand.nombre_completo }} ({{ cand.cargo_aspirado }})
               </option>
             </select>
             <ChevronDown class="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
