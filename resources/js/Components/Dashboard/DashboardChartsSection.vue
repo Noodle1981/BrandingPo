@@ -105,26 +105,121 @@ const redesConVistasDisponibles = computed(() => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. GRÁFICA TEMPORAL: COMUNIDAD (SEGUIDORES NETOS) CON HITOS DE BOOSTER
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. GRÁFICA TEMPORAL: COMUNIDAD (SEGUIDORES NETOS) CON AGRUPACIÓN INTELIGENTE
 // ─────────────────────────────────────────────────────────────────────────────
 const selectedComunidadPlatform = ref('todas');
+const agrupacionTemporalComunidad = ref('semana'); // 'semana' (default) | 'mes' | 'dia'
+const agrupacionTemporalScore = ref('semana');
+const agrupacionTemporalVistas = ref('semana');
+
+// Helper para agrupar puntos por Semana o Mes reduciendo saturación visual
+const agruparPuntosTimeline = (puntosArray, modo, hitos = [], platKey = null) => {
+  if (!puntosArray || puntosArray.length === 0) return [];
+  if (modo === 'dia') return puntosArray;
+
+  const grupos = {};
+
+  puntosArray.forEach(p => {
+    let d;
+    if (p.fecha_raw) {
+      d = new Date(p.fecha_raw + 'T12:00:00');
+    } else if (p.fecha && p.fecha.includes('/')) {
+      const parts = p.fecha.split('/');
+      d = new Date(2026, parseInt(parts[1], 10) - 1, parseInt(parts[0], 10), 12);
+    } else {
+      d = new Date();
+    }
+
+    let key, label;
+    if (modo === 'mes') {
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      key = `${year}-${String(month + 1).padStart(2, '0')}`;
+      label = `${meses[month]} '${String(year).slice(-2)}`;
+    } else {
+      // modo === 'semana': corte semanal al domingo
+      const day = d.getDay();
+      const diff = day === 0 ? 0 : 7 - day;
+      const finSemana = new Date(d);
+      finSemana.setDate(d.getDate() + diff);
+
+      const y = finSemana.getFullYear();
+      const m = String(finSemana.getMonth() + 1).padStart(2, '0');
+      const dia = String(finSemana.getDate()).padStart(2, '0');
+      key = `${y}-${m}-${dia}`;
+      label = `Sem. ${dia}/${m}`;
+    }
+
+    if (!grupos[key]) {
+      grupos[key] = {
+        key,
+        label,
+        puntos: []
+      };
+    }
+    grupos[key].puntos.push(p);
+  });
+
+  const keys = Object.keys(grupos).sort();
+
+  return keys.map(k => {
+    const g = grupos[k];
+    const ultimoPunto = g.puntos[g.puntos.length - 1];
+
+    const tieneBooster = g.puntos.some(pto => {
+      return hitos.some(h =>
+        (!platKey || platKey === 'todas' || h.plataforma === platKey) && (
+          (h.fecha_raw && pto.fecha_raw && h.fecha_raw === pto.fecha_raw) ||
+          (h.fecha && pto.fecha && h.fecha === pto.fecha)
+        )
+      );
+    });
+
+    const infoBooster = tieneBooster
+      ? hitos.find(h =>
+          (!platKey || platKey === 'todas' || h.plataforma === platKey) &&
+          g.puntos.some(pto =>
+            (h.fecha_raw && pto.fecha_raw && h.fecha_raw === pto.fecha_raw) ||
+            (h.fecha && pto.fecha && h.fecha === pto.fecha)
+          )
+        )
+      : null;
+
+    return {
+      fecha: g.label,
+      fecha_raw: k,
+      seguidores: ultimoPunto.seguidores ?? 0,
+      vistas: ultimoPunto.vistas ?? 0,
+      puntos: ultimoPunto.puntos ?? 0,
+      interacciones: ultimoPunto.interacciones ?? 0,
+      tieneBooster,
+      infoBooster,
+    };
+  });
+};
 
 const comunidadChartData = computed(() => {
   const hitos = props.hitosBooster || [];
   const series = props.seriesPorRed || {};
   const plataformasKeys = Object.keys(series);
+  const modo = agrupacionTemporalComunidad.value;
 
   if (selectedComunidadPlatform.value === 'todas') {
-    const primerKey = plataformasKeys[0];
-    const labels = primerKey && series[primerKey].puntos
-      ? series[primerKey].puntos.map(m => m.fecha)
-      : (props.historicoMediciones || []).map(m => m.fecha);
+    const totalPuntosAgrupados = agruparPuntosTimeline(props.historicoMediciones || [], modo, hitos, 'todas');
+    let labels = totalPuntosAgrupados.map(m => m.fecha);
 
     const datasets = [];
 
     plataformasKeys.forEach(platKey => {
       const s = series[platKey];
       if (!s || !s.puntos || s.puntos.length === 0) return;
+
+      const puntosAgrupados = agruparPuntosTimeline(s.puntos, modo, hitos, platKey);
+      if (labels.length === 0) {
+        labels = puntosAgrupados.map(m => m.fecha);
+      }
 
       const meta = getSocialMeta(platKey);
       const colorHex = s.color || meta.color;
@@ -135,23 +230,16 @@ const comunidadChartData = computed(() => {
       const pointBorderColors = [];
       const pointBorderWidths = [];
 
-      s.puntos.forEach(p => {
-        const tieneBooster = hitos.some(h => 
-          h.plataforma === platKey && (
-            (h.fecha_raw && p.fecha_raw && h.fecha_raw === p.fecha_raw) || 
-            (h.fecha && p.fecha && h.fecha === p.fecha)
-          )
-        );
-
-        if (tieneBooster) {
-          pointRadiuses.push(8);
-          pointHoverRadiuses.push(10);
+      puntosAgrupados.forEach(p => {
+        if (p.tieneBooster) {
+          pointRadiuses.push(7);
+          pointHoverRadiuses.push(9);
           pointBackgroundColors.push('#ef4444');
           pointBorderColors.push('#ffffff');
           pointBorderWidths.push(2);
         } else {
-          pointRadiuses.push(3);
-          pointHoverRadiuses.push(5);
+          pointRadiuses.push(modo === 'mes' ? 5 : (modo === 'semana' ? 4 : 2.5));
+          pointHoverRadiuses.push(modo === 'mes' ? 7 : (modo === 'semana' ? 6 : 4.5));
           pointBackgroundColors.push(colorHex);
           pointBorderColors.push('#ffffff');
           pointBorderWidths.push(1);
@@ -160,7 +248,7 @@ const comunidadChartData = computed(() => {
 
       datasets.push({
         label: s.nombre,
-        data: s.puntos.map(m => m.seguidores),
+        data: puntosAgrupados.map(m => m.seguidores),
         borderColor: colorHex,
         backgroundColor: `${colorHex}15`,
         fill: false,
@@ -172,27 +260,28 @@ const comunidadChartData = computed(() => {
         pointBorderColor: pointBorderColors,
         pointBorderWidth: pointBorderWidths,
         plataforma: platKey,
+        puntosAgrupados,
       });
     });
 
-    const totalPuntos = props.historicoMediciones || [];
-    if (totalPuntos.length > 0) {
+    if (totalPuntosAgrupados.length > 0) {
       const colorTotal = '#06b6d4';
       datasets.unshift({
         label: 'Total Multired (Suma)',
-        data: totalPuntos.map(m => m.seguidores),
+        data: totalPuntosAgrupados.map(m => m.seguidores),
         borderColor: colorTotal,
         backgroundColor: `${colorTotal}10`,
         fill: false,
         tension: 0.35,
         borderWidth: 2.5,
         borderDash: [5, 4],
-        pointRadius: 4,
+        pointRadius: modo === 'mes' ? 5 : (modo === 'semana' ? 4 : 3),
         pointHoverRadius: 6,
         pointBackgroundColor: colorTotal,
         pointBorderColor: '#ffffff',
         pointBorderWidth: 1.5,
         plataforma: 'todas',
+        puntosAgrupados: totalPuntosAgrupados,
       });
     }
 
@@ -204,10 +293,11 @@ const comunidadChartData = computed(() => {
     return { labels: [], datasets: [] };
   }
 
+  const puntosAgrupados = agruparPuntosTimeline(s.puntos, modo, hitos, selectedComunidadPlatform.value);
   const meta = getSocialMeta(selectedComunidadPlatform.value);
   const colorHex = s.color || meta.color;
-  const labels = s.puntos.map(m => m.fecha);
-  const data = s.puntos.map(m => m.seguidores);
+  const labels = puntosAgrupados.map(m => m.fecha);
+  const data = puntosAgrupados.map(m => m.seguidores);
 
   const pointRadiuses = [];
   const pointHoverRadiuses = [];
@@ -215,23 +305,16 @@ const comunidadChartData = computed(() => {
   const pointBorderColors = [];
   const pointBorderWidths = [];
 
-  s.puntos.forEach(p => {
-    const tieneBooster = hitos.some(h => 
-      h.plataforma === selectedComunidadPlatform.value && (
-        (h.fecha_raw && p.fecha_raw && h.fecha_raw === p.fecha_raw) || 
-        (h.fecha && p.fecha && h.fecha === p.fecha)
-      )
-    );
-
-    if (tieneBooster) {
-      pointRadiuses.push(8);
-      pointHoverRadiuses.push(10);
+  puntosAgrupados.forEach(p => {
+    if (p.tieneBooster) {
+      pointRadiuses.push(7);
+      pointHoverRadiuses.push(9);
       pointBackgroundColors.push('#ef4444');
       pointBorderColors.push('#ffffff');
       pointBorderWidths.push(2);
     } else {
-      pointRadiuses.push(3);
-      pointHoverRadiuses.push(5);
+      pointRadiuses.push(modo === 'mes' ? 5 : (modo === 'semana' ? 4 : 2.5));
+      pointHoverRadiuses.push(modo === 'mes' ? 7 : (modo === 'semana' ? 6 : 4.5));
       pointBackgroundColors.push(colorHex);
       pointBorderColors.push('#ffffff');
       pointBorderWidths.push(1);
@@ -254,6 +337,7 @@ const comunidadChartData = computed(() => {
       pointBorderColor: pointBorderColors,
       pointBorderWidth: pointBorderWidths,
       plataforma: selectedComunidadPlatform.value,
+      puntosAgrupados,
     }]
   };
 });
@@ -294,21 +378,10 @@ const comunidadChartOptions = computed(() => {
           label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString('es-AR')} seg`,
           afterLabel: (ctx) => {
             const dataset = ctx.dataset;
-            const plat = dataset.plataforma || selectedComunidadPlatform.value;
             const idx = ctx.dataIndex;
-            const series = props.seriesPorRed || {};
-            const punto = series[plat]?.puntos ? series[plat].puntos[idx] : null;
-            if (!punto) return '';
-
-            const hitos = (props.hitosBooster || []).filter(h => 
-              h.plataforma === plat && (
-                (h.fecha_raw && punto.fecha_raw && h.fecha_raw === punto.fecha_raw) || 
-                (h.fecha && punto.fecha && h.fecha === punto.fecha)
-              )
-            );
-
-            if (hitos.length > 0) {
-              const h = hitos[0];
+            const pto = dataset.puntosAgrupados ? dataset.puntosAgrupados[idx] : null;
+            if (pto && pto.tieneBooster && pto.infoBooster) {
+              const h = pto.infoBooster;
               return `🚀 BOOSTER ${h.plataforma.toUpperCase()}: ${h.monto_formateado}\n📌 ${h.titulo}`;
             }
             return '';
@@ -317,8 +390,14 @@ const comunidadChartOptions = computed(() => {
       }
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
-      y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
+      x: {
+        grid: { display: false },
+        ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, maxRotation: 0, autoSkip: true, maxTicksLimit: 14 }
+      },
+      y: {
+        grid: { color: 'rgba(148, 163, 184, 0.1)' },
+        ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) }
+      }
     }
   };
 });
@@ -331,12 +410,11 @@ const selectedScorePlatform = ref('todas');
 const scoreChartData = computed(() => {
   const series = props.seriesPorRed || {};
   const plataformasKeys = Object.keys(series);
+  const modo = agrupacionTemporalScore.value;
 
   if (selectedScorePlatform.value === 'todas') {
-    const primerKey = plataformasKeys[0];
-    const labels = primerKey && series[primerKey].puntos
-      ? series[primerKey].puntos.map(m => m.fecha)
-      : (props.historicoMediciones || []).map(m => m.fecha);
+    const totalPuntosAgrupados = agruparPuntosTimeline(props.historicoMediciones || [], modo, [], 'todas');
+    let labels = totalPuntosAgrupados.map(m => m.fecha);
 
     const datasets = [];
 
@@ -344,44 +422,50 @@ const scoreChartData = computed(() => {
       const s = series[platKey];
       if (!s || !s.puntos || s.puntos.length === 0) return;
 
+      const puntosAgrupados = agruparPuntosTimeline(s.puntos, modo, [], platKey);
+      if (labels.length === 0) {
+        labels = puntosAgrupados.map(m => m.fecha);
+      }
+
       const meta = getSocialMeta(platKey);
       const colorHex = s.color || meta.color;
 
       datasets.push({
         label: s.nombre,
-        data: s.puntos.map(m => m.puntos || 0),
+        data: puntosAgrupados.map(m => m.puntos || 0),
         borderColor: colorHex,
         backgroundColor: `${colorHex}15`,
         fill: false,
         tension: 0.35,
         borderWidth: 2.5,
-        pointRadius: 3,
+        pointRadius: modo === 'mes' ? 5 : (modo === 'semana' ? 4 : 2.5),
         pointHoverRadius: 6,
         pointBackgroundColor: colorHex,
         pointBorderColor: '#ffffff',
         pointBorderWidth: 1,
         plataforma: platKey,
+        puntosAgrupados,
       });
     });
 
-    const totalPuntos = props.historicoMediciones || [];
-    if (totalPuntos.length > 0) {
+    if (totalPuntosAgrupados.length > 0) {
       const colorTotal = '#f59e0b';
       datasets.unshift({
         label: 'Total Score (Suma)',
-        data: totalPuntos.map(m => m.puntos || 0),
+        data: totalPuntosAgrupados.map(m => m.puntos || 0),
         borderColor: colorTotal,
         backgroundColor: `${colorTotal}10`,
         fill: false,
         tension: 0.35,
         borderWidth: 2.5,
         borderDash: [5, 4],
-        pointRadius: 4,
+        pointRadius: modo === 'mes' ? 5 : (modo === 'semana' ? 4 : 3),
         pointHoverRadius: 6,
         pointBackgroundColor: colorTotal,
         pointBorderColor: '#ffffff',
         pointBorderWidth: 1.5,
         plataforma: 'todas',
+        puntosAgrupados: totalPuntosAgrupados,
       });
     }
 
@@ -393,10 +477,11 @@ const scoreChartData = computed(() => {
     return { labels: [], datasets: [] };
   }
 
+  const puntosAgrupados = agruparPuntosTimeline(s.puntos, modo, [], selectedScorePlatform.value);
   const meta = getSocialMeta(selectedScorePlatform.value);
   const colorHex = s.color || meta.color;
-  const labels = s.puntos.map(m => m.fecha);
-  const data = s.puntos.map(m => m.puntos || 0);
+  const labels = puntosAgrupados.map(m => m.fecha);
+  const data = puntosAgrupados.map(m => m.puntos || 0);
 
   return {
     labels,
@@ -408,12 +493,13 @@ const scoreChartData = computed(() => {
       fill: true,
       tension: 0.35,
       borderWidth: 2.5,
-      pointRadius: 3,
+      pointRadius: modo === 'mes' ? 5 : (modo === 'semana' ? 4 : 2.5),
       pointHoverRadius: 6,
       pointBackgroundColor: colorHex,
       pointBorderColor: '#ffffff',
       pointBorderWidth: 1,
       plataforma: selectedScorePlatform.value,
+      puntosAgrupados,
     }]
   };
 });
@@ -456,7 +542,7 @@ const scoreChartOptions = computed(() => {
       }
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
+      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } },
       y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
     }
   };
@@ -565,12 +651,11 @@ const selectedVistasPlatform = ref('todas');
 const vistasChartData = computed(() => {
   const series = props.seriesPorRed || {};
   const plataformasConVistas = redesConVistasDisponibles.value.map(r => r.plataforma);
+  const modo = agrupacionTemporalVistas.value;
 
   if (selectedVistasPlatform.value === 'todas') {
-    const primerKey = plataformasConVistas[0] || Object.keys(series)[0];
-    const labels = primerKey && series[primerKey]?.puntos
-      ? series[primerKey].puntos.map(m => m.fecha)
-      : (props.historicoMediciones || []).map(m => m.fecha);
+    const totalPuntosAgrupados = agruparPuntosTimeline(props.historicoMediciones || [], modo, [], 'todas');
+    let labels = totalPuntosAgrupados.map(m => m.fecha);
 
     const datasets = [];
 
@@ -578,44 +663,50 @@ const vistasChartData = computed(() => {
       const s = series[platKey];
       if (!s || !s.puntos || s.puntos.length === 0) return;
 
+      const puntosAgrupados = agruparPuntosTimeline(s.puntos, modo, [], platKey);
+      if (labels.length === 0) {
+        labels = puntosAgrupados.map(m => m.fecha);
+      }
+
       const meta = getSocialMeta(platKey);
       const colorHex = s.color || meta.color;
 
       datasets.push({
         label: s.nombre,
-        data: s.puntos.map(m => m.vistas || 0),
+        data: puntosAgrupados.map(m => m.vistas || 0),
         borderColor: colorHex,
         backgroundColor: `${colorHex}15`,
         fill: false,
         tension: 0.35,
         borderWidth: 2.5,
-        pointRadius: 3,
+        pointRadius: modo === 'mes' ? 5 : (modo === 'semana' ? 4 : 2.5),
         pointHoverRadius: 6,
         pointBackgroundColor: colorHex,
         pointBorderColor: '#ffffff',
         pointBorderWidth: 1,
         plataforma: platKey,
+        puntosAgrupados,
       });
     });
 
-    const totalPuntos = props.historicoMediciones || [];
-    if (totalPuntos.length > 0) {
+    if (totalPuntosAgrupados.length > 0) {
       const colorTotal = '#10b981';
       datasets.unshift({
         label: 'Total Vistas (Suma)',
-        data: totalPuntos.map(m => m.vistas || 0),
+        data: totalPuntosAgrupados.map(m => m.vistas || 0),
         borderColor: colorTotal,
         backgroundColor: `${colorTotal}10`,
         fill: false,
         tension: 0.35,
         borderWidth: 2.5,
         borderDash: [5, 4],
-        pointRadius: 4,
+        pointRadius: modo === 'mes' ? 5 : (modo === 'semana' ? 4 : 3),
         pointHoverRadius: 6,
         pointBackgroundColor: colorTotal,
         pointBorderColor: '#ffffff',
         pointBorderWidth: 1.5,
         plataforma: 'todas',
+        puntosAgrupados: totalPuntosAgrupados,
       });
     }
 
@@ -627,10 +718,11 @@ const vistasChartData = computed(() => {
     return { labels: [], datasets: [] };
   }
 
+  const puntosAgrupados = agruparPuntosTimeline(s.puntos, modo, [], selectedVistasPlatform.value);
   const meta = getSocialMeta(selectedVistasPlatform.value);
   const colorHex = s.color || meta.color;
-  const labels = s.puntos.map(m => m.fecha);
-  const data = s.puntos.map(m => m.vistas || 0);
+  const labels = puntosAgrupados.map(m => m.fecha);
+  const data = puntosAgrupados.map(m => m.vistas || 0);
 
   return {
     labels,
@@ -642,12 +734,13 @@ const vistasChartData = computed(() => {
       fill: true,
       tension: 0.35,
       borderWidth: 2.5,
-      pointRadius: 3,
+      pointRadius: modo === 'mes' ? 5 : (modo === 'semana' ? 4 : 2.5),
       pointHoverRadius: 6,
       pointBackgroundColor: colorHex,
       pointBorderColor: '#ffffff',
       pointBorderWidth: 1,
       plataforma: selectedVistasPlatform.value,
+      puntosAgrupados,
     }]
   };
 });
@@ -690,7 +783,7 @@ const vistasChartOptions = computed(() => {
       }
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } } },
+      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, maxRotation: 0, autoSkip: true, maxTicksLimit: 14 } },
       y: { grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' }, callback: (v) => formatNumber(v) } }
     }
   };
@@ -1119,7 +1212,50 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <!-- Selector de Agrupación Temporal: Semana / Mes / Día -->
+              <div class="inline-flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-mono">
+                <button
+                  type="button"
+                  @click="agrupacionTemporalComunidad = 'semana'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalComunidad === 'semana'
+                      ? 'bg-cyan-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                  title="Agrupar por semana (Cierre dominical)"
+                >
+                  Semana
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalComunidad = 'mes'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalComunidad === 'mes'
+                      ? 'bg-cyan-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                  title="Agrupar por mes calendario"
+                >
+                  Mes
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalComunidad = 'dia'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalComunidad === 'dia'
+                      ? 'bg-cyan-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                  title="Mediciones diarias detalladas"
+                >
+                  Día
+                </button>
+              </div>
+
               <select
                 v-model="selectedComunidadPlatform"
                 class="px-2 py-1 text-xs font-mono font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500"
@@ -1162,7 +1298,50 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <!-- Selector de Agrupación Temporal: Semana / Mes / Día -->
+              <div class="inline-flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-mono">
+                <button
+                  type="button"
+                  @click="agrupacionTemporalScore = 'semana'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalScore === 'semana'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                  title="Agrupar por semana (Cierre dominical)"
+                >
+                  Semana
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalScore = 'mes'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalScore === 'mes'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                  title="Agrupar por mes calendario"
+                >
+                  Mes
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalScore = 'dia'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalScore === 'dia'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                  title="Mediciones diarias detalladas"
+                >
+                  Día
+                </button>
+              </div>
+
               <select
                 v-model="selectedScorePlatform"
                 class="px-2 py-1 text-xs font-mono font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500"
@@ -1205,7 +1384,50 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <!-- Selector de Agrupación Temporal: Semana / Mes / Día -->
+              <div class="inline-flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-mono">
+                <button
+                  type="button"
+                  @click="agrupacionTemporalVistas = 'semana'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalVistas === 'semana'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                  title="Agrupar por semana (Cierre dominical)"
+                >
+                  Semana
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalVistas = 'mes'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalVistas === 'mes'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                  title="Agrupar por mes calendario"
+                >
+                  Mes
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalVistas = 'dia'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalVistas === 'dia'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                  title="Mediciones diarias detalladas"
+                >
+                  Día
+                </button>
+              </div>
+
               <select
                 v-model="selectedVistasPlatform"
                 class="px-2 py-1 text-xs font-mono font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -1499,14 +1721,134 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <button
-              type="button"
-              @click="cerrarModalGrafico"
-              class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
-              title="Cerrar modal (ESC)"
-            >
-              <X class="w-4 h-4" />
-            </button>
+            <div class="flex items-center gap-3">
+              <!-- Selector Temporal dentro del modal para gráficos de evolución -->
+              <div v-if="modalGraficoActivo === 'comunidad'" class="inline-flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-mono">
+                <button
+                  type="button"
+                  @click="agrupacionTemporalComunidad = 'semana'"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalComunidad === 'semana'
+                      ? 'bg-cyan-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                >
+                  Semana
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalComunidad = 'mes'"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalComunidad === 'mes'
+                      ? 'bg-cyan-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                >
+                  Mes
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalComunidad = 'dia'"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalComunidad === 'dia'
+                      ? 'bg-cyan-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                >
+                  Día
+                </button>
+              </div>
+
+              <div v-else-if="modalGraficoActivo === 'score'" class="inline-flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-mono">
+                <button
+                  type="button"
+                  @click="agrupacionTemporalScore = 'semana'"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalScore === 'semana'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                >
+                  Semana
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalScore = 'mes'"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalScore === 'mes'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                >
+                  Mes
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalScore = 'dia'"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalScore === 'dia'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                >
+                  Día
+                </button>
+              </div>
+
+              <div v-else-if="modalGraficoActivo === 'vistas'" class="inline-flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-mono">
+                <button
+                  type="button"
+                  @click="agrupacionTemporalVistas = 'semana'"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalVistas === 'semana'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                >
+                  Semana
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalVistas = 'mes'"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalVistas === 'mes'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                >
+                  Mes
+                </button>
+                <button
+                  type="button"
+                  @click="agrupacionTemporalVistas = 'dia'"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold',
+                    agrupacionTemporalVistas === 'dia'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ]"
+                >
+                  Día
+                </button>
+              </div>
+
+              <button
+                type="button"
+                @click="cerrarModalGrafico"
+                class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
+                title="Cerrar modal (ESC)"
+              >
+                <X class="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <!-- Contenido del Gráfico Ampliado -->
