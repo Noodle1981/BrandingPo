@@ -6,7 +6,6 @@ import {
   MapPin,
   Users,
   Edit3,
-  ShieldCheck,
   ArrowLeft
 } from '@lucide/vue';
 
@@ -46,7 +45,7 @@ const colorAcentoHex = computed(() => {
     </div>
 
     <!-- Header Principal -->
-    <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+    <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
         <div class="flex items-start sm:items-center gap-4">
           <!-- Avatar del Candidato -->
@@ -99,32 +98,6 @@ const colorAcentoHex = computed(() => {
             <Edit3 class="w-4 h-4" :class="esPropio ? 'text-cyan-500' : 'text-purple-500'" />
             <span>Editar Datos Básicos</span>
           </button>
-        </div>
-      </div>
-
-      <!-- Semáforo de Leyenda de Canales -->
-      <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-3 text-xs">
-        <span class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 font-mono uppercase text-[11px]">
-          <ShieldCheck class="w-4 h-4" :class="esPropio ? 'text-cyan-500' : 'text-purple-500'" />
-          Semáforo de Canales Oficiales:
-        </span>
-        <div class="flex items-center gap-4 flex-wrap font-mono text-[11px]">
-          <span class="inline-flex items-center gap-1.5 text-blue-500 dark:text-blue-400 font-semibold">
-            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-            🔵 Certificada / Verificada
-          </span>
-          <span class="inline-flex items-center gap-1.5 text-emerald-500 dark:text-emerald-400 font-semibold">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            🟢 Activa / En Uso
-          </span>
-          <span class="inline-flex items-center gap-1.5 text-rose-500 dark:text-rose-400 font-semibold">
-            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-            🔴 Inactiva / Sin Movimiento
-          </span>
-          <span class="inline-flex items-center gap-1.5 text-slate-400 font-semibold">
-            <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-            ⚪ Sin Configurar
-          </span>
         </div>
       </div>
     </div>
