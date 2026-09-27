@@ -87,7 +87,9 @@ La interfaz de **BrandingPo** combina la potencia analítica de una **Sala de Si
 
 Cada Sprint debe desarrollarse de forma representativa, atómica y completa bajo el siguiente ciclo:
 1. **Desarrollo del feature:** Modelos, migraciones, lógica de backend y vistas Vue (con soporte Dark/Light y estilo feed social).
-2. **Seeders Representativos:** Crear seeders con datos realistas (candidato propio, opositores, electos, notas de medios, pauta).
+2. **Seeders Representativos & Protección de Datos Reales:**
+   - Crear seeders únicamente para catálogos y estructuras base (territorios, ejes, roles).
+   - **PROHIBICIÓN ESTRICTA EN PUBLICACIONES:** No generar seeders que inyecten publicaciones sintéticas o ficticias (`demo-*`). Se trabaja exclusivamente con publicaciones y métricas reales de redes sociales cargadas por el usuario o sincronizadas vía scraper.
 3. **Testeo y Validación:** Comprobación funcional y validación de permisos por rol.
 4. **Git Commit & Push:** Cerrar el sprint con commit descriptivo y push al repositorio.
 
