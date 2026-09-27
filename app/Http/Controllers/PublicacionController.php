@@ -349,13 +349,8 @@ class PublicacionController extends Controller
 
         // Obtener Años y Meses reales que existen en la base de datos para este workspace (fechas de origen fecha_publicacion)
         $baseFechasQuery = Publicacion::where('workspace_id', $workspace->id)
-            ->whereNotNull('fecha_publicacion');
-
-        if ($filtro === 'propio') {
-            $baseFechasQuery->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
-        } elseif ($filtro === 'oposicion') {
-            $baseFechasQuery->whereHas('candidato', fn ($q) => $q->where('es_propio', false));
-        }
+            ->whereNotNull('fecha_publicacion')
+            ->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
 
         if ($candidatoId) {
             $baseFechasQuery->where('candidato_id', $candidatoId);
@@ -398,13 +393,8 @@ class PublicacionController extends Controller
             })->unique('numero')->sortBy('numero')->values();
 
         $query = Publicacion::where('workspace_id', $workspace->id)
+            ->whereHas('candidato', fn ($q) => $q->where('es_propio', true))
             ->with(['candidato', 'perfilSocial', 'ejeTematico', 'pautaEventos']);
-
-        if ($filtro === 'propio') {
-            $query->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
-        } elseif ($filtro === 'oposicion') {
-            $query->whereHas('candidato', fn ($q) => $q->where('es_propio', false));
-        }
 
         if ($candidatoId) {
             $query->where('candidato_id', $candidatoId);
@@ -556,17 +546,11 @@ class PublicacionController extends Controller
             ];
         });
 
-        $candidatosQuery = Candidato::where('workspace_id', $workspace->id)
-            ->orderByDesc('es_propio')
-            ->orderBy('nombre_completo');
-
-        if ($filtro === 'propio') {
-            $candidatosQuery->where('es_propio', true);
-        } elseif ($filtro === 'oposicion') {
-            $candidatosQuery->where('es_propio', false);
-        }
-
-        $candidatos = $candidatosQuery->with('perfilesSociales')->get();
+        $candidatos = Candidato::where('workspace_id', $workspace->id)
+            ->where('es_propio', true)
+            ->orderBy('nombre_completo')
+            ->with('perfilesSociales')
+            ->get();
 
         $ejes = EjeTematico::where('workspace_id', $workspace->id)
             ->orderBy('orden')

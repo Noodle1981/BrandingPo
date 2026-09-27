@@ -199,7 +199,7 @@ const openCreateModal = () => {
 </script>
 
 <template>
-  <Head :title="filtros.filtro === 'propio' ? 'Muro Social — Mi Campaña' : 'Feed Social Multired | Social Wall'" />
+  <Head title="Muro Social — Mi Campaña" />
 
   <WarRoomLayout>
     <div class="space-y-6 max-w-7xl mx-auto pb-16">
@@ -210,18 +210,16 @@ const openCreateModal = () => {
           <div class="flex items-center gap-2.5 flex-wrap">
             <Radio class="w-6 h-6 text-cyan-500 animate-pulse" />
             <h1 class="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-              {{ filtros.filtro === 'propio' ? 'Muro de Publicaciones — Mi Campaña' : (filtros.filtro === 'oposicion' ? 'Muro de Publicaciones — Rivales' : 'Feed Social Multired (Social Wall)') }}
+              Muro de Publicaciones — Mi Campaña
             </h1>
             <span
-              v-if="filtros.filtro"
-              class="text-[10px] uppercase font-mono font-bold px-2.5 py-0.5 rounded-full border"
-              :class="filtros.filtro === 'propio' ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/40' : 'bg-violet-500/20 text-violet-600 dark:text-violet-400 border-violet-500/40'"
+              class="text-[10px] uppercase font-mono font-bold px-2.5 py-0.5 rounded-full border bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/40"
             >
-              {{ filtros.filtro === 'propio' ? '🎖️ CANDIDATO OFICIAL' : '⚔️ RIVALES' }}
+              🎖️ MI CAMPAÑA
             </span>
           </div>
           <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {{ filtros.filtro === 'propio' ? 'Línea de tiempo cronológica con todas las publicaciones, reels, reacciones nativas y pauta publicitaria.' : 'Muro unificado de auditoría de publicaciones de todos los candidatos.' }}
+            Línea de tiempo cronológica con todas las publicaciones, reels, reacciones nativas y pauta publicitaria.
           </p>
         </div>
 
@@ -353,7 +351,7 @@ const openCreateModal = () => {
           >
             <option value="">👤 Candidato (Todos)</option>
             <option v-for="c in candidatos" :key="c.id" :value="c.id">
-              {{ c.nombre_completo }} {{ c.es_propio ? '(Propio)' : '(Rival)' }}
+              {{ c.nombre_completo }}
             </option>
           </select>
 

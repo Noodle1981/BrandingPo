@@ -43,11 +43,10 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    // Gestión del Perfil Propio (Cliente) y Oposición (Competencia)
+    // Gestión del Perfil Propio de Campaña
     Route::get('/mi-candidato', [CandidatoController::class, 'miCandidato'])->name('mi-candidato');
-    Route::get('/candidatos', [CandidatoController::class, 'index'])->name('candidatos.index');
-    // IMPORTANTE: benchmarking debe ir ANTES de /candidatos/{candidato} para que Laravel no confunda "benchmarking" como ID
-    Route::get('/candidatos/benchmarking', [CandidatoController::class, 'benchmarking'])->name('candidatos.benchmarking');
+    Route::redirect('/candidatos', '/mi-candidato');
+    Route::redirect('/candidatos/benchmarking', '/mi-candidato');
     Route::get('/candidatos/{candidato}', [CandidatoController::class, 'show'])->name('candidatos.show');
     Route::get('/perfiles-sociales/{perfilSocial}/metricas', [CandidatoController::class, 'metricasCanal'])->name('perfiles-sociales.metricas');
 

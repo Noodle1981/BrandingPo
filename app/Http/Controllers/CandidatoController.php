@@ -25,131 +25,19 @@ use Inertia\Response;
 class CandidatoController extends Controller
 {
     /**
-     * Catálogo de la Oposición y Candidatos Rivales (Competencia) del Workspace Activo.
+     * Redirección al perfil oficial de campaña (la plataforma se centra exclusivamente en el candidato propio).
      */
-    public function index(Request $request): Response
+    public function index(Request $request): RedirectResponse
     {
-        $workspace = WorkspaceHelper::activo($request);
-        $cicloId = $request->input('ciclo_id');
-        $estado = $request->input('estado');
-
-        // Filtrar exclusivamente a los opositores / rivales del workspace
-        $query = Candidato::where('workspace_id', $workspace->id)
-            ->where('es_propio', false)
-            ->with(['cicloCampana', 'territorio', 'perfilesSociales']);
-
-        if ($cicloId) {
-            $query->where('ciclo_campana_id', $cicloId);
-        }
-
-        if ($estado) {
-            $query->where('estado_politico', $estado);
-        }
-
-        $candidatos = $query->orderBy('nombre_completo')
-            ->get()
-            ->map(function ($c) {
-                $totalSeguidores = $c->perfilesSociales->sum('seguidores_actuales');
-
-                return [
-                    'id' => $c->id,
-                    'nombre_completo' => $c->nombre_completo,
-                    'partido_coalicion' => $c->partido_coalicion,
-                    'cargo_aspirado' => $c->cargo_aspirado,
-                    'estado_politico' => $c->estado_politico,
-                    'color_hex' => $c->color_hex,
-                    'es_propio' => false,
-                    'avatar_url' => $c->avatar_url,
-                    'bio_resumen' => $c->bio_resumen,
-                    'ciclo_campana' => $c->cicloCampana?->nombre,
-                    'ciclo_campana_id' => $c->ciclo_campana_id,
-                    'territorio' => $c->territorio?->nombre,
-                    'territorio_id' => $c->territorio_id,
-                    'total_seguidores' => $totalSeguidores,
-                    'perfiles_count' => $c->perfilesSociales->count(),
-                    'perfiles' => $c->perfilesSociales->map(fn ($p) => [
-                        'id' => $p->id,
-                        'plataforma' => $p->plataforma,
-                        'handle_usuario' => $p->handle_usuario,
-                        'seguidores_actuales' => $p->seguidores_actuales,
-                        'esta_verificado' => $p->esta_verificado,
-                        'esta_activo' => $p->esta_activo,
-                    ]),
-                ];
-            });
-
-        $ciclos = CicloCampana::where('workspace_id', $workspace->id)
-            ->orderByDesc('anio')
-            ->get(['id', 'anio', 'nombre', 'es_activo']);
-
-        $territorios = Territorio::where('workspace_id', $workspace->id)
-            ->orderBy('nombre')
-            ->get(['id', 'nombre', 'tipo']);
-
-        return Inertia::render('Candidatos/Index', [
-            'candidatos' => $candidatos,
-            'ciclos' => $ciclos,
-            'territorios' => $territorios,
-            'filtros' => [
-                'ciclo_id' => $cicloId,
-                'estado' => $estado,
-            ],
-            'estados_disponibles' => [
-                ['key' => 'opositor', 'label' => 'Opositor Principal'],
-                ['key' => 'candidato', 'label' => 'Candidato Rival Oficial'],
-                ['key' => 'precandidato', 'label' => 'Precandidato (Interna Opositora)'],
-                ['key' => 'intendente_electo', 'label' => 'Intendente Electo'],
-                ['key' => 'gobernador_electo', 'label' => 'Gobernador Electo'],
-                ['key' => 'en_funciones', 'label' => 'En Gestión'],
-                ['key' => 'inactivo', 'label' => 'Inactivo'],
-            ],
-        ]);
+        return redirect()->route('mi-candidato');
     }
 
     /**
-     * Benchmarking comparativo de crecimiento neto entre el candidato propio y los rivales.
-     * Muestra quién crece más rápido en cada red social desde el Punto Cero.
+     * Redirección al perfil oficial de campaña.
      */
-    public function benchmarking(Request $request): Response
+    public function benchmarking(Request $request): RedirectResponse
     {
-        $workspace = WorkspaceHelper::activo($request);
-
-        $candidatos = Candidato::where('workspace_id', $workspace->id)
-            ->with(['perfilesSociales', 'territorio'])
-            ->orderByDesc('es_propio')
-            ->orderBy('nombre_completo')
-            ->get()
-            ->map(fn ($c) => [
-                'id' => $c->id,
-                'nombre' => $c->nombre_completo,
-                'partido' => $c->partido_coalicion,
-                'cargo' => $c->cargo_aspirado,
-                'es_propio' => $c->es_propio,
-                'color' => $c->color_hex ?? ($c->es_propio ? '#06b6d4' : '#8b5cf6'),
-                'avatar' => $c->avatar_url,
-                'territorio' => $c->territorio?->nombre,
-                'redes' => $c->perfilesSociales->map(fn ($p) => [
-                    'plataforma' => $p->plataforma,
-                    'handle' => $p->handle_usuario,
-                    'seguidores_actuales' => $p->seguidores_actuales,
-                    'seguidores_punto_cero' => $p->seguidores_punto_cero ?? 0,
-                    'crecimiento_neto' => $p->seguidores_actuales - ($p->seguidores_punto_cero ?? 0),
-                    'crecimiento_pct' => ($p->seguidores_punto_cero ?? 0) > 0
-                        ? round((($p->seguidores_actuales - $p->seguidores_punto_cero) / $p->seguidores_punto_cero) * 100, 1)
-                        : 0,
-                    'esta_activo' => $p->esta_activo,
-                    'fecha_punto_cero' => $p->fecha_punto_cero,
-                ]),
-            ]);
-
-        return Inertia::render('Candidatos/Benchmarking', [
-            'candidatos' => $candidatos,
-            'workspace' => [
-                'id' => $workspace->id,
-                'nombre' => $workspace->nombre,
-                'nivel_label' => $workspace->nivel_politico_label,
-            ],
-        ]);
+        return redirect()->route('mi-candidato');
     }
 
     /**
