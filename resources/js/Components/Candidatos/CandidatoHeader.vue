@@ -45,16 +45,16 @@ const colorAcentoHex = computed(() => {
     </div>
 
     <!-- Header Principal -->
-    <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-        <div class="flex items-start sm:items-center gap-4">
+    <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-start sm:items-center gap-3.5">
           <!-- Avatar del Candidato -->
           <div class="relative shrink-0">
             <img
               :src="candidato.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(candidato.nombre_completo)}&background=${esPropio ? '082f49' : '1e1b4b'}&color=${esPropio ? '38bdf8' : 'a855f7'}`"
               :alt="candidato.nombre_completo"
               referrerpolicy="no-referrer"
-              class="w-20 h-20 rounded-2xl object-cover border-2 shadow-md"
+              class="w-16 h-16 rounded-xl object-cover border-2 shadow-xs"
               :style="{ borderColor: colorAcentoHex }"
               @error="$event.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(candidato.nombre_completo)}&background=${esPropio ? '082f49' : '1e1b4b'}&color=${esPropio ? '38bdf8' : 'a855f7'}&size=256&bold=true`"
             />
@@ -62,13 +62,13 @@ const colorAcentoHex = computed(() => {
 
           <div>
             <div class="flex items-center gap-2 flex-wrap">
-              <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+              <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-none">
                 {{ candidato.nombre_completo }}
               </h1>
               <Badge variant="estado" :value="candidato.estado_politico" size="sm" />
             </div>
 
-            <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mt-1">
+            <p class="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 mt-1">
               {{ candidato.cargo_aspirado }} &bull; <span class="text-slate-500 font-normal">{{ candidato.partido_coalicion }}</span>
             </p>
 

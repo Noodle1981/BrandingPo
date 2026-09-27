@@ -59,7 +59,7 @@ const openConfigModal = (platformKey = null) => {
   <Head :title="`Mi Candidato: ${candidato.nombre_completo}`" />
 
   <WarRoomLayout>
-    <div class="space-y-6">
+    <div class="space-y-3.5 sm:space-y-4">
       <!-- 1. Cabecera del Candidato Propio -->
       <CandidatoHeader
         :candidato="candidato"

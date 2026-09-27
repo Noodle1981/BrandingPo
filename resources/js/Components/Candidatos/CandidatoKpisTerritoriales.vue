@@ -51,100 +51,100 @@ const tiersDesglose = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <!-- Grid de 4 Cards Ejecutivas -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
+  <div class="space-y-3">
+    <!-- Grid de 4 Cards Ejecutivas (Reducido 15-20%) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 font-mono">
       <!-- 1. Audiencia Bruta Acumulada -->
-      <div class="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
+      <div class="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-0.5">
         <div class="flex items-center justify-between text-slate-500 text-xs font-semibold">
-          <span class="flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-            <Users class="w-4 h-4 text-slate-400" />
+          <span class="flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+            <Users class="w-3.5 h-3.5 text-slate-400" />
             Comunidad Bruta
           </span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+          <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
             Suma Redes
           </span>
         </div>
-        <div class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100">
+        <div class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight">
           {{ totalSeguidoresBruto.toLocaleString('es-AR') }}
         </div>
-        <div class="text-[11px] text-slate-400 font-sans pt-1 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
-          <span>Contactos totales en canales</span>
+        <div class="text-[10px] text-slate-400 font-sans pt-0.5 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+          <span>Contactos en canales</span>
           <span class="font-bold text-slate-500 font-mono">{{ candidato.perfiles_count || candidato.redes?.length || 7 }} redes</span>
         </div>
       </div>
 
       <!-- 2. Seguidores Únicos Reales (Tiers Deduplicados) -->
       <div
-        class="p-4 rounded-3xl bg-white dark:bg-slate-900 border-2 shadow-sm space-y-1 relative group cursor-pointer transition-all hover:scale-101"
+        class="p-3 rounded-2xl bg-white dark:bg-slate-900 border-2 shadow-xs space-y-0.5 relative group cursor-pointer transition-all hover:scale-101"
         :class="esPropio ? 'border-cyan-500/40 hover:border-cyan-500' : 'border-purple-500/40 hover:border-purple-500'"
         @click="isTiersModalOpen = true"
       >
         <div class="flex items-center justify-between text-xs font-semibold">
           <span
-            class="flex items-center gap-1.5 uppercase tracking-wider text-[11px] font-bold"
+            class="flex items-center gap-1.5 uppercase tracking-wider text-[10px] font-bold"
             :class="esPropio ? 'text-cyan-600 dark:text-cyan-400' : 'text-purple-600 dark:text-purple-400'"
           >
-            <Layers class="w-4 h-4" />
+            <Layers class="w-3.5 h-3.5" />
             Audiencia Real Única
           </span>
           <span
-            class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider"
+            class="text-[9px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider"
             :class="esPropio ? 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400' : 'bg-purple-500/15 text-purple-600 dark:text-purple-400'"
           >
             Desduplicado
           </span>
         </div>
         <div
-          class="text-2xl sm:text-3xl font-extrabold"
+          class="text-xl sm:text-2xl font-extrabold leading-tight"
           :class="esPropio ? 'text-cyan-600 dark:text-cyan-400' : 'text-purple-600 dark:text-purple-400'"
         >
           {{ totalSeguidoresNetos.toLocaleString('es-AR') }}
         </div>
-        <div class="text-[11px] text-slate-500 dark:text-slate-400 font-sans pt-1 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
-          <span>Personas individuales netas</span>
-          <span class="font-bold underline text-[10px] font-mono flex items-center gap-0.5" :class="esPropio ? 'text-cyan-500' : 'text-purple-500'">
+        <div class="text-[10px] text-slate-500 dark:text-slate-400 font-sans pt-0.5 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+          <span>Personas individuales</span>
+          <span class="font-bold underline text-[9px] font-mono flex items-center gap-0.5" :class="esPropio ? 'text-cyan-500' : 'text-purple-500'">
             Ver Tiers &rarr;
           </span>
         </div>
       </div>
 
       <!-- 3. Penetración en Padrón Electoral -->
-      <div class="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
+      <div class="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-0.5">
         <div class="flex items-center justify-between text-slate-500 text-xs font-semibold">
-          <span class="flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-            <Target class="w-4 h-4 text-emerald-500" />
+          <span class="flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+            <Target class="w-3.5 h-3.5 text-emerald-500" />
             Penetración Padrón
           </span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+          <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
             Electoral
           </span>
         </div>
-        <div class="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
+        <div class="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 leading-tight">
           {{ penetracionNetaPct }}%
         </div>
-        <div class="text-[11px] text-slate-400 font-sans pt-1 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
-          <span>Padrón: {{ padronElectoral.toLocaleString('es-AR') }} electores</span>
+        <div class="text-[10px] text-slate-400 font-sans pt-0.5 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+          <span>Padrón: {{ padronElectoral.toLocaleString('es-AR') }}</span>
           <span class="font-bold text-slate-500 font-mono">{{ candidato.territorio?.nombre || 'Distrito' }}</span>
         </div>
       </div>
 
       <!-- 4. Publicaciones Registradas -->
-      <div class="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
+      <div class="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-0.5">
         <div class="flex items-center justify-between text-slate-500 text-xs font-semibold">
-          <span class="flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-            <Sparkles class="w-4 h-4 text-amber-500" />
+          <span class="flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+            <Sparkles class="w-3.5 h-3.5 text-amber-500" />
             Contenidos Auditados
           </span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">
+          <span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">
             Feed
           </span>
         </div>
-        <div class="text-2xl sm:text-3xl font-extrabold text-amber-600 dark:text-amber-400">
+        <div class="text-xl sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400 leading-tight">
           {{ totalPublicaciones.toLocaleString('es-AR') }}
         </div>
-        <div class="text-[11px] text-slate-400 font-sans pt-1 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
-          <span>Posts y videos monitoreados</span>
+        <div class="text-[10px] text-slate-400 font-sans pt-0.5 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+          <span>Posts monitoreados</span>
           <span class="font-bold text-slate-500 font-mono">Multired</span>
         </div>
       </div>

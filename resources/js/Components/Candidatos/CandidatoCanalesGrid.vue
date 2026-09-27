@@ -32,13 +32,13 @@ const openConfig = (platformKey) => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 lg:grid-cols-7 gap-2.5 sm:gap-3">
+  <div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 lg:grid-cols-7 gap-2 sm:gap-2.5">
       <div
         v-for="red in redes"
         :key="red.key"
         @click="selectPlatform(red.key)"
-        class="p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-center gap-2 cursor-pointer relative shadow-xs group"
+        class="p-2 sm:p-2.5 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center gap-1 cursor-pointer relative shadow-xs group"
         :class="[
           modelValue === red.key
             ? (esPropio ? 'ring-2 ring-cyan-500 ' : 'ring-2 ring-purple-500 ') + 'shadow-md scale-102 ' + tabBadgeStyle(red.color_estado).tab
@@ -49,7 +49,7 @@ const openConfig = (platformKey) => {
         <button
           type="button"
           @click.stop="openConfig(red.key)"
-          class="absolute top-1.5 right-1.5 p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+          class="absolute top-1 right-1 p-0.5 rounded-md text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
           :class="[
             modelValue === red.key
               ? (esPropio ? 'text-cyan-500 hover:text-cyan-600' : 'text-purple-500 hover:text-purple-600')
@@ -57,11 +57,11 @@ const openConfig = (platformKey) => {
           ]"
           :title="`Configurar canal y Punto Cero de ${red.nombre}`"
         >
-          <Settings class="w-3.5 h-3.5" />
+          <Settings class="w-3 h-3" />
         </button>
 
         <!-- Logo Oficial de la Red -->
-        <div class="flex items-center justify-center w-9 h-9 rounded-xl shadow-2xs shrink-0" :class="getSocialMeta(red.key).bgLight">
+        <div class="flex items-center justify-center w-7.5 h-7.5 rounded-lg shadow-2xs shrink-0" :class="getSocialMeta(red.key).bgLight">
           <!-- Instagram -->
           <svg v-if="red.key === 'instagram'" class="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :style="{ color: getSocialMeta(red.key).color }">
             <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
