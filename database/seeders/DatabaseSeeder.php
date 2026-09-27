@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             PoliticaSeeder::class,
-            PublicacionSeeder::class,
+            // PublicacionSeeder::class, // Desactivado para preservar únicamente publicaciones originales de redes
             CalendarioAndBriefingSeeder::class,
         ]);
     }

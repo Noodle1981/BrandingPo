@@ -15,6 +15,11 @@ class PublicacionSeeder extends Seeder
      */
     public function run(): void
     {
+        if (Publicacion::exists()) {
+            // Preservar publicaciones originales existentes
+            return;
+        }
+
         $candidatos = Candidato::with('perfilesSociales')->get()->keyBy('nombre_completo');
         $ejes = EjeTematico::all()->keyBy('slug');
 
