@@ -24,7 +24,8 @@ import {
   Globe,
   ShieldHalf,
   Target,
-  ChevronRight
+  ChevronRight,
+  Layers
 } from '@lucide/vue';
 import ThemeToggle from '../Components/ThemeToggle.vue';
 import Badge from '../Components/Badge.vue';
@@ -161,6 +162,13 @@ const navigationSecciones = computed(() => [
         href: '/dashboard',
         icon: LayoutDashboard,
         current: route().current('dashboard'),
+      },
+      {
+        name: 'Ejes de Campaña',
+        desc: 'Los 3 pilares estratégicos (Orden, Futuro, Humano)',
+        href: '/estrategia-ejes',
+        icon: Layers,
+        current: route().current('ejes*'),
       },
       {
         name: 'Predictor de Pauta',

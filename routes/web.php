@@ -7,6 +7,7 @@ use App\Http\Controllers\CalendarioController;
 use App\Http\Controllers\CandidatoController;
 use App\Http\Controllers\CrisisController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EjesEstrategicosController;
 use App\Http\Controllers\MediosController;
 use App\Http\Controllers\PresupuestoController;
 use App\Http\Controllers\PublicacionController;
@@ -117,6 +118,10 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/predictor', [AnalyticsController::class, 'index'])->name('predictor.index');
     Route::post('/analytics/predict', [AnalyticsController::class, 'predictApi'])->name('analytics.predict');
+
+    // Estrategia de Campaña: Los 3 Ejes Principales (El Orden, El Futuro, El Eje Humano)
+    Route::get('/estrategia-ejes', [EjesEstrategicosController::class, 'index'])->name('ejes.index');
+    Route::get('/ejes', [EjesEstrategicosController::class, 'index']);
 
     // Calendario & Agenda de Campaña
     Route::get('/calendario', [CalendarioController::class, 'index'])->name('calendario.index');

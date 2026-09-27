@@ -400,7 +400,7 @@ const tiposPauta = [
               <Target class="w-3.5 h-3.5 text-cyan-500" />
               <span>Eje Temático de Campaña</span>
             </span>
-            <span class="text-[10px] text-slate-400 font-mono">5 Pilares & 16 Sub-ejes</span>
+            <span class="text-[10px] text-slate-400 font-mono">3 Pilares de Campaña</span>
           </label>
           <select
             v-model="editForm.eje_tematico_id"

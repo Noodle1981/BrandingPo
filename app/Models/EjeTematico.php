@@ -13,12 +13,17 @@ class EjeTematico extends Model
     protected $fillable = [
         'workspace_id',
         'pilar_principal',
+        'es_eje_campana',
         'nombre',
         'slug',
         'color_badge',
         'icono',
         'orden',
         'descripcion',
+    ];
+
+    protected $casts = [
+        'es_eje_campana' => 'boolean',
     ];
 
     /**

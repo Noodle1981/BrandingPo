@@ -18,6 +18,27 @@ class PublicacionSeeder extends Seeder
         $candidatos = Candidato::with('perfilesSociales')->get()->keyBy('nombre_completo');
         $ejes = EjeTematico::all()->keyBy('slug');
 
+        $ejeObras = $ejes->get('obras-e-infraestructura') ?? $ejes->first();
+        $ejeSeguridad = $ejes->get('seguridad-ciudadana-y-prevencion') ?? $ejeObras;
+        $ejeEconomia = $ejes->get('produccion-y-empleo') ?? $ejes->first();
+        $ejeInnovacion = $ejes->get('innovacion-y-capacitacion') ?? $ejeEconomia;
+        $ejeSalud = $ejes->get('salud-y-deportes') ?? $ejes->first();
+        $ejeJuventud = $ejes->get('juventud') ?? $ejeEconomia;
+        $ejeGestion = $ejes->get('atencion-ciudadana-y-tramites-digitales') ?? $ejes->first();
+
+        $getEje = function ($key) use ($ejes, $ejeObras, $ejeSeguridad, $ejeEconomia, $ejeInnovacion, $ejeSalud, $ejeJuventud, $ejeGestion) {
+            return match ($key) {
+                'seguridad' => $ejeSeguridad,
+                'obras' => $ejeObras,
+                'economia' => $ejeEconomia,
+                'innovacion' => $ejeInnovacion,
+                'salud' => $ejeSalud,
+                'juventud' => $ejeJuventud,
+                'gestion' => $ejeGestion,
+                default => $ejes->get($key) ?? $ejeObras,
+            };
+        };
+
         if ($candidatos->isEmpty()) {
             return;
         }
