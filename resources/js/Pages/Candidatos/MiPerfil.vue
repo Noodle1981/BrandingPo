@@ -8,7 +8,6 @@ import CandidatoKpisTerritoriales from '../../Components/Candidatos/CandidatoKpi
 import CandidatoCanalesGrid from '../../Components/Candidatos/CandidatoCanalesGrid.vue';
 import CandidatoCanalFicha from '../../Components/Candidatos/CandidatoCanalFicha.vue';
 import CandidatoCanalConfigModal from '../../Components/Candidatos/CandidatoCanalConfigModal.vue';
-import CandidatoFeedSection from '../../Components/Candidatos/CandidatoFeedSection.vue';
 
 const props = defineProps({
   candidato: {
@@ -88,14 +87,6 @@ const openConfigModal = (platformKey = null) => {
         :candidato="candidato"
         tema="propio"
         @configurar="openConfigModal"
-      />
-
-      <!-- 5. Muro de Publicaciones, Fast-Flow y Edición -->
-      <CandidatoFeedSection
-        :candidato="candidato"
-        :publicaciones="publicaciones"
-        :ejes="ejes"
-        tema="propio"
       />
 
       <!-- Modales Modulares -->
