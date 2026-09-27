@@ -165,21 +165,21 @@ const reauditarCanal = async () => {
 </script>
 
 <template>
-  <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+  <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5">
     <!-- Header Ficha del Canal -->
-    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-4">
-      <div class="flex items-center gap-4">
+    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 flex-wrap gap-3">
+      <div class="flex items-center gap-3">
         <!-- Foto de Perfil en la Red Social -->
         <div class="relative shrink-0">
           <img
             :src="red.foto_perfil_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(red.handle_usuario || red.nombre || 'Canal')}&background=${esPropio ? '082f49' : '1e1b4b'}&color=${esPropio ? '38bdf8' : 'a855f7'}`"
             :alt="red.nombre"
             referrerpolicy="no-referrer"
-            class="w-14 h-14 rounded-2xl object-cover border-2 shadow-sm"
+            class="w-10 h-10 rounded-xl object-cover border-2 shadow-xs"
             :class="esPropio ? 'border-cyan-500' : 'border-purple-500'"
           />
           <div
-            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900"
+            class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center border border-white dark:border-slate-900"
             :class="{
               'bg-blue-500 text-white': red.color_estado === 'azul',
               'bg-emerald-500 text-white': red.color_estado === 'verde' || red.color_estado === 'naranja',
@@ -187,28 +187,28 @@ const reauditarCanal = async () => {
               'bg-slate-400 text-slate-900': red.color_estado === 'gris',
             }"
           >
-            <CheckCircle v-if="red.color_estado === 'azul'" class="w-3 h-3" />
-            <span v-else class="text-[9px] font-extrabold">{{ red.color_estado === 'rojo' ? '×' : '●' }}</span>
+            <CheckCircle v-if="red.color_estado === 'azul'" class="w-2.5 h-2.5" />
+            <span v-else class="text-[8px] font-extrabold">{{ red.color_estado === 'rojo' ? '×' : '●' }}</span>
           </div>
         </div>
 
         <div>
           <div class="flex items-center gap-2 flex-wrap">
-            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h2 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
               <span>{{ red.nombre }}</span>
-              <span v-if="!esPropio" class="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500 font-mono font-bold">
+              <span v-if="!esPropio" class="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-500/10 text-purple-500 font-mono font-bold">
                 Rival
               </span>
             </h2>
             <span
-              class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase"
+              class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase"
               :class="tabBadgeStyle(red.color_estado).pill"
             >
               {{ tabBadgeStyle(red.color_estado).label }}
             </span>
           </div>
 
-          <div class="flex items-center gap-3 mt-1 text-xs font-mono text-slate-600 dark:text-slate-400 flex-wrap">
+          <div class="flex items-center gap-2.5 text-xs font-mono text-slate-600 dark:text-slate-400 flex-wrap">
             <span class="font-bold text-slate-800 dark:text-slate-200">
               {{ red.handle_usuario || 'Sin handle asignado' }}
             </span>
@@ -220,27 +220,27 @@ const reauditarCanal = async () => {
               class="inline-flex items-center gap-1 text-[11px] underline font-semibold transition-colors"
               :class="esPropio ? 'text-cyan-500 hover:text-cyan-400' : 'text-purple-500 hover:text-purple-400'"
             >
-              <span>Abrir perfil oficial</span>
+              <span>Abrir perfil</span>
               <ExternalLink class="w-3 h-3" />
             </a>
             <span v-else class="text-slate-400 text-[11px] italic">
-              (Enlace no configurado)
+              (Sin enlace)
             </span>
           </div>
         </div>
       </div>
 
       <!-- Barra de Botones de Acción del Canal -->
-      <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-1.5 flex-wrap">
         <!-- 1. Enlace a Métricas del Canal -->
         <Link
           v-if="red.perfil_id"
           :href="`/perfiles-sociales/${red.perfil_id}/metricas`"
-          class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold font-mono flex items-center gap-1.5 transition-all shadow-xs cursor-pointer hover:scale-102"
+          class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold font-mono flex items-center gap-1.5 transition-all shadow-xs cursor-pointer hover:scale-102"
           :title="`Ver panel analítico avanzado de ${red.nombre}`"
         >
-          <BarChart3 class="w-4 h-4" :class="esPropio ? 'text-cyan-500' : 'text-purple-500'" />
-          <span>Dashboard Canal</span>
+          <BarChart3 class="w-3.5 h-3.5" :class="esPropio ? 'text-cyan-500' : 'text-purple-500'" />
+          <span>Dashboard</span>
         </Link>
 
         <!-- 2. Sincronización Maestra con Modal de Progreso -->
@@ -249,11 +249,11 @@ const reauditarCanal = async () => {
           type="button"
           @click="sincronizarCanal"
           :disabled="isSyncingCanal"
-          class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold font-mono flex items-center gap-1.5 transition-all shadow-xs cursor-pointer hover:scale-102 disabled:opacity-50"
+          class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold font-mono flex items-center gap-1.5 transition-all shadow-xs cursor-pointer hover:scale-102 disabled:opacity-50"
           :title="`Sincronización Maestra: audita seguidores y todas las publicaciones de ${red.nombre} en ventana activa (≤ 15 días) con progreso en vivo`"
         >
-          <Zap class="w-4 h-4" :class="[isSyncingCanal ? 'animate-bounce text-amber-500' : (esPropio ? 'text-cyan-500' : 'text-purple-500')]" />
-          <span>{{ isSyncingCanal ? 'Sincronizando...' : 'Sincronizar Canal' }}</span>
+          <Zap class="w-3.5 h-3.5" :class="[isSyncingCanal ? 'animate-bounce text-amber-500' : (esPropio ? 'text-cyan-500' : 'text-purple-500')]" />
+          <span>{{ isSyncingCanal ? 'Sincronizando...' : 'Sincronizar' }}</span>
         </button>
 
         <!-- 3. Re-auditar Seguidores en Vivo -->
@@ -262,11 +262,11 @@ const reauditarCanal = async () => {
           type="button"
           @click="reauditarCanal"
           :disabled="isRefreshing"
-          class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold font-mono flex items-center gap-1.5 transition-all shadow-xs cursor-pointer hover:scale-102 disabled:opacity-50"
+          class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold font-mono flex items-center gap-1.5 transition-all shadow-xs cursor-pointer hover:scale-102 disabled:opacity-50"
           :title="`Auditoría rápida: actualiza únicamente el número de seguidores y datos de cabecera de ${red.nombre}`"
         >
-          <RefreshCw class="w-4 h-4" :class="[isRefreshing ? 'animate-spin text-cyan-500' : 'text-slate-400']" />
-          <span>{{ isRefreshing ? 'Leyendo...' : 'Re-auditar Seguidores' }}</span>
+          <RefreshCw class="w-3.5 h-3.5" :class="[isRefreshing ? 'animate-spin text-cyan-500' : 'text-slate-400']" />
+          <span>{{ isRefreshing ? 'Leyendo...' : 'Re-auditar' }}</span>
         </button>
 
         <!-- 4. Configurar Punto Cero -->
@@ -274,46 +274,46 @@ const reauditarCanal = async () => {
           v-if="canWrite"
           type="button"
           @click="emit('configurar', red.key)"
-          class="px-4 py-2 rounded-xl text-white text-xs font-bold font-mono flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-102"
+          class="px-3 py-1.5 rounded-lg text-white text-xs font-bold font-mono flex items-center gap-1.5 transition-all cursor-pointer shadow-xs hover:scale-102"
           :class="esPropio ? 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-600/20' : 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/20'"
         >
-          <Settings class="w-4 h-4" />
-          <span>Configurar Canal & Punto Cero</span>
+          <Settings class="w-3.5 h-3.5" />
+          <span>Configurar Punto Cero</span>
         </button>
       </div>
     </div>
 
     <!-- Mensaje de feedback de re-auditar seguidores -->
-    <div v-if="refreshMessage" class="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-600 dark:text-purple-400 text-xs font-mono flex items-center gap-2">
+    <div v-if="refreshMessage" class="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-600 dark:text-purple-400 text-xs font-mono flex items-center gap-2">
       <CheckCircle class="w-4 h-4 shrink-0" />
       <span>{{ refreshMessage }}</span>
     </div>
 
     <!-- Tarjetas de Métricas de Punto Cero vs Actual -->
     <div
-      class="grid gap-4 font-mono"
+      class="grid gap-2.5 sm:gap-3 font-mono"
       :class="red.key === 'facebook' ? 'grid-cols-1 sm:grid-cols-3' : (red.key === 'tiktok' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4')"
     >
       <!-- Seguidores / Suscriptores / Contactos -->
-      <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-        <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
+      <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-0.5">
+        <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
           <span>👥 {{ red.key === 'youtube' ? 'Suscriptores' : (red.key === 'linkedin' ? 'Contactos' : 'Seguidores') }}</span>
           <span
             v-if="red.crecimiento_neto_seguidores > 0"
-            class="text-[10px] font-bold px-1.5 py-0.5 rounded font-mono"
+            class="text-[9px] font-bold px-1.5 py-0.2 rounded font-mono"
             :class="esPropio ? 'text-emerald-500 bg-emerald-500/10' : 'text-purple-400 bg-purple-500/10'"
           >
             +{{ Number(red.crecimiento_neto_seguidores).toLocaleString('es-AR') }}
           </span>
         </span>
         <div
-          class="text-2xl font-extrabold"
+          class="text-lg sm:text-xl font-extrabold leading-tight"
           :class="esPropio ? 'text-cyan-600 dark:text-cyan-400' : 'text-purple-600 dark:text-purple-400'"
         >
           {{ Number(red.seguidores_actuales || 0).toLocaleString('es-AR') }}
         </div>
         <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-          <span>Punto Alfa (Inicio):</span>
+          <span>Punto Alfa:</span>
           <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(red.seguidores_punto_cero || 0).toLocaleString('es-AR') }}</span>
         </div>
       </div>
@@ -321,16 +321,16 @@ const reauditarCanal = async () => {
       <!-- Cuentas Seguidas (Oculto en YouTube) -->
       <div
         v-if="red.key !== 'youtube'"
-        class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1"
+        class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-0.5"
       >
-        <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
+        <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">
           🔄 Seguidos
         </span>
-        <div class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">
+        <div class="text-lg sm:text-xl font-extrabold text-slate-800 dark:text-slate-200 leading-tight">
           {{ Number(red.seguidos_actuales || 0).toLocaleString('es-AR') }}
         </div>
         <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-          <span>Punto Alfa (Inicio):</span>
+          <span>Punto Alfa:</span>
           <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(red.seguidos_punto_cero || 0).toLocaleString('es-AR') }}</span>
         </div>
       </div>
@@ -338,22 +338,22 @@ const reauditarCanal = async () => {
       <!-- Me Gusta Acumulados (Específico TikTok) -->
       <div
         v-if="red.key === 'tiktok'"
-        class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-rose-500/30 space-y-1"
+        class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border-2 border-rose-500/30 space-y-0.5"
       >
-        <span class="text-[11px] uppercase tracking-wider text-rose-500 font-bold block flex items-center justify-between">
+        <span class="text-[10px] uppercase tracking-wider text-rose-500 font-bold block flex items-center justify-between">
           <span>❤️ Me Gusta</span>
           <span
             v-if="red.crecimiento_neto_me_gusta > 0"
-            class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
+            class="text-emerald-500 text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/10"
           >
             +{{ Number(red.crecimiento_neto_me_gusta).toLocaleString('es-AR') }}
           </span>
         </span>
-        <div class="text-2xl font-extrabold text-rose-600 dark:text-rose-400">
+        <div class="text-lg sm:text-xl font-extrabold text-rose-600 dark:text-rose-400 leading-tight">
           {{ Number(red.me_gusta_totales || 0).toLocaleString('es-AR') }}
         </div>
         <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-          <span>Punto Alfa (Inicio):</span>
+          <span>Punto Alfa:</span>
           <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(red.me_gusta_punto_cero || 0).toLocaleString('es-AR') }}</span>
         </div>
       </div>
@@ -361,22 +361,22 @@ const reauditarCanal = async () => {
       <!-- Publicaciones / Videos Totales (Oculto en Facebook según GEMINI.md) -->
       <div
         v-if="red.key !== 'facebook'"
-        class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1"
+        class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-0.5"
       >
-        <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
-          <span>{{ red.key === 'tiktok' || red.key === 'youtube' ? '🎬 Videos' : (red.key === 'linkedin' ? '📝 Posts / Artículos' : '📄 Publicaciones') }}</span>
+        <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold block flex items-center justify-between">
+          <span>{{ red.key === 'tiktok' || red.key === 'youtube' ? '🎬 Videos' : (red.key === 'linkedin' ? '📝 Posts' : '📄 Posts') }}</span>
           <span
             v-if="red.crecimiento_neto_posts > 0"
-            class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
+            class="text-emerald-500 text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/10"
           >
             +{{ Number(red.crecimiento_neto_posts).toLocaleString('es-AR') }}
           </span>
         </span>
-        <div class="text-2xl font-extrabold text-slate-800 dark:text-slate-200">
+        <div class="text-lg sm:text-xl font-extrabold text-slate-800 dark:text-slate-200 leading-tight">
           {{ Number(red.publicaciones_totales || 0).toLocaleString('es-AR') }}
         </div>
         <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-          <span>Punto Alfa (Inicio):</span>
+          <span>Punto Alfa:</span>
           <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(red.publicaciones_punto_cero || 0).toLocaleString('es-AR') }}</span>
         </div>
       </div>
@@ -384,36 +384,36 @@ const reauditarCanal = async () => {
       <!-- Visualizaciones Totales (Específico YouTube) -->
       <div
         v-if="red.key === 'youtube'"
-        class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-red-500/30 space-y-1"
+        class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border-2 border-red-500/30 space-y-0.5"
       >
-        <span class="text-[11px] uppercase tracking-wider text-red-500 font-bold block flex items-center justify-between">
-          <span>👁️ Visualizaciones</span>
+        <span class="text-[10px] uppercase tracking-wider text-red-500 font-bold block flex items-center justify-between">
+          <span>👁️ Vistas</span>
           <span
             v-if="red.crecimiento_neto_visualizaciones > 0"
-            class="text-emerald-500 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10"
+            class="text-emerald-500 text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/10"
           >
             +{{ Number(red.crecimiento_neto_visualizaciones).toLocaleString('es-AR') }}
           </span>
         </span>
-        <div class="text-2xl font-extrabold text-red-600 dark:text-red-400">
+        <div class="text-lg sm:text-xl font-extrabold text-red-600 dark:text-red-400 leading-tight">
           {{ Number(red.visualizaciones_totales || 0).toLocaleString('es-AR') }}
         </div>
         <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-slate-800/50">
-          <span>Punto Alfa (Inicio):</span>
+          <span>Punto Alfa:</span>
           <span class="font-bold text-slate-700 dark:text-slate-300">{{ Number(red.visualizaciones_punto_cero || 0).toLocaleString('es-AR') }}</span>
         </div>
       </div>
 
       <!-- Fecha de Inicio & Punto Cero -->
-      <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-        <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold block">
-          📅 Fecha Punto Cero
+      <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-0.5">
+        <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold block">
+          📅 Punto Cero
         </span>
-        <div class="text-sm font-bold text-slate-800 dark:text-slate-200 pt-1">
+        <div class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 pt-0.5 truncate">
           {{ red.fecha_punto_cero || 'No registrada' }}
         </div>
         <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200/50 dark:border-slate-800/50 truncate" :title="red.notas_punto_cero || 'Línea de partida de auditoría'">
-          {{ red.notas_punto_cero || 'Línea de partida de auditoría' }}
+          {{ red.notas_punto_cero || 'Línea base auditoría' }}
         </div>
       </div>
     </div>
@@ -421,21 +421,21 @@ const reauditarCanal = async () => {
     <!-- Banner si el canal está inactivo / no configurado -->
     <div
       v-if="red.color_estado === 'rojo' || red.color_estado === 'gris'"
-      class="p-4 rounded-2xl border flex items-center justify-between flex-wrap gap-3"
+      class="p-3 rounded-xl border flex items-center justify-between flex-wrap gap-2.5"
       :class="red.color_estado === 'rojo' ? 'bg-rose-500/10 border-rose-500/30' : 'bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'"
     >
-      <div class="flex items-center gap-2.5">
-        <AlertCircle class="w-5 h-5 shrink-0" :class="red.color_estado === 'rojo' ? 'text-rose-500' : 'text-slate-400'" />
+      <div class="flex items-center gap-2">
+        <AlertCircle class="w-4 h-4 shrink-0" :class="red.color_estado === 'rojo' ? 'text-rose-500' : 'text-slate-400'" />
         <p class="text-xs" :class="red.color_estado === 'rojo' ? 'text-rose-600 dark:text-rose-300' : 'text-slate-600 dark:text-slate-300'">
-          <span v-if="red.color_estado === 'rojo'">Este canal digital figura como <strong>Inactivo o Sin Movimiento</strong>.</span>
-          <span v-else>Este canal aún no cuenta con un perfil vinculado. Configúralo para comenzar la auditoría de campaña.</span>
+          <span v-if="red.color_estado === 'rojo'">Canal digital <strong>Inactivo o Sin Movimiento</strong>.</span>
+          <span v-else>Canal sin perfil vinculado. Configúralo para iniciar la auditoría.</span>
         </p>
       </div>
       <button
         v-if="canWrite"
         type="button"
         @click="emit('configurar', red.key)"
-        class="px-3.5 py-1.5 rounded-xl text-white font-bold text-xs font-mono transition-all cursor-pointer"
+        class="px-3 py-1 rounded-lg text-white font-bold text-xs font-mono transition-all cursor-pointer"
         :class="esPropio ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-purple-600 hover:bg-purple-500'"
       >
         Configurar Ahora
