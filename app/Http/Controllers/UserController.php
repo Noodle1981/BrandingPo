@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\User\StoreUserRequest;
+use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,22 +48,10 @@ class UserController extends Controller
     /**
      * Crear un nuevo usuario en la plataforma.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreUserRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activoONull($request);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', Password::min(8)],
-            'role' => ['required', Rule::in(['admin', 'consultor', 'visualizador'])],
-        ], [
-            'name.required' => 'El nombre es obligatorio.',
-            'email.required' => 'El correo electrónico es obligatorio.',
-            'email.unique' => 'Ya existe un usuario con este correo.',
-            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
-            'role.in' => 'El rol seleccionado no es válido.',
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
             'name' => $validated['name'],
@@ -84,16 +74,10 @@ class UserController extends Controller
     /**
      * Actualizar los datos y rol de un usuario.
      */
-    public function update(Request $request, User $usuario): RedirectResponse
+    public function update(UpdateUserRequest $request, User $usuario): RedirectResponse
     {
         $workspace = WorkspaceHelper::activoONull($request);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($usuario->id)],
-            'role' => ['required', Rule::in(['admin', 'consultor', 'visualizador'])],
-            'password' => ['nullable', 'string', Password::min(8)],
-        ]);
+        $validated = $request->validated();
 
         $data = [
             'name' => $validated['name'],

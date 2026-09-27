@@ -167,7 +167,6 @@ class SecurityHardeningTest extends TestCase
             'workspace_id' => $ws2->id,
             'candidato_id' => $candidatoWs2->id,
             'perfil_social_id' => $perfilWs2->id,
-            'plataforma' => 'instagram',
             'contenido_resumen' => 'Publicación secreta de Campaña B',
             'fecha_publicacion' => now(),
             'tipo_formato' => 'Post',

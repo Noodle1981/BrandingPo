@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Publicacion\StorePublicacionRequest;
+use App\Http\Requests\Publicacion\UpdatePublicacionRequest;
 use App\Models\Candidato;
 use App\Models\EjeTematico;
 use App\Models\PerfilSocial;
@@ -585,50 +587,10 @@ class PublicacionController extends Controller
     /**
      * Guardar una nueva publicación.
      */
-    public function store(Request $request, MediaStorageService $mediaStorage): RedirectResponse
+    public function store(StorePublicacionRequest $request, MediaStorageService $mediaStorage): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        // Limpiar strings vacíos para evitar fallos de validación en campos relacionales opcionales
-        $request->merge([
-            'perfil_social_id' => $request->filled('perfil_social_id') ? $request->input('perfil_social_id') : null,
-            'eje_tematico_id' => $request->filled('eje_tematico_id') ? $request->input('eje_tematico_id') : null,
-        ]);
-
-        $validated = $request->validate([
-            'candidato_id' => ['required', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
-            'perfil_social_id' => ['nullable', 'exists:perfil_socials,id'],
-            'plataforma' => ['nullable', 'string'],
-            'eje_tematico_id' => ['nullable', Rule::exists('eje_tematicos', 'id')->where('workspace_id', $workspace->id)],
-            'eje_tematico_nombre' => ['nullable', 'string', 'max:255'],
-            'fecha_publicacion' => ['required', 'date'],
-            'tipo_formato' => ['required', 'string'],
-            'tipo_pauta' => ['required', 'string', 'in:organico,organico_impulsado,pauta_paga,colaboracion_pagada'],
-            'monto_invertido_pauta' => ['nullable', 'numeric', 'min:0'],
-            'url_post' => ['nullable', 'string', 'max:1000'],
-            'media_url' => ['nullable', 'string', 'max:1000'],
-            'vistas_organicas' => ['nullable', 'integer', 'min:0'],
-            'vistas_pagadas' => ['nullable', 'integer', 'min:0'],
-            'contenido_resumen' => ['required', 'string'],
-            'total_likes' => ['nullable', 'integer', 'min:0'],
-            'me_gusta' => ['nullable', 'integer', 'min:0'],
-            'me_encanta' => ['nullable', 'integer', 'min:0'],
-            'me_importa' => ['nullable', 'integer', 'min:0'],
-            'me_divierte' => ['nullable', 'integer', 'min:0'],
-            'me_asombra' => ['nullable', 'integer', 'min:0'],
-            'me_entristece' => ['nullable', 'integer', 'min:0'],
-            'me_enoja' => ['nullable', 'integer', 'min:0'],
-            'total_comentarios' => ['nullable', 'integer', 'min:0'],
-            'total_compartidos' => ['nullable', 'integer', 'min:0'],
-            'total_republicados' => ['nullable', 'integer', 'min:0'],
-            'total_guardados' => ['nullable', 'integer', 'min:0'],
-            'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
-            'comentario_destacado' => ['nullable', 'string', 'max:500'],
-            'figura_acompanante' => ['nullable', 'string', 'max:255'],
-        ], [
-            'candidato_id.required' => 'Debes seleccionar un candidato.',
-            'contenido_resumen.required' => 'El texto o resumen del post es obligatorio.',
-        ]);
+        $validated = $request->validated();
 
         // Resolver o autogenerar el perfil social si vino por plataforma
         $perfilSocialId = $validated['perfil_social_id'] ?? null;
@@ -756,37 +718,12 @@ class PublicacionController extends Controller
     /**
      * Actualizar una publicación existente.
      */
-    public function update(Request $request, Publicacion $publicacion, MediaStorageService $mediaStorage): RedirectResponse
+    public function update(UpdatePublicacionRequest $request, Publicacion $publicacion, MediaStorageService $mediaStorage): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($publicacion, $workspace);
 
-        $validated = $request->validate([
-            'contenido_resumen' => ['required', 'string'],
-            'fecha_publicacion' => ['nullable', 'date'],
-            'url_post' => ['nullable', 'string', 'max:1000'],
-            'media_url' => ['nullable', 'string', 'max:1000'],
-            'tipo_formato' => ['required', 'string'],
-            'tipo_pauta' => ['required', 'string', 'in:organico,organico_impulsado,pauta_paga,colaboracion_pagada'],
-            'monto_invertido_pauta' => ['nullable', 'numeric', 'min:0'],
-            'vistas_organicas' => ['nullable', 'integer', 'min:0'],
-            'vistas_pagadas' => ['nullable', 'integer', 'min:0'],
-            'total_vistas' => ['nullable', 'integer', 'min:0'],
-            'total_likes' => ['nullable', 'integer', 'min:0'],
-            'me_gusta' => ['nullable', 'integer', 'min:0'],
-            'me_encanta' => ['nullable', 'integer', 'min:0'],
-            'me_importa' => ['nullable', 'integer', 'min:0'],
-            'me_divierte' => ['nullable', 'integer', 'min:0'],
-            'me_asombra' => ['nullable', 'integer', 'min:0'],
-            'me_entristece' => ['nullable', 'integer', 'min:0'],
-            'me_enoja' => ['nullable', 'integer', 'min:0'],
-            'total_comentarios' => ['nullable', 'integer', 'min:0'],
-            'total_compartidos' => ['nullable', 'integer', 'min:0'],
-            'total_republicados' => ['nullable', 'integer', 'min:0'],
-            'total_guardados' => ['nullable', 'integer', 'min:0'],
-            'eje_tematico_id' => ['nullable', Rule::exists('eje_tematicos', 'id')->where('workspace_id', $workspace->id)],
-            'termometro_humor_social' => ['nullable', 'integer', 'min:1', 'max:5'],
-        ]);
+        $validated = $request->validated();
 
         // Canonicalizar URL y validar unicidad
         $canonicalUrl = ! empty($validated['url_post'])
