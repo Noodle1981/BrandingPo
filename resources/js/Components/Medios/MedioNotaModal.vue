@@ -18,6 +18,7 @@ import {
   AlertTriangle
 } from '@lucide/vue';
 import SocialPlatformIcon from '../SocialPlatformIcon.vue';
+import MedioFacebookReaccionesInput from './MedioFacebookReaccionesInput.vue';
 
 const props = defineProps({
   isOpen: {
@@ -68,21 +69,6 @@ const form = useForm({
     sad: 0,
     angry: 0,
   },
-});
-
-const totalReaccionesCalculado = computed(() => {
-  const r = form.reacciones_desglose || {};
-  return (Number(r.likes) || 0) + (Number(r.love) || 0) + (Number(r.haha) || 0) + 
-         (Number(r.wow) || 0) + (Number(r.sad) || 0) + (Number(r.angry) || 0);
-});
-
-const porcentajeEnojoCalculado = computed(() => {
-  if (totalReaccionesCalculado.value <= 0) return 0;
-  return Math.round(((Number(form.reacciones_desglose?.angry) || 0) / totalReaccionesCalculado.value) * 100);
-});
-
-const alertaCrisisModal = computed(() => {
-  return porcentajeEnojoCalculado.value >= 15;
 });
 
 const limpiarFormulario = () => {
@@ -496,122 +482,10 @@ const submit = () => {
         <!-- ============================================================== -->
         <!-- MÓDULO FAST-FLOW: REACCIONES E INTERACCIÓN EN FACEBOOK         -->
         <!-- ============================================================== -->
-        <div v-if="form.origen_tipo === 'facebook'" class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <SocialPlatformIcon platform="facebook" size="xs" />
-              <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
-                Cuantificación de Reacciones en Facebook (Fast-Flow):
-              </label>
-            </div>
-            <div class="flex items-center gap-2 text-xs font-mono font-bold">
-              <span class="text-slate-400 text-[11px]">Total:</span>
-              <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
-                {{ totalReaccionesCalculado.toLocaleString() }}
-              </span>
-            </div>
-          </div>
-
-          <p class="text-[11px] text-slate-500 dark:text-slate-400">
-            Registra o calibra el desglose emoji por emoji de la publicación para auditar el termómetro de humor social (Regla GEMINI 1.B.4).
-          </p>
-
-          <!-- Grid de 6 emojis de Facebook -->
-          <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            <!-- Likes 👍 -->
-            <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col items-center">
-              <span class="text-base">👍</span>
-              <span class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">Me gusta</span>
-              <input
-                v-model.number="form.reacciones_desglose.likes"
-                type="number"
-                min="0"
-                class="w-full text-center mt-1 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-cyan-500"
-              />
-            </div>
-
-            <!-- Love ❤️ -->
-            <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col items-center">
-              <span class="text-base">❤️</span>
-              <span class="text-[10px] font-bold text-rose-500 uppercase mt-0.5">Encanta</span>
-              <input
-                v-model.number="form.reacciones_desglose.love"
-                type="number"
-                min="0"
-                class="w-full text-center mt-1 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-rose-500"
-              />
-            </div>
-
-            <!-- Haha 😂 -->
-            <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col items-center">
-              <span class="text-base">😂</span>
-              <span class="text-[10px] font-bold text-amber-500 uppercase mt-0.5">Divierte</span>
-              <input
-                v-model.number="form.reacciones_desglose.haha"
-                type="number"
-                min="0"
-                class="w-full text-center mt-1 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-amber-500"
-              />
-            </div>
-
-            <!-- Wow 😮 -->
-            <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col items-center">
-              <span class="text-base">😮</span>
-              <span class="text-[10px] font-bold text-cyan-500 uppercase mt-0.5">Asombra</span>
-              <input
-                v-model.number="form.reacciones_desglose.wow"
-                type="number"
-                min="0"
-                class="w-full text-center mt-1 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-cyan-500"
-              />
-            </div>
-
-            <!-- Sad 😢 -->
-            <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col items-center">
-              <span class="text-base">😢</span>
-              <span class="text-[10px] font-bold text-indigo-400 uppercase mt-0.5">Entristece</span>
-              <input
-                v-model.number="form.reacciones_desglose.sad"
-                type="number"
-                min="0"
-                class="w-full text-center mt-1 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
-
-            <!-- Angry 😡 -->
-            <div 
-              class="p-2 rounded-xl border flex flex-col items-center transition-colors"
-              :class="alertaCrisisModal 
-                ? 'bg-rose-500/10 border-rose-500/50 dark:bg-rose-950/30' 
-                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800'"
-            >
-              <span class="text-base">😡</span>
-              <span class="text-[10px] font-bold text-rose-600 uppercase mt-0.5">Enoja</span>
-              <input
-                v-model.number="form.reacciones_desglose.angry"
-                type="number"
-                min="0"
-                class="w-full text-center mt-1 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-rose-500"
-              />
-            </div>
-          </div>
-
-          <!-- Alerta de Crisis Dinámica (😡 > 15%) -->
-          <div 
-            v-if="alertaCrisisModal"
-            class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-2.5 text-rose-600 dark:text-rose-400 text-xs"
-          >
-            <AlertTriangle class="w-4 h-4 shrink-0 mt-0.5 text-rose-500 animate-pulse" />
-            <div>
-              <p class="font-extrabold flex items-center gap-1">
-                <span>Alerta de Crisis: {{ porcentajeEnojoCalculado }}% de Indignación</span>
-              </p>
-              <p class="text-[11px] text-rose-700/80 dark:text-rose-300/80 mt-0.5">
-                La tasa de enojo supera el 15% del total de reacciones de la publicación. Monitorear de inmediato o preparar réplica oficial de campaña.
-              </p>
-            </div>
-          </div>
-        </div>
+        <MedioFacebookReaccionesInput
+          v-if="form.origen_tipo === 'facebook'"
+          v-model="form.reacciones_desglose"
+        />
 
         <!-- Bajada / Resumen Informativo -->
         <div>

@@ -267,7 +267,8 @@ class PublicacionController extends Controller
         $mes = $request->input('mes');
         $filtro = $request->input('filtro'); // 'propio' | 'oposicion'
 
-        $query = Publicacion::where('workspace_id', $workspace->id)
+        $query = Publicacion::with('perfilSocial')
+            ->where('workspace_id', $workspace->id)
             ->where('tipo_pauta', 'organico');
 
         if ($filtro === 'propio') {

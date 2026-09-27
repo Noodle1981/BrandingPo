@@ -19,32 +19,22 @@ class CandidatosAndProfilesTest extends TestCase
         $this->seed([UserSeeder::class, PoliticaSeeder::class]);
     }
 
-    public function test_authenticated_user_can_list_candidatos(): void
+    public function test_authenticated_user_can_view_mi_candidato(): void
     {
         $user = User::where('role', 'visualizador')->first();
 
-        $response = $this->actingAs($user)->get('/candidatos');
+        $response = $this->actingAs($user)->get('/mi-candidato');
         $response->assertStatus(200);
 
-        // Verify seeded profiles exist
+        // Verify redirect from /candidatos
+        $redirectResponse = $this->actingAs($user)->get('/candidatos');
+        $redirectResponse->assertRedirect('/mi-candidato');
+
+        // Verify seeded profile exists
         $this->assertDatabaseHas('candidatos', [
             'nombre_completo' => 'Federico Sisterna',
             'es_propio' => true,
-            'estado_politico' => 'candidato',
         ]);
-
-        $this->assertDatabaseHas('candidatos', [
-            'nombre_completo' => 'Carlos Morales',
-            'estado_politico' => 'opositor',
-        ]);
-    }
-
-    public function test_filtering_candidatos_by_estado_politico(): void
-    {
-        $user = User::where('role', 'consultor')->first();
-
-        $response = $this->actingAs($user)->get('/candidatos?estado=opositor');
-        $response->assertStatus(200);
     }
 
     public function test_consultor_can_create_a_candidate(): void

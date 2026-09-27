@@ -25,8 +25,6 @@ class CleanRoutesTest extends TestCase
             '/' => 'Dashboard',
             '/dashboard' => 'Dashboard Direct',
             '/mi-candidato' => 'Mi Candidato',
-            '/candidatos' => 'Oposición y Rivales',
-            '/candidatos/benchmarking' => 'Benchmarking',
             '/territorios' => 'Territorio & Demografía',
             '/feed' => 'Feed Social',
             '/feed?filtro=propio' => 'Feed Propio',
