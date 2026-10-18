@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import {
   ExternalLink,
@@ -48,6 +48,12 @@ const syncProgress = ref({
 });
 const syncLogs = ref([]);
 let progressInterval = null;
+
+onUnmounted(() => {
+  if (progressInterval) {
+    clearInterval(progressInterval);
+  }
+});
 
 const isRefreshing = ref(false);
 const refreshMessage = ref('');

@@ -673,6 +673,8 @@ const saveTerritorio = () => {
                   <div v-if="dept.candidato_propio" class="flex items-center gap-2">
                     <img
                       :src="dept.candidato_propio.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(dept.candidato_propio.nombre_completo)}`"
+                      :alt="`Avatar de ${dept.candidato_propio.nombre_completo}`"
+                      referrerpolicy="no-referrer"
                       class="w-6 h-6 rounded-full object-cover border border-cyan-500"
                     />
                     <span class="text-slate-900 dark:text-slate-100">{{ dept.candidato_propio.nombre_completo }}</span>

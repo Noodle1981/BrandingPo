@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import { useModalKeydown } from '../../composables/useModalKeydown';
 import { 
   X, 
   Globe, 
@@ -103,15 +104,10 @@ const handleClose = () => {
   emit('close');
 };
 
-const handleKeyDown = (e) => {
-  if (e.key === 'Escape' && props.isOpen) {
-    handleClose();
-  }
-};
+useModalKeydown(() => props.isOpen, handleClose);
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    window.addEventListener('keydown', handleKeyDown);
     form.clearErrors();
     mostrarDatosTecnicos.value = false;
 
@@ -145,7 +141,6 @@ watch(() => props.isOpen, (newVal) => {
       limpiarFormulario();
     }
   } else {
-    window.removeEventListener('keydown', handleKeyDown);
     limpiarFormulario();
   }
 });

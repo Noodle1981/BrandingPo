@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import axios from 'axios';
+import { useModalKeydown } from '../../composables/useModalKeydown';
 import { 
   X, 
   Sparkles, 
@@ -63,15 +64,10 @@ const handleClose = () => {
   emit('close');
 };
 
-const handleKeyDown = (e) => {
-  if (e.key === 'Escape' && props.isOpen) {
-    handleClose();
-  }
-};
+useModalKeydown(() => props.isOpen, handleClose);
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    window.addEventListener('keydown', handleKeyDown);
     mensajeDeteccion.value = '';
     errorDeteccion.value = '';
     form.clearErrors();
@@ -89,7 +85,6 @@ watch(() => props.isOpen, (newVal) => {
       limpiarFormulario();
     }
   } else {
-    window.removeEventListener('keydown', handleKeyDown);
     limpiarFormulario();
   }
 });

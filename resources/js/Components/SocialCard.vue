@@ -28,6 +28,7 @@ import {
 import Badge from './Badge.vue';
 import MediaEmbed from './MediaEmbed.vue';
 import SocialCardEditModal from './SocialCardEditModal.vue';
+import { useFormatters } from '../composables/useFormatters';
 
 const props = defineProps({
   post: {
@@ -305,17 +306,7 @@ const confirmDelete = () => {
   });
 };
 
-const formatNumber = (num) => {
-  if (num === null || num === undefined) return '0';
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num.toString();
-};
-
-const formatCurrency = (amount) => {
-  if (!amount) return '$0';
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(amount);
-};
+const { formatNumber, formatCurrency } = useFormatters();
 
 const currentReacciones = computed(() => {
   return parseReacciones(props.post?.reacciones_detalladas, props.post?.total_likes);

@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import SocialPlatformIcon from '../SocialPlatformIcon.vue';
 import { useFormatters } from '../../composables/useFormatters';
 import { useSocialMetrics } from '../../composables/useSocialMetrics';
+import { useModalKeydown } from '../../composables/useModalKeydown';
 import {
   Users,
   Flame,
@@ -1179,19 +1180,7 @@ const cerrarModalGrafico = () => {
   emit('update:modal-grafico-externo', null);
 };
 
-const handleKeyDown = (e) => {
-  if (e.key === 'Escape' && modalGraficoActivo.value) {
-    cerrarModalGrafico();
-  }
-};
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown);
-});
+useModalKeydown(() => modalGraficoActivo.value !== null, cerrarModalGrafico);
 </script>
 
 <template>
