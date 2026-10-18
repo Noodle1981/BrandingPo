@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Candidato;
-use App\Models\Publicacion;
 use App\Models\User;
 use App\Services\PoliticaEngagementService;
 use Database\Seeders\PoliticaSeeder;
@@ -27,7 +26,7 @@ class PoliticaEngagementTest extends TestCase
      */
     public function test_normalizacion_por_tier_compara_justamente_micro_y_mega(): void
     {
-        $servicio = new PoliticaEngagementService();
+        $servicio = new PoliticaEngagementService;
 
         // Candidato MICRO (5,000 seguidores) con buen desempeño orgánico (6.5% TAP)
         // 6.5% está cerca del punto medio [5.0 - 10.0] -> espera score ~62
@@ -66,7 +65,7 @@ class PoliticaEngagementTest extends TestCase
      */
     public function test_detector_forense_identifica_granja_de_likes_sinteticos(): void
     {
-        $servicio = new PoliticaEngagementService();
+        $servicio = new PoliticaEngagementService;
 
         // 800 likes pero solo 1 comentario (< 0.8% de comentarios respecto a likes)
         $res = $servicio->calcularTasaAceptacionReal([

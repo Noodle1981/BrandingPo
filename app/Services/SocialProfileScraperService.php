@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Helpers\SecurityHelper;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -880,7 +881,7 @@ class SocialProfileScraperService
             // Facebook incluye el texto íntegro en el payload JSON de la página bajo
             // el nodo "message":{"text":"..."} — esto evita el "..." de los og:description
             if (preg_match('/"message"\s*:\s*\{\s*"text"\s*:\s*"((?:\\\\.|[^"\\\\])*)"/s', $html, $mMsg)) {
-                $fullText = json_decode('"' . $mMsg[1] . '"');
+                $fullText = json_decode('"'.$mMsg[1].'"');
                 if (! empty($fullText) && is_string($fullText)) {
                     $result['contenido_resumen'] = trim($fullText);
                 }
@@ -949,9 +950,9 @@ class SocialProfileScraperService
             }
 
             // ── 7. Colección unificada de meta textos (para extracción de métricas) ───────
-            $allMetaTexts = $rawTitle . ' ' . $rawDesc;
+            $allMetaTexts = $rawTitle.' '.$rawDesc;
             if (preg_match_all('/<meta[^>]+content="([^"]*)"/i', $html, $allMetas)) {
-                $allMetaTexts .= ' ' . implode(' ', array_map(
+                $allMetaTexts .= ' '.implode(' ', array_map(
                     fn ($t) => html_entity_decode($t, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
                     $allMetas[1]
                 ));
@@ -1128,7 +1129,7 @@ class SocialProfileScraperService
 
             // 2. Extraer autor del handle en la URL si está presente
             if (preg_match('/tiktok\.com\/@([a-zA-Z0-9_\.\-]+)/i', $cleanUrl, $am)) {
-                $result['handle_autor'] = '@' . ltrim($am[1], '@');
+                $result['handle_autor'] = '@'.ltrim($am[1], '@');
             }
 
             // 3. Consultar endpoint oficial oEmbed de TikTok (para fotos se convierte a /video/$id y con www. para compatibilidad con la API oEmbed)
@@ -1136,7 +1137,7 @@ class SocialProfileScraperService
             if (str_contains($oembedTargetUrl, 'tiktok.com') && ! str_contains($oembedTargetUrl, 'www.tiktok.com')) {
                 $oembedTargetUrl = str_replace('://tiktok.com', '://www.tiktok.com', $oembedTargetUrl);
             }
-            $oembedUrl = 'https://www.tiktok.com/oembed?url=' . urlencode($oembedTargetUrl);
+            $oembedUrl = 'https://www.tiktok.com/oembed?url='.urlencode($oembedTargetUrl);
             $oembedResp = Http::withoutVerifying()
                 ->timeout(10)
                 ->withHeaders([
@@ -1154,7 +1155,7 @@ class SocialProfileScraperService
                     $result['media_url'] = $oembed['thumbnail_url'];
                 }
                 if (! empty($oembed['author_unique_id'])) {
-                    $result['handle_autor'] = '@' . ltrim($oembed['author_unique_id'], '@');
+                    $result['handle_autor'] = '@'.ltrim($oembed['author_unique_id'], '@');
                 } elseif (! empty($oembed['author_name']) && empty($result['handle_autor'])) {
                     $result['handle_autor'] = $oembed['author_name'];
                 }
@@ -1388,7 +1389,8 @@ class SocialProfileScraperService
         // ── Caso 1: Twitter/X status URL (máxima prioridad para evitar confusión con otros patrones) ──
         if (preg_match('/(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/(\d+)/i', $input, $tm)) {
             $url = $tm[0];
-            return str_starts_with($url, 'http') ? $url : 'https://' . $url;
+
+            return str_starts_with($url, 'http') ? $url : 'https://'.$url;
         }
 
         // ── Caso 2: Facebook plugin URL dentro de un <iframe src="..."> ──────────────
@@ -1496,7 +1498,7 @@ class SocialProfileScraperService
                 'igsh', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
                 'ref', 'ref_src', 'ref_url', 'fbclid', 'gclid', 's', 't', 'mibextid', 'rdid',
                 'is_from_webapp', 'sender_device', 'share_id', 'feature', 'app', 'locale',
-                'twclid', 'si', '_r', '_d', 'checksum', 'source_ve_path', 'embed_source'
+                'twclid', 'si', '_r', '_d', 'checksum', 'source_ve_path', 'embed_source',
             ];
 
             foreach ($params as $k => $v) {
@@ -1573,13 +1575,15 @@ class SocialProfileScraperService
 
             // 3. Meta tags estándar (article:published_time, og:article:published_time, datePublished)
             if (preg_match('/<meta[^>]+(?:property="article:published_time"|property="og:article:published_time"|itemprop="datePublished"|name="publish_date"|name="pubdate")[^>]+content="([^"]+)"/i', $html, $m)) {
-                $carbon = \Carbon\Carbon::parse($m[1]);
+                $carbon = Carbon::parse($m[1]);
+
                 return $carbon->format('Y-m-d\TH:i');
             }
 
             // 4. Schema.org / JSON-LD ("datePublished": "...", "uploadDate": "...")
             if (preg_match('/"(?:datePublished|uploadDate|created_at|dateCreated)"\s*:\s*"([^"]+)"/i', $html, $m)) {
-                $carbon = \Carbon\Carbon::parse($m[1]);
+                $carbon = Carbon::parse($m[1]);
+
                 return $carbon->format('Y-m-d\TH:i');
             }
 

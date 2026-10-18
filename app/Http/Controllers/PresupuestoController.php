@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Presupuesto\StorePresupuestoPartidaRequest;
 use App\Models\Candidato;
 use App\Models\CicloCampana;
 use App\Models\PresupuestoPartida;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -89,18 +89,10 @@ class PresupuestoController extends Controller
     /**
      * Registrar una nueva partida presupuestaria.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StorePresupuestoPartidaRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        $validated = $request->validate([
-            'ciclo_campana_id' => ['required', Rule::exists('ciclo_campanas', 'id')->where('workspace_id', $workspace->id)],
-            'candidato_id' => ['nullable', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
-            'categoria' => ['required', 'string'],
-            'monto_asignado' => ['required', 'numeric', 'min:0'],
-            'monto_ejecutado' => ['nullable', 'numeric', 'min:0'],
-            'notas' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         PresupuestoPartida::create([
             'workspace_id' => $workspace->id,

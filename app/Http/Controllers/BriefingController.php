@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Briefing\StoreInformeRequest;
 use App\Models\CicloCampana;
 use App\Models\InformeEjecutivo;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -84,17 +84,10 @@ class BriefingController extends Controller
     /**
      * Generar / Guardar un nuevo informe ejecutivo.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreInformeRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        $validated = $request->validate([
-            'ciclo_campana_id' => ['required', Rule::exists('ciclo_campanas', 'id')->where('workspace_id', $workspace->id)],
-            'titulo' => ['required', 'string', 'max:255'],
-            'periodo_cubierto' => ['required', 'string', 'max:255'],
-            'resumen_ejecutivo' => ['required', 'string'],
-            'conclusiones_estrategicas' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         $publicaciones = Publicacion::where('workspace_id', $workspace->id)->get();
 

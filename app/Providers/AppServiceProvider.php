@@ -39,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
         // 3. Configuración de Rate Limiters de seguridad
         RateLimiter::for('auth', function (Request $request) {
             $maxAttempts = app()->isProduction() ? 5 : 30;
+
             return Limit::perMinute($maxAttempts)->by($request->ip())
                 ->response(function () {
                     return back()->withErrors([

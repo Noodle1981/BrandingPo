@@ -14,7 +14,7 @@ class MediaStorageService
      *
      * @param  string|null  $urlExterna  URL externa (ej: Instagram/Facebook CDN)
      * @param  string|null  $rutaActual  Ruta local existente para limpiar si cambia
-     * @return string|null  Ruta pública accesible (ej: /storage/publicaciones/...)
+     * @return string|null Ruta pública accesible (ej: /storage/publicaciones/...)
      */
     public function guardarMediaLocal(?string $urlExterna, ?string $rutaActual = null): ?string
     {
@@ -87,7 +87,7 @@ class MediaStorageService
      * @param  string|null  $urlExterna  URL de avatar externa
      * @param  string  $prefijo  Prefijo identificador (ej: candidato_10)
      * @param  string|null  $rutaActual  Ruta previa para limpiar
-     * @return string|null  Ruta pública accesible (ej: /storage/avatars/...)
+     * @return string|null Ruta pública accesible (ej: /storage/avatars/...)
      */
     public function guardarAvatarLocal(?string $urlExterna, string $prefijo = 'avatar', ?string $rutaActual = null): ?string
     {

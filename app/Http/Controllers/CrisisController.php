@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Crisis\StoreAlianzaRequest;
+use App\Http\Requests\Crisis\StoreCrisisRequest;
+use App\Http\Requests\Crisis\UpdateCrisisRequest;
 use App\Models\AlianzaPolitica;
 use App\Models\Candidato;
 use App\Models\EventoCrisis;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -96,20 +98,10 @@ class CrisisController extends Controller
     /**
      * Registrar un nuevo incidente de crisis.
      */
-    public function storeCrisis(Request $request): RedirectResponse
+    public function storeCrisis(StoreCrisisRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        $validated = $request->validate([
-            'candidato_id' => ['required', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
-            'titulo' => ['required', 'string', 'max:255'],
-            'fecha_evento' => ['required', 'date'],
-            'nivel_gravedad' => ['required', 'in:leve,moderado,critico'],
-            'minutos_tiempo_respuesta' => ['nullable', 'integer', 'min:0'],
-            'estrategia_contencion' => ['nullable', 'string'],
-            'estado' => ['required', 'in:abierto,en_contencion,resuelto'],
-            'impacto_estimado' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         EventoCrisis::create([
             'workspace_id' => $workspace->id,
@@ -130,17 +122,12 @@ class CrisisController extends Controller
     /**
      * Actualizar estado o contención de crisis.
      */
-    public function updateCrisis(Request $request, EventoCrisis $crisis): RedirectResponse
+    public function updateCrisis(UpdateCrisisRequest $request, EventoCrisis $crisis): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($crisis, $workspace);
 
-        $validated = $request->validate([
-            'estado' => ['required', 'in:abierto,en_contencion,resuelto'],
-            'estrategia_contencion' => ['nullable', 'string'],
-            'minutos_tiempo_respuesta' => ['nullable', 'integer', 'min:0'],
-        ]);
-
+        $validated = $request->validated();
         $crisis->update($validated);
 
         return redirect()->route('crisis.index')
@@ -150,17 +137,10 @@ class CrisisController extends Controller
     /**
      * Registrar una alianza o figura de respaldo político.
      */
-    public function storeAlianza(Request $request): RedirectResponse
+    public function storeAlianza(StoreAlianzaRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        $validated = $request->validate([
-            'candidato_id' => ['required', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
-            'nombre_figura' => ['required', 'string', 'max:255'],
-            'cargo_o_rol' => ['required', 'string', 'max:255'],
-            'tipo_impacto' => ['required', 'in:suma,resta,neutro'],
-            'notas_observacion' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         AlianzaPolitica::create([
             'workspace_id' => $workspace->id,

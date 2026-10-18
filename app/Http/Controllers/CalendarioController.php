@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Calendario\StoreEventoCalendarioRequest;
 use App\Models\Candidato;
 use App\Models\CicloCampana;
 use App\Models\EjeTematico;
@@ -10,7 +11,6 @@ use App\Models\EventoCalendario;
 use App\Models\Publicacion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -168,22 +168,10 @@ class CalendarioController extends Controller
     /**
      * Registrar evento en el calendario.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreEventoCalendarioRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        $validated = $request->validate([
-            'ciclo_campana_id' => ['required', Rule::exists('ciclo_campanas', 'id')->where('workspace_id', $workspace->id)],
-            'candidato_id' => ['nullable', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
-            'eje_tematico_id' => ['nullable', Rule::exists('eje_tematicos', 'id')->where('workspace_id', $workspace->id)],
-            'titulo' => ['required', 'string', 'max:255'],
-            'fecha_inicio' => ['required', 'date'],
-            'fecha_fin' => ['nullable', 'date'],
-            'tipo_evento' => ['required', 'string'],
-            'lugar' => ['nullable', 'string', 'max:255'],
-            'estado' => ['required', 'in:programado,realizado,cancelado'],
-            'notas' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         if (empty($validated['candidato_id'])) {
             $propio = Candidato::where('workspace_id', $workspace->id)
@@ -215,4 +203,3 @@ class CalendarioController extends Controller
             ->with('success', 'Evento eliminado del calendario.');
     }
 }
-

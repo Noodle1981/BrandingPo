@@ -3,20 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Candidato;
-use App\Models\CicloCampana;
 use App\Models\MedioPrensa;
-use App\Models\NotaPrensa;
-use App\Models\PerfilSocial;
-use App\Models\Territorio;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\GenericMediaScraperService;
-use App\Services\SocialProfileScraperService;
 use Database\Seeders\PoliticaSeeder;
 use Database\Seeders\PublicacionSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class MediosObservatoryAndScraperTest extends TestCase
@@ -24,9 +18,13 @@ class MediosObservatoryAndScraperTest extends TestCase
     use RefreshDatabase;
 
     protected Workspace $workspace;
+
     protected Candidato $candidatoPropio;
+
     protected User $admin;
+
     protected User $consultor;
+
     protected User $visualizador;
 
     protected function setUp(): void
@@ -195,7 +193,7 @@ class MediosObservatoryAndScraperTest extends TestCase
             ->get();
 
         // 1. Detección por Nombre Completo
-        $texto1 = "El intendente Federico Sisterna inauguró obras de pavimentación en el departamento.";
+        $texto1 = 'El intendente Federico Sisterna inauguró obras de pavimentación en el departamento.';
         $mencion1 = $scraper->detectarMencionCandidato($texto1, $candidatos);
 
         $this->assertNotNull($mencion1);
@@ -203,12 +201,12 @@ class MediosObservatoryAndScraperTest extends TestCase
         $this->assertEquals('titular', $mencion1['tipo_mencion']);
 
         // Evaluación de tono favorable
-        $eval1 = $scraper->evaluarTonoYSentimiento("Federico Sisterna inauguró obras", "Avance histórico en pavimentación", 'web');
+        $eval1 = $scraper->evaluarTonoYSentimiento('Federico Sisterna inauguró obras', 'Avance histórico en pavimentación', 'web');
         $this->assertEquals('favorable', $eval1['tono']);
         $this->assertGreaterThan(0, $eval1['score']);
 
         // 2. Detección de tono crítico con palabras clave
-        $eval2 = $scraper->evaluarTonoYSentimiento("Denuncian colapso y demoras en el sistema", "Polémica por falta de inversión", 'web');
+        $eval2 = $scraper->evaluarTonoYSentimiento('Denuncian colapso y demoras en el sistema', 'Polémica por falta de inversión', 'web');
         $this->assertEquals('critico', $eval2['tono']);
         $this->assertLessThan(0, $eval2['score']);
 
@@ -221,7 +219,7 @@ class MediosObservatoryAndScraperTest extends TestCase
             'sad' => 5,
             'angry' => 20, // 20 / 38 = 52.6% > 15%
         ];
-        $eval3 = $scraper->evaluarTonoYSentimiento("Reclamo vecinal", "Vecinos protestan", 'facebook', $reaccionesCriticas);
+        $eval3 = $scraper->evaluarTonoYSentimiento('Reclamo vecinal', 'Vecinos protestan', 'facebook', $reaccionesCriticas);
         $this->assertEquals('critico', $eval3['tono']);
         $this->assertLessThan(0, $eval3['score']);
     }

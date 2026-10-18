@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Candidato;
 use App\Models\EjeTematico;
 use App\Models\Publicacion;
+use App\Models\Workspace;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
@@ -344,7 +345,7 @@ class PublicacionSeeder extends Seeder
             ];
 
             $totalVistas = (int) $data['vistas_org'] + (int) $data['vistas_pag'];
-            $workspaceId = $candidato->workspace_id ?? \App\Models\Workspace::first()?->id;
+            $workspaceId = $candidato->workspace_id ?? Workspace::first()?->id;
 
             Publicacion::create([
                 'workspace_id' => $workspaceId,

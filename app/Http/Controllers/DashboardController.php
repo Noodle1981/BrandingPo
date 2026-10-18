@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
 use App\Models\Candidato;
+use App\Models\EjeTematico;
 use App\Models\NotaPrensa;
+use App\Models\PerfilSocialMetrica;
 use App\Models\Publicacion;
+use App\Services\PoliticaEngagementService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -59,7 +62,7 @@ class DashboardController extends Controller
             ->latest('fecha_publicacion')
             ->get();
 
-        $ejes = \App\Models\EjeTematico::where('workspace_id', $workspace->id)
+        $ejes = EjeTematico::where('workspace_id', $workspace->id)
             ->orderBy('orden')
             ->orderBy('id')
             ->get();
@@ -88,7 +91,7 @@ class DashboardController extends Controller
             $partes = explode('-', $keyYm);
             $ano = $partes[0] ?? date('Y');
             $mesInt = (int) ($partes[1] ?? 1);
-            $nombreMes = ($mesesEspanol[$mesInt] ?? $keyYm) . " {$ano}";
+            $nombreMes = ($mesesEspanol[$mesInt] ?? $keyYm)." {$ano}";
             $cortoMes = $mesesCortos[$mesInt] ?? $keyYm;
 
             $cantPosts = $postsMes->count();
@@ -123,7 +126,7 @@ class DashboardController extends Controller
             $mesIntNow = (int) ($partesNow[1] ?? 1);
             $desgloseMensual->push([
                 'clave_mes' => $mesActualYm,
-                'nombre_mes' => ($mesesEspanol[$mesIntNow] ?? $mesActualYm) . " {$anoNow}",
+                'nombre_mes' => ($mesesEspanol[$mesIntNow] ?? $mesActualYm)." {$anoNow}",
                 'mes_corto' => $mesesCortos[$mesIntNow] ?? $mesActualYm,
                 'ano' => (int) $anoNow,
                 'total_posts' => 0,
@@ -304,7 +307,7 @@ class DashboardController extends Controller
         }
 
         // Análisis integral con PoliticaEngagementService (Follower-based equitativo)
-        $politicaEngagement = app(\App\Services\PoliticaEngagementService::class);
+        $politicaEngagement = app(PoliticaEngagementService::class);
         $analisisGlobal = $politicaEngagement->calcularTasaAceptacionReal([
             'seguidores_canal' => $seguidoresNetosEstimados,
             'likes' => (int) $publicaciones->sum('total_likes'),
@@ -444,7 +447,7 @@ class DashboardController extends Controller
         // Mejor mes histórico de la campaña
         $mejorMesItem = $desgloseMensual->sortByDesc('score_total')->first();
         $recordMensualScore = $mejorMesItem ? (int) $mejorMesItem['score_total'] : $scoreImpactoTotal;
-        $recordMensualNombre = $mejorMesItem ? $mejorMesItem['mes_corto'] . ' ' . $mejorMesItem['ano'] : '';
+        $recordMensualNombre = $mejorMesItem ? $mejorMesItem['mes_corto'].' '.$mejorMesItem['ano'] : '';
         $recordMensualCorto = $mejorMesItem ? $mejorMesItem['mes_corto'] : '';
 
         // Meta Total de Campaña: Presión Electoral Total (100% del Padrón Electoral)
@@ -466,8 +469,8 @@ class DashboardController extends Controller
             : 0;
 
         $scoreImpactoBaseTexto = number_format($seguidoresNetosEstimados, 0, ',', '.')
-            . ' únicos netos (Tiers) × ' . $factorEngagementObjetivo
-            . ' — cubre ' . $pctPadronCubiertoPorTiers . '% del padrón';
+            .' únicos netos (Tiers) × '.$factorEngagementObjetivo
+            .' — cubre '.$pctPadronCubiertoPorTiers.'% del padrón';
 
         $scoreImpactoPct = $scoreImpactoMeta > 0
             ? round(($scoreImpactoTotal / $scoreImpactoMeta) * 100, 1)
@@ -500,14 +503,14 @@ class DashboardController extends Controller
         ];
 
         $plataformasOrden = ['instagram', 'facebook', 'threads', 'tiktok', 'x_twitter', 'youtube', 'linkedin'];
-        $now = \Carbon\Carbon::now();
+        $now = Carbon::now();
         $startOfMonth = $now->copy()->startOfMonth();
 
         $perfilesPorPlataforma = $candidato->perfilesSociales->keyBy('plataforma');
 
         $redesDesglose = collect($plataformasOrden)->map(function ($plat) use ($perfilesPorPlataforma, $publicaciones, $startOfMonth, $plataformasColores) {
             $perfil = $perfilesPorPlataforma->get($plat);
-            $tieneHandle = $perfil && (!empty(trim($perfil->handle_usuario ?? '')) || !empty(trim($perfil->url_perfil ?? '')));
+            $tieneHandle = $perfil && (! empty(trim($perfil->handle_usuario ?? '')) || ! empty(trim($perfil->url_perfil ?? '')));
 
             if ($perfil && $tieneHandle) {
                 $postsRed = $publicaciones->where('perfil_social_id', $perfil->id);
@@ -730,7 +733,7 @@ class DashboardController extends Controller
 
         $perfilesActivos = $candidato->perfilesSociales->filter(fn ($p) => (bool) $p->esta_activo || (int) $p->seguidores_actuales > 0);
         $perfilesIds = $perfilesActivos->pluck('id');
-        $medicionesHistoricas = \App\Models\PerfilSocialMetrica::whereIn('perfil_social_id', $perfilesIds)
+        $medicionesHistoricas = PerfilSocialMetrica::whereIn('perfil_social_id', $perfilesIds)
             ->orderBy('fecha', 'asc')
             ->get();
 
@@ -1073,9 +1076,9 @@ class DashboardController extends Controller
                 'fecha_raw' => $p->fecha_publicacion ? $p->fecha_publicacion->format('Y-m-d') : '',
                 'tipo_pauta' => $p->tipo_pauta,
                 'monto_invertido' => (float) $p->monto_invertido_pauta,
-                'monto_formateado' => '$' . number_format((float) $p->monto_invertido_pauta, 0, ',', '.'),
+                'monto_formateado' => '$'.number_format((float) $p->monto_invertido_pauta, 0, ',', '.'),
                 'plataforma' => $p->plataforma ?: $p->perfilSocial?->plataforma ?: 'instagram',
-                'titulo' => mb_substr($p->contenido_resumen ?: 'Post Impulsado', 0, 45) . '...',
+                'titulo' => mb_substr($p->contenido_resumen ?: 'Post Impulsado', 0, 45).'...',
                 'score_impacto' => ($p->total_likes * 1) + ($p->total_comentarios * 3) + ($p->total_compartidos * 5) + ((int) ($p->total_republicados ?? 0) * 10),
             ];
         })->values();

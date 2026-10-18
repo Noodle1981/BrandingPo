@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\PoliticaEngagementService;
+use App\Services\SocialProfileScraperService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -85,7 +87,7 @@ class Publicacion extends Model
 
         // 2. Analizar URL y copy si el post figura como orgánico
         if ($this->tipo_pauta === 'organico') {
-            $analisis = \App\Services\SocialProfileScraperService::analizarHuellaPauta($this->url_post, $this->contenido_resumen);
+            $analisis = SocialProfileScraperService::analizarHuellaPauta($this->url_post, $this->contenido_resumen);
             if ($analisis['tiene_huella']) {
                 return $analisis;
             }
@@ -103,7 +105,7 @@ class Publicacion extends Model
             ? (int) ($this->perfilSocial->seguidores_actuales ?? 1000)
             : 1000;
 
-        $servicio = app(\App\Services\PoliticaEngagementService::class);
+        $servicio = app(PoliticaEngagementService::class);
 
         return $servicio->calcularTasaAceptacionReal([
             'seguidores_canal' => $seguidores,
@@ -152,6 +154,7 @@ class Publicacion extends Model
     {
         if (array_key_exists('indice_aprobacion_neta', $this->insights_internos_propios ?? [])) {
             $val = $this->insights_internos_propios['indice_aprobacion_neta'];
+
             return $val !== null ? (float) $val : null;
         }
 
@@ -273,18 +276,18 @@ class Publicacion extends Model
 
         // 1. Verificación por URL (si fue provista)
         if (! empty($url)) {
-            $canonical = \App\Services\SocialProfileScraperService::canonicalizePostUrl($url) ?? $url;
+            $canonical = SocialProfileScraperService::canonicalizePostUrl($url) ?? $url;
             $rawClean = rtrim(trim($url), '/');
             $canonicalClean = rtrim($canonical, '/');
 
             // Buscar coincidencia exacta o por versión canonicalizada
             $encontradoPorUrl = (clone $baseQuery)->where(function ($q) use ($url, $canonical, $rawClean, $canonicalClean) {
                 $q->where('url_post', $url)
-                  ->orWhere('url_post', $canonical)
-                  ->orWhere('url_post', $rawClean)
-                  ->orWhere('url_post', $canonicalClean)
-                  ->orWhere('url_post', $canonicalClean.'/')
-                  ->orWhere('url_post', $rawClean.'/');
+                    ->orWhere('url_post', $canonical)
+                    ->orWhere('url_post', $rawClean)
+                    ->orWhere('url_post', $canonicalClean)
+                    ->orWhere('url_post', $canonicalClean.'/')
+                    ->orWhere('url_post', $rawClean.'/');
             })->first();
 
             if ($encontradoPorUrl) {

@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Models\Candidato;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 
@@ -71,8 +72,8 @@ class WorkspaceHelper
             $workspaceIdRecurso = $recurso->workspace_id;
         } elseif (method_exists($recurso, 'candidato') && $recurso->candidato) {
             $workspaceIdRecurso = $recurso->candidato->workspace_id;
-        } elseif (isset($recurso->candidato_id) && class_exists(\App\Models\Candidato::class)) {
-            $workspaceIdRecurso = \App\Models\Candidato::find($recurso->candidato_id)?->workspace_id;
+        } elseif (isset($recurso->candidato_id) && class_exists(Candidato::class)) {
+            $workspaceIdRecurso = Candidato::find($recurso->candidato_id)?->workspace_id;
         }
 
         if ($workspaceIdRecurso !== null && (int) $workspaceIdRecurso !== (int) $workspace->id) {

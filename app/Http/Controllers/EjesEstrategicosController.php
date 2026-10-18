@@ -86,11 +86,11 @@ class EjesEstrategicosController extends Controller
             $partes = explode('-', $keyYm);
             $ano = $partes[0] ?? date('Y');
             $mesInt = (int) ($partes[1] ?? 1);
-            $nombreMes = ($mesesEspanol[$mesInt] ?? $keyYm) . " {$ano}";
+            $nombreMes = ($mesesEspanol[$mesInt] ?? $keyYm)." {$ano}";
 
             return [
                 'clave' => $keyYm,
-                'nombre' => $nombreMes . ($keyYm === $mesActualYm ? ' (En curso)' : ''),
+                'nombre' => $nombreMes.($keyYm === $mesActualYm ? ' (En curso)' : ''),
                 'es_actual' => $keyYm === $mesActualYm,
                 'total_posts' => $postsMes->count(),
             ];
@@ -103,7 +103,7 @@ class EjesEstrategicosController extends Controller
             $mesIntNow = (int) ($partesNow[1] ?? 1);
             $desglosePeriodos->push([
                 'clave' => $mesActualYm,
-                'nombre' => ($mesesEspanol[$mesIntNow] ?? $mesActualYm) . " {$anoNow} (En curso)",
+                'nombre' => ($mesesEspanol[$mesIntNow] ?? $mesActualYm)." {$anoNow} (En curso)",
                 'es_actual' => true,
                 'total_posts' => 0,
             ]);
@@ -406,12 +406,12 @@ class EjesEstrategicosController extends Controller
         // 6. EVOLUCIÓN HISTÓRICA TIME-SERIES MENSUAL POR PILAR
         // ─────────────────────────────────────────────────────────────
         $mesesTimeline = $gruposPorMes->keys()->sort()->values();
-        $evolucionHistorica = $mesesTimeline->map(function ($ym) use ($gruposPorMes, $mesesCortos, $ejesCatalogados) {
+        $evolucionHistorica = $mesesTimeline->map(function ($ym) use ($gruposPorMes, $mesesCortos) {
             $postsMes = $gruposPorMes->get($ym, collect());
             $partes = explode('-', $ym);
             $ano = $partes[0] ?? date('Y');
             $mesInt = (int) ($partes[1] ?? 1);
-            $etiqueta = ($mesesCortos[$mesInt] ?? $ym) . ' ' . substr($ano, 2, 2);
+            $etiqueta = ($mesesCortos[$mesInt] ?? $ym).' '.substr($ano, 2, 2);
 
             $postsOrden = $postsMes->filter(fn ($p) => $p->ejeTematico?->pilar_principal === '1. Infraestructura y Seguridad Local (El Eje del Orden)')->count();
             $postsFuturo = $postsMes->filter(fn ($p) => $p->ejeTematico?->pilar_principal === '2. Desarrollo, Empleo y Comercio (El Eje del Futuro)')->count();

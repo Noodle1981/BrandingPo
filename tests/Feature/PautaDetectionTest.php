@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Candidato;
 use App\Models\Publicacion;
+use App\Models\PublicacionPautaEvento;
 use App\Models\User;
 use App\Services\SocialProfileScraperService;
 use Database\Seeders\PoliticaSeeder;
@@ -27,7 +28,7 @@ class PautaDetectionTest extends TestCase
      */
     public function test_scraper_detecta_parametros_de_pauta_en_url(): void
     {
-        $scraper = new SocialProfileScraperService();
+        $scraper = new SocialProfileScraperService;
 
         // 1. URL con fbclid
         $urlConFbclid = 'https://instagram.com/reel/DcrP2plT5TP?fbclid=IwAR2X_example_meta_token';
@@ -134,7 +135,7 @@ class PautaDetectionTest extends TestCase
             'total_vistas' => 3500,
         ]);
 
-        $evento = \App\Models\PublicacionPautaEvento::create([
+        $evento = PublicacionPautaEvento::create([
             'publicacion_id' => $pub->id,
             'tipo_pauta_anterior' => 'organico',
             'tipo_pauta_nuevo' => 'organico_impulsado',

@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Candidato;
 use App\Models\EjeTematico;
+use App\Models\PerfilSocial;
+use App\Models\Publicacion;
 use App\Models\User;
 use Database\Seeders\PoliticaSeeder;
 use Database\Seeders\PublicacionSeeder;
@@ -118,7 +120,7 @@ class PublicacionesAndFastFlowTest extends TestCase
 
         $response->assertRedirect();
 
-        $publicacion = \App\Models\Publicacion::where('url_post', 'LIKE', '%DcQjMFlTt7q%')->first();
+        $publicacion = Publicacion::where('url_post', 'LIKE', '%DcQjMFlTt7q%')->first();
         $this->assertNotNull($publicacion);
         $this->assertEquals(17, $publicacion->total_likes);
         $this->assertEquals(4, $publicacion->total_comentarios);
@@ -146,7 +148,7 @@ class PublicacionesAndFastFlowTest extends TestCase
             'fecha_publicacion' => now()->toDateTimeString(),
         ]);
 
-        $this->assertEquals(1, \App\Models\Publicacion::where('url_post', 'LIKE', '%TEST_DUP_123%')->count());
+        $this->assertEquals(1, Publicacion::where('url_post', 'LIKE', '%TEST_DUP_123%')->count());
 
         // Intento de subir la misma publicación con ligeras variaciones en la URL
         $responseDuplicate = $this->actingAs($consultor)->post('/publicaciones', [
@@ -161,7 +163,7 @@ class PublicacionesAndFastFlowTest extends TestCase
 
         $responseDuplicate->assertSessionHasErrors(['url_post']);
         // Sigue habiendo solo 1 registro
-        $this->assertEquals(1, \App\Models\Publicacion::where('url_post', 'LIKE', '%TEST_DUP_123%')->count());
+        $this->assertEquals(1, Publicacion::where('url_post', 'LIKE', '%TEST_DUP_123%')->count());
     }
 
     public function test_cannot_store_duplicate_publication_by_content_and_date(): void
@@ -192,7 +194,7 @@ class PublicacionesAndFastFlowTest extends TestCase
         ]);
 
         $responseDuplicate->assertSessionHasErrors(['url_post']);
-        $this->assertEquals(1, \App\Models\Publicacion::where('contenido_resumen', 'Mensaje de campaña idéntico sin URL.')->count());
+        $this->assertEquals(1, Publicacion::where('contenido_resumen', 'Mensaje de campaña idéntico sin URL.')->count());
     }
 
     public function test_scrape_post_detects_already_registered_publication(): void
@@ -226,7 +228,7 @@ class PublicacionesAndFastFlowTest extends TestCase
     public function test_updating_tipo_pauta_creates_pauta_evento_snapshot(): void
     {
         $consultor = User::where('role', 'consultor')->first();
-        $publicacion = \App\Models\Publicacion::where('tipo_pauta', 'organico')->first();
+        $publicacion = Publicacion::where('tipo_pauta', 'organico')->first();
 
         $this->assertNotNull($publicacion);
         $oldLikes = $publicacion->total_likes;
@@ -263,7 +265,7 @@ class PublicacionesAndFastFlowTest extends TestCase
     public function test_sincronizar_canal_completo_returns_expected_json(): void
     {
         $consultor = User::where('role', 'consultor')->first();
-        $perfil = \App\Models\PerfilSocial::first();
+        $perfil = PerfilSocial::first();
 
         $response = $this->actingAs($consultor)->postJson("/perfiles-sociales/{$perfil->id}/sincronizar-canal");
 

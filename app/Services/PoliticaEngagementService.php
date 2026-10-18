@@ -13,25 +13,25 @@ class PoliticaEngagementService
             'min_seguidores' => 1_000,
             'max_seguidores' => 10_000,
             'organico' => ['min' => 5.0, 'max' => 10.0],
-            'pauta'    => ['min' => 2.5, 'max' => 5.0],
+            'pauta' => ['min' => 2.5, 'max' => 5.0],
         ],
         'medio' => [
             'min_seguidores' => 10_001,
             'max_seguidores' => 100_000,
             'organico' => ['min' => 3.5, 'max' => 6.0],
-            'pauta'    => ['min' => 1.5, 'max' => 3.0],
+            'pauta' => ['min' => 1.5, 'max' => 3.0],
         ],
         'macro' => [
             'min_seguidores' => 100_001,
             'max_seguidores' => 1_000_000,
             'organico' => ['min' => 2.0, 'max' => 3.5],
-            'pauta'    => ['min' => 1.0, 'max' => 1.8],
+            'pauta' => ['min' => 1.0, 'max' => 1.8],
         ],
         'mega' => [
             'min_seguidores' => 1_000_001,
             'max_seguidores' => PHP_INT_MAX,
             'organico' => ['min' => 1.0, 'max' => 2.0],
-            'pauta'    => ['min' => 0.4, 'max' => 1.0],
+            'pauta' => ['min' => 0.4, 'max' => 1.0],
         ],
     ];
 
@@ -153,9 +153,9 @@ class PoliticaEngagementService
     {
         return match (true) {
             $seguidores >= 1_000_001 => 'mega',
-            $seguidores >= 100_001   => 'macro',
-            $seguidores >= 10_001    => 'medio',
-            default                  => 'micro',
+            $seguidores >= 100_001 => 'macro',
+            $seguidores >= 10_001 => 'medio',
+            default => 'micro',
         };
     }
 }

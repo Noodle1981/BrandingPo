@@ -50,7 +50,7 @@ class GenericMediaScraperService
                     }
                 }
             } catch (\Throwable $e) {
-                Log::info("No se pudo extraer avatar de Facebook ({$urlFacebook}): " . $e->getMessage());
+                Log::info("No se pudo extraer avatar de Facebook ({$urlFacebook}): ".$e->getMessage());
             }
         }
 
@@ -58,6 +58,7 @@ class GenericMediaScraperService
         if (! empty($urlWeb)) {
             if (! SecurityHelper::esUrlSegura($urlWeb)) {
                 $resultado['mensaje'] = 'La URL del sitio web no es válida o apunta a un destino restringido.';
+
                 return $resultado;
             }
 
@@ -96,24 +97,24 @@ class GenericMediaScraperService
                     }
                 }
             } catch (\Throwable $e) {
-                Log::warning("Error inspeccionando web oficial ({$urlWeb}): " . $e->getMessage());
+                Log::warning("Error inspeccionando web oficial ({$urlWeb}): ".$e->getMessage());
             }
 
             // 3. Si no detectó RSS en el HTML, probar rutas estándar conocidas
             if (empty($resultado['feed_rss_url'])) {
                 $parsed = parse_url($urlWeb);
-                $baseUrl = ($parsed['scheme'] ?? 'https') . '://' . ($parsed['host'] ?? '');
+                $baseUrl = ($parsed['scheme'] ?? 'https').'://'.($parsed['host'] ?? '');
                 $candidatosRss = [
-                    $baseUrl . '/feed',
-                    $baseUrl . '/rss',
-                    $baseUrl . '/rss/feed.html?r=1',
-                    $baseUrl . '/sitemap-news.xml',
-                    $baseUrl . '/feed/atom',
-                    $baseUrl . '/rss.xml',
-                    rtrim($urlWeb, '/') . '/feed',
-                    rtrim($urlWeb, '/') . '/rss',
-                    rtrim($urlWeb, '/') . '/rss/feed.html?r=1',
-                    rtrim($urlWeb, '/') . '/sitemap-news.xml',
+                    $baseUrl.'/feed',
+                    $baseUrl.'/rss',
+                    $baseUrl.'/rss/feed.html?r=1',
+                    $baseUrl.'/sitemap-news.xml',
+                    $baseUrl.'/feed/atom',
+                    $baseUrl.'/rss.xml',
+                    rtrim($urlWeb, '/').'/feed',
+                    rtrim($urlWeb, '/').'/rss',
+                    rtrim($urlWeb, '/').'/rss/feed.html?r=1',
+                    rtrim($urlWeb, '/').'/sitemap-news.xml',
                 ];
 
                 foreach (array_unique($candidatosRss) as $rssTestUrl) {
@@ -159,7 +160,7 @@ class GenericMediaScraperService
         $itemsWeb = $this->obtenerNoticiasWeb($medio);
         foreach ($itemsWeb as $item) {
             $notasAnalizadas++;
-            $mencion = $this->detectarMencionCandidato($item['titulo'] . ' ' . ($item['resumen'] ?? ''), $candidatos);
+            $mencion = $this->detectarMencionCandidato($item['titulo'].' '.($item['resumen'] ?? ''), $candidatos);
 
             if ($mencion) {
                 $mencionesDetectadas++;
@@ -191,8 +192,8 @@ class GenericMediaScraperService
 
                 // Si el medio tiene Fanpage de Facebook vinculada, auditar también el debate social en Facebook
                 if (! empty($medio->url_facebook) && SecurityHelper::esUrlSegura($medio->url_facebook)) {
-                    $fbPostUrl = rtrim($medio->url_facebook, '/') . '/posts/' . abs(crc32($item['url_nota']));
-                    
+                    $fbPostUrl = rtrim($medio->url_facebook, '/').'/posts/'.abs(crc32($item['url_nota']));
+
                     $notaFbExistente = NotaPrensa::where('workspace_id', $medio->workspace_id)
                         ->where('medio_prensa_id', $medio->id)
                         ->where('url_nota', $fbPostUrl)
@@ -223,7 +224,7 @@ class GenericMediaScraperService
                             'es_tapa_o_principal' => false,
                             'interacciones_en_redes_del_medio' => $totalReac,
                             'reacciones_desglose' => $reaccionesBase,
-                            'raw_post_id' => 'fb_' . abs(crc32($item['url_nota'])),
+                            'raw_post_id' => 'fb_'.abs(crc32($item['url_nota'])),
                         ]);
                         $nuevasNotas++;
                     }
@@ -235,7 +236,7 @@ class GenericMediaScraperService
         $itemsFb = $this->obtenerPublicacionesFacebook($medio);
         foreach ($itemsFb as $item) {
             $notasAnalizadas++;
-            $mencion = $this->detectarMencionCandidato($item['titulo'] . ' ' . ($item['resumen'] ?? ''), $candidatos);
+            $mencion = $this->detectarMencionCandidato($item['titulo'].' '.($item['resumen'] ?? ''), $candidatos);
 
             if ($mencion) {
                 $mencionesDetectadas++;
@@ -297,7 +298,7 @@ class GenericMediaScraperService
             if ($candidato->relationLoaded('perfilesSociales') || method_exists($candidato, 'perfilesSociales')) {
                 foreach ($candidato->perfilesSociales as $perfil) {
                     $handle = ltrim(mb_strtolower($perfil->usuario_handle ?? '', 'UTF-8'), '@');
-                    if ($handle && (str_contains($textoLimpio, '@' . $handle) || str_contains($textoLimpio, $handle))) {
+                    if ($handle && (str_contains($textoLimpio, '@'.$handle) || str_contains($textoLimpio, $handle))) {
                         return [
                             'candidato' => $candidato,
                             'tipo_mencion' => 'etiqueta_directa',
@@ -315,7 +316,7 @@ class GenericMediaScraperService
             }
 
             // 3. Coincidencia por Apellido representativo (longitud >= 4 para evitar falsos positivos)
-            if (mb_strlen($apellido, 'UTF-8') >= 4 && preg_match('/\b' . preg_quote($apellido, '/') . '\b/iu', $textoLimpio)) {
+            if (mb_strlen($apellido, 'UTF-8') >= 4 && preg_match('/\b'.preg_quote($apellido, '/').'\b/iu', $textoLimpio)) {
                 return [
                     'candidato' => $candidato,
                     'tipo_mencion' => 'cuerpo',
@@ -331,7 +332,7 @@ class GenericMediaScraperService
      */
     public function evaluarTonoYSentimiento(string $titulo, string $resumen, string $origen, ?array $reacciones = null): array
     {
-        $textoCompleto = mb_strtolower($titulo . ' ' . $resumen, 'UTF-8');
+        $textoCompleto = mb_strtolower($titulo.' '.$resumen, 'UTF-8');
 
         // Si es Facebook y tenemos desglose de reacciones emocionales:
         if ($origen === 'facebook' && is_array($reacciones)) {
@@ -351,6 +352,7 @@ class GenericMediaScraperService
                 // Regla GEMINI.md B.4: Alerta roja inmediata si 😡 > 15%
                 if ($porcentajeEnojo >= 15 || $angry > ($likes + $love)) {
                     $score = round(-0.50 - ($porcentajeEnojo / 200), 2);
+
                     return [
                         'tono' => 'critico',
                         'score' => max(-1.00, $score),
@@ -359,6 +361,7 @@ class GenericMediaScraperService
 
                 if ($porcentajePositivo >= 60) {
                     $score = round(0.40 + ($porcentajePositivo / 200), 2);
+
                     return [
                         'tono' => 'favorable',
                         'score' => min(1.00, $score),
@@ -371,13 +374,13 @@ class GenericMediaScraperService
         $palabrasFavorables = [
             'inauguró', 'inaugura', 'pavimentación', 'obras', 'avance', 'crecimiento',
             'apoyo', 'lidera', 'éxito', 'felicitó', 'premio', 'mejora', 'acuerdo',
-            'inversión', 'solución', 'récord', 'transforma', 'impulsa', 'respaldo'
+            'inversión', 'solución', 'récord', 'transforma', 'impulsa', 'respaldo',
         ];
 
         $palabrasCriticas = [
             'denuncia', 'denuncian', 'colapso', 'polémica', 'escándalo', 'imputado',
             'corrupción', 'demoras', 'crítica', 'reclamo', 'freno', 'crisis',
-            'cuestionan', 'irregularidad', 'conflicto', 'ajuste', 'paro', 'rechazo'
+            'cuestionan', 'irregularidad', 'conflicto', 'ajuste', 'paro', 'rechazo',
         ];
 
         $puntosPositivos = 0;
@@ -397,6 +400,7 @@ class GenericMediaScraperService
 
         if ($puntosNegativos > $puntosPositivos) {
             $score = -0.30 - (min($puntosNegativos, 5) * 0.12);
+
             return [
                 'tono' => 'critico',
                 'score' => max(-1.00, round($score, 2)),
@@ -405,6 +409,7 @@ class GenericMediaScraperService
 
         if ($puntosPositivos > $puntosNegativos) {
             $score = 0.30 + (min($puntosPositivos, 5) * 0.12);
+
             return [
                 'tono' => 'favorable',
                 'score' => min(1.00, round($score, 2)),
@@ -433,17 +438,19 @@ class GenericMediaScraperService
         // 2. Si no hubo resultados y tenemos url_sitio, probar sitemap-news o feeds alternativos
         if (empty($items) && ! empty($medio->url_sitio) && SecurityHelper::esUrlSegura($medio->url_sitio)) {
             $parsed = parse_url($medio->url_sitio);
-            $baseUrl = ($parsed['scheme'] ?? 'https') . '://' . ($parsed['host'] ?? '');
+            $baseUrl = ($parsed['scheme'] ?? 'https').'://'.($parsed['host'] ?? '');
 
             $alternativas = [
-                $baseUrl . '/sitemap-news.xml',
-                $baseUrl . '/rss/feed.html?r=1',
-                $baseUrl . '/feed',
-                $baseUrl . '/rss',
+                $baseUrl.'/sitemap-news.xml',
+                $baseUrl.'/rss/feed.html?r=1',
+                $baseUrl.'/feed',
+                $baseUrl.'/rss',
             ];
 
             foreach ($alternativas as $altUrl) {
-                if ($altUrl === $feedUrl) continue;
+                if ($altUrl === $feedUrl) {
+                    continue;
+                }
                 $items = $this->consultarYParsearXml($altUrl, $medio->url_sitio);
                 if (! empty($items)) {
                     // Guardar el feed detectado para futuras sincronizaciones
@@ -478,7 +485,8 @@ class GenericMediaScraperService
 
             return $this->parsearFeedXml($res->body(), $siteUrl ?: $xmlUrl);
         } catch (\Throwable $e) {
-            Log::info("No se pudo obtener XML desde {$xmlUrl}: " . $e->getMessage());
+            Log::info("No se pudo obtener XML desde {$xmlUrl}: ".$e->getMessage());
+
             return [];
         }
     }
@@ -537,7 +545,8 @@ class GenericMediaScraperService
 
             return $items;
         } catch (\Throwable $e) {
-            Log::info("Error extrayendo titulares de portada para {$urlWeb}: " . $e->getMessage());
+            Log::info("Error extrayendo titulares de portada para {$urlWeb}: ".$e->getMessage());
+
             return [];
         }
     }
@@ -642,7 +651,7 @@ class GenericMediaScraperService
                 }
             }
         } catch (\Throwable $e) {
-            Log::info("Error parseando XML feed: " . $e->getMessage());
+            Log::info('Error parseando XML feed: '.$e->getMessage());
         }
 
         return $items;
@@ -662,7 +671,7 @@ class GenericMediaScraperService
         try {
             // Se realiza la lectura mediante el scraper de perfiles sociales con User-Agents de Facebook
             $profileData = $this->socialScraper->scrapeProfile($fbUrl, 'facebook');
-            
+
             // Si la descripción pública contiene noticias recientes o posts extraídos
             if (! empty($profileData['raw_description'])) {
                 // Simulador analítico estructurado de publicaciones de Facebook
@@ -671,7 +680,7 @@ class GenericMediaScraperService
                     'origen_tipo' => 'facebook',
                     'titulo' => mb_substr($profileData['raw_description'], 0, 180),
                     'resumen' => $profileData['raw_description'],
-                    'url_nota' => rtrim($fbUrl, '/') . '/posts/' . time(),
+                    'url_nota' => rtrim($fbUrl, '/').'/posts/'.time(),
                     'fecha_publicacion' => Carbon::now(),
                     'interacciones' => ($profileData['seguidores'] ?? 100) > 1000 ? 350 : 50,
                     'reacciones_desglose' => [
@@ -682,11 +691,11 @@ class GenericMediaScraperService
                         'sad' => 2,
                         'angry' => 4,
                     ],
-                    'raw_post_id' => 'fb_' . md5($fbUrl . '_' . date('Ymd')),
+                    'raw_post_id' => 'fb_'.md5($fbUrl.'_'.date('Ymd')),
                 ];
             }
         } catch (\Throwable $e) {
-            Log::info("Error obteniendo Facebook del medio {$medio->nombre}: " . $e->getMessage());
+            Log::info("Error obteniendo Facebook del medio {$medio->nombre}: ".$e->getMessage());
         }
 
         return $items;
@@ -703,7 +712,7 @@ class GenericMediaScraperService
         }
 
         if (str_starts_with($relUrl, '//')) {
-            return 'https:' . $relUrl;
+            return 'https:'.$relUrl;
         }
 
         $parts = parse_url($baseUrl);

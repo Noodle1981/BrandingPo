@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\SecurityHelper;
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Medios\StoreMedioRequest;
+use App\Http\Requests\Medios\StoreNotaRequest;
+use App\Http\Requests\Medios\UpdateMedioRequest;
+use App\Http\Requests\Medios\UpdateNotaRequest;
 use App\Models\Candidato;
 use App\Models\MedioPrensa;
 use App\Models\NotaPrensa;
@@ -12,7 +15,6 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -73,6 +75,7 @@ class MediosController extends Controller
         $mesesDisponibles = $fechasMesesQuery->pluck('fecha_publicacion')
             ->map(function ($f) use ($nombresMeses) {
                 $numMes = Carbon::parse($f)->format('m');
+
                 return [
                     'numero' => $numMes,
                     'nombre' => $nombresMeses[$numMes] ?? $numMes,
@@ -292,28 +295,10 @@ class MediosController extends Controller
     /**
      * Registrar un nuevo medio de prensa en el workspace activo.
      */
-    public function storeMedio(Request $request): RedirectResponse
+    public function storeMedio(StoreMedioRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        $validated = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
-            'tipo_medio' => ['required', 'in:digital,impreso,radio,tv'],
-            'url_sitio' => ['nullable', 'url', 'max:500'],
-            'url_facebook' => ['nullable', 'url', 'max:500'],
-            'avatar_url' => ['nullable', 'string', 'max:1000'],
-            'feed_rss_url' => ['nullable', 'url', 'max:500'],
-            'alcance_tipo' => ['required', 'in:local,provincial,nacional'],
-            'sesgo_editorial_estimado' => ['required', 'in:oficialista,independiente,opositor,neutral'],
-        ]);
-
-        if (! empty($validated['url_sitio']) && ! SecurityHelper::esUrlSegura($validated['url_sitio'])) {
-            return back()->withErrors(['url_sitio' => 'La URL del portal web no es válida o apunta a un host restringido.']);
-        }
-
-        if (! empty($validated['url_facebook']) && ! SecurityHelper::esUrlSegura($validated['url_facebook'])) {
-            return back()->withErrors(['url_facebook' => 'La URL de Facebook no es válida o apunta a un host restringido.']);
-        }
+        $validated = $request->validated();
 
         MedioPrensa::create(array_merge($validated, [
             'workspace_id' => $workspace->id,
@@ -327,30 +312,12 @@ class MediosController extends Controller
     /**
      * Actualizar datos de un medio de prensa.
      */
-    public function updateMedio(Request $request, MedioPrensa $medio): RedirectResponse
+    public function updateMedio(UpdateMedioRequest $request, MedioPrensa $medio): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($medio, $workspace);
 
-        $validated = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
-            'tipo_medio' => ['required', 'in:digital,impreso,radio,tv'],
-            'url_sitio' => ['nullable', 'url', 'max:500'],
-            'url_facebook' => ['nullable', 'url', 'max:500'],
-            'avatar_url' => ['nullable', 'string', 'max:1000'],
-            'feed_rss_url' => ['nullable', 'url', 'max:500'],
-            'alcance_tipo' => ['required', 'in:local,provincial,nacional'],
-            'sesgo_editorial_estimado' => ['required', 'in:oficialista,independiente,opositor,neutral'],
-        ]);
-
-        if (! empty($validated['url_sitio']) && ! SecurityHelper::esUrlSegura($validated['url_sitio'])) {
-            return back()->withErrors(['url_sitio' => 'La URL del portal web no es válida o apunta a un host restringido.']);
-        }
-
-        if (! empty($validated['url_facebook']) && ! SecurityHelper::esUrlSegura($validated['url_facebook'])) {
-            return back()->withErrors(['url_facebook' => 'La URL de Facebook no es válida o apunta a un host restringido.']);
-        }
-
+        $validated = $request->validated();
         $medio->update($validated);
 
         return redirect()->route('medios.index')
@@ -454,32 +421,10 @@ class MediosController extends Controller
     /**
      * Registrar una nueva nota manual en el clipping.
      */
-    public function storeNota(Request $request): RedirectResponse
+    public function storeNota(StoreNotaRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        $validated = $request->validate([
-            'medio_prensa_id' => ['required', Rule::exists('medios_prensa', 'id')->where('workspace_id', $workspace->id)],
-            'candidato_id' => ['nullable', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
-            'origen_tipo' => ['nullable', 'in:web,facebook'],
-            'tipo_mencion' => ['nullable', 'in:etiqueta_directa,titular,cuerpo'],
-            'fecha_publicacion' => ['required', 'date'],
-            'titulo' => ['required', 'string', 'max:500'],
-            'resumen' => ['nullable', 'string'],
-            'url_nota' => ['nullable', 'url', 'max:500'],
-            'tono_mencion' => ['required', 'in:favorable,neutro,critico'],
-            'puntuacion_sentimiento' => ['nullable', 'numeric', 'between:-1,1'],
-            'es_tapa_o_principal' => ['boolean'],
-            'interacciones_en_redes_del_medio' => ['nullable', 'integer', 'min:0'],
-            'respuesta_replica_candidato' => ['nullable', 'string'],
-            'reacciones_desglose' => ['nullable', 'array'],
-            'reacciones_desglose.likes' => ['nullable', 'integer', 'min:0'],
-            'reacciones_desglose.love' => ['nullable', 'integer', 'min:0'],
-            'reacciones_desglose.haha' => ['nullable', 'integer', 'min:0'],
-            'reacciones_desglose.wow' => ['nullable', 'integer', 'min:0'],
-            'reacciones_desglose.sad' => ['nullable', 'integer', 'min:0'],
-            'reacciones_desglose.angry' => ['nullable', 'integer', 'min:0'],
-        ]);
+        $validated = $request->validated();
 
         $reacciones = $request->input('reacciones_desglose');
         $totalInteracciones = is_array($reacciones) && ! empty($reacciones)
@@ -511,33 +456,12 @@ class MediosController extends Controller
     /**
      * Actualizar una nota existente en el clipping.
      */
-    public function updateNota(Request $request, NotaPrensa $nota): RedirectResponse
+    public function updateNota(UpdateNotaRequest $request, NotaPrensa $nota): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($nota, $workspace);
 
-        $validated = $request->validate([
-            'medio_prensa_id' => ['required', Rule::exists('medios_prensa', 'id')->where('workspace_id', $workspace->id)],
-            'candidato_id' => ['nullable', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
-            'origen_tipo' => ['nullable', 'in:web,facebook'],
-            'tipo_mencion' => ['nullable', 'in:etiqueta_directa,titular,cuerpo'],
-            'fecha_publicacion' => ['required', 'date'],
-            'titulo' => ['required', 'string', 'max:500'],
-            'resumen' => ['nullable', 'string'],
-            'url_nota' => ['nullable', 'url', 'max:500'],
-            'tono_mencion' => ['required', 'in:favorable,neutro,critico'],
-            'puntuacion_sentimiento' => ['nullable', 'numeric', 'between:-1,1'],
-            'es_tapa_o_principal' => ['boolean'],
-            'interacciones_en_redes_del_medio' => ['nullable', 'integer', 'min:0'],
-            'respuesta_replica_candidato' => ['nullable', 'string'],
-            'reacciones_desglose' => ['nullable', 'array'],
-            'reacciones_desglose.likes' => ['nullable', 'integer', 'min:0'],
-            'reacciones_desglose.love' => ['nullable', 'integer', 'min:0'],
-            'reacciones_desglose.haha' => ['nullable', 'integer', 'min:0'],
-            'reacciones_desglose.wow' => ['nullable', 'integer', 'min:0'],
-            'reacciones_desglose.sad' => ['nullable', 'integer', 'min:0'],
-            'reacciones_desglose.angry' => ['nullable', 'integer', 'min:0'],
-        ]);
+        $validated = $request->validated();
 
         $reacciones = $request->input('reacciones_desglose');
         $totalInteracciones = is_array($reacciones) && ! empty($reacciones)

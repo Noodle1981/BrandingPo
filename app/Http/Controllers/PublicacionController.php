@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Publicacion\ActualizarFechaPublicacionRequest;
 use App\Http\Requests\Publicacion\StorePublicacionRequest;
 use App\Http\Requests\Publicacion\UpdatePublicacionRequest;
 use App\Models\Candidato;
@@ -18,7 +19,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -829,16 +829,14 @@ class PublicacionController extends Controller
      * Confirmación rápida de fecha de publicación (edición inline desde la tarjeta del Feed).
      * Solo actualiza fecha_publicacion sin re-calcular métricas emocionales.
      */
-    public function actualizarFecha(Request $request, Publicacion $publicacion): RedirectResponse
+    public function actualizarFecha(ActualizarFechaPublicacionRequest $request, Publicacion $publicacion): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
 
         // Verificar que la publicación pertenece al workspace activo
         abort_unless($publicacion->workspace_id === $workspace->id, 403);
 
-        $validated = $request->validate([
-            'fecha_publicacion' => ['required', 'date'],
-        ]);
+        $validated = $request->validated();
 
         $publicacion->update([
             'fecha_publicacion' => $validated['fecha_publicacion'],

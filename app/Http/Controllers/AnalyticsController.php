@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Analytics\PredictPautaRequest;
 use App\Models\Candidato;
 use App\Models\Publicacion;
 use App\Services\AdsImpactPredictorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -100,16 +100,9 @@ class AnalyticsController extends Controller
     /**
      * API del Predictor de Impacto de Pauta con Porcentaje de Proximidad.
      */
-    public function predictApi(Request $request): JsonResponse
+    public function predictApi(PredictPautaRequest $request): JsonResponse
     {
-        $workspace = WorkspaceHelper::activo($request);
-
-        $validated = $request->validate([
-            'monto' => ['nullable', 'numeric', 'min:0', 'max:1000000000'],
-            'formato' => ['nullable', 'string', 'max:100'],
-            'plataforma' => ['nullable', 'string', 'max:50'],
-            'candidato_id' => ['nullable', Rule::exists('candidatos', 'id')->where('workspace_id', $workspace->id)],
-        ]);
+        $validated = $request->validated();
 
         $monto = (float) ($validated['monto'] ?? 50000);
         $formato = (string) ($validated['formato'] ?? 'Reel');

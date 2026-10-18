@@ -3,7 +3,12 @@
 namespace Tests\Feature;
 
 use App\Helpers\SecurityHelper;
+use App\Models\Candidato;
+use App\Models\CicloCampana;
+use App\Models\PerfilSocial;
+use App\Models\Publicacion;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Tests\TestCase;
@@ -82,10 +87,10 @@ class SecurityHardeningTest extends TestCase
      */
     public function test_bloqueo_acceso_cross_workspace_candidato(): void
     {
-        $ws1 = \App\Models\Workspace::create(['nombre' => 'Campaña San Juan', 'slug' => 'san-juan']);
-        $ws2 = \App\Models\Workspace::create(['nombre' => 'Campaña Mendoza', 'slug' => 'mendoza']);
+        $ws1 = Workspace::create(['nombre' => 'Campaña San Juan', 'slug' => 'san-juan']);
+        $ws2 = Workspace::create(['nombre' => 'Campaña Mendoza', 'slug' => 'mendoza']);
 
-        $cicloWs2 = \App\Models\CicloCampana::create([
+        $cicloWs2 = CicloCampana::create([
             'workspace_id' => $ws2->id,
             'nombre' => 'Elecciones Mendoza 2027',
             'anio' => 2027,
@@ -101,7 +106,7 @@ class SecurityHardeningTest extends TestCase
         ]);
         $ws1->usuarios()->attach($user->id, ['role' => 'consultor']);
 
-        $candidatoWs2 = \App\Models\Candidato::create([
+        $candidatoWs2 = Candidato::create([
             'workspace_id' => $ws2->id,
             'ciclo_campana_id' => $cicloWs2->id,
             'nombre_completo' => 'Rival en Mendoza',
@@ -127,10 +132,10 @@ class SecurityHardeningTest extends TestCase
      */
     public function test_bloqueo_acceso_cross_workspace_publicacion(): void
     {
-        $ws1 = \App\Models\Workspace::create(['nombre' => 'Campaña A', 'slug' => 'campana-a']);
-        $ws2 = \App\Models\Workspace::create(['nombre' => 'Campaña B', 'slug' => 'campana-b']);
+        $ws1 = Workspace::create(['nombre' => 'Campaña A', 'slug' => 'campana-a']);
+        $ws2 = Workspace::create(['nombre' => 'Campaña B', 'slug' => 'campana-b']);
 
-        $cicloWs2 = \App\Models\CicloCampana::create([
+        $cicloWs2 = CicloCampana::create([
             'workspace_id' => $ws2->id,
             'nombre' => 'Elecciones 2027 B',
             'anio' => 2027,
@@ -146,7 +151,7 @@ class SecurityHardeningTest extends TestCase
         ]);
         $ws1->usuarios()->attach($user->id, ['role' => 'consultor']);
 
-        $candidatoWs2 = \App\Models\Candidato::create([
+        $candidatoWs2 = Candidato::create([
             'workspace_id' => $ws2->id,
             'ciclo_campana_id' => $cicloWs2->id,
             'nombre_completo' => 'Candidato B',
@@ -155,7 +160,7 @@ class SecurityHardeningTest extends TestCase
             'es_propio' => true,
         ]);
 
-        $perfilWs2 = \App\Models\PerfilSocial::create([
+        $perfilWs2 = PerfilSocial::create([
             'candidato_id' => $candidatoWs2->id,
             'plataforma' => 'instagram',
             'handle_usuario' => 'candidatob',
@@ -163,7 +168,7 @@ class SecurityHardeningTest extends TestCase
             'esta_verificado' => false,
         ]);
 
-        $pubWs2 = \App\Models\Publicacion::create([
+        $pubWs2 = Publicacion::create([
             'workspace_id' => $ws2->id,
             'candidato_id' => $candidatoWs2->id,
             'perfil_social_id' => $perfilWs2->id,

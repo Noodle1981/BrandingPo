@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Territorio\StoreTerritorioRequest;
+use App\Http\Requests\Territorio\UpdateTerritorioRequest;
 use App\Models\Candidato;
 use App\Models\Publicacion;
 use App\Models\Territorio;
@@ -212,23 +214,10 @@ class TerritorioController extends Controller
     /**
      * Guardar nuevo territorio.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreTerritorioRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        $validated = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
-            'tipo' => ['required', 'string', 'in:municipio,departamento,provincia,seccion'],
-            'parent_id' => ['nullable', 'exists:territorios,id'],
-            'codigo_indec' => ['nullable', 'string', 'max:50'],
-            'poblacion_total' => ['nullable', 'integer', 'min:0'],
-            'padron_electoral' => ['nullable', 'integer', 'min:0'],
-            'poblacion_urbana_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'poblacion_rural_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'hogares_nbi_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'latitud' => ['nullable', 'numeric'],
-            'longitud' => ['nullable', 'numeric'],
-        ]);
+        $validated = $request->validated();
 
         $poblacion = (int) ($validated['poblacion_total'] ?? 40000);
         $padron = (int) ($validated['padron_electoral'] ?? 30000);
@@ -252,24 +241,12 @@ class TerritorioController extends Controller
     /**
      * Actualizar territorio y recalcular pirámide demográfica.
      */
-    public function update(Request $request, Territorio $territorio): RedirectResponse
+    public function update(UpdateTerritorioRequest $request, Territorio $territorio): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($territorio, $workspace);
 
-        $validated = $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
-            'tipo' => ['required', 'string', 'in:municipio,departamento,provincia,seccion'],
-            'parent_id' => ['nullable', 'exists:territorios,id'],
-            'codigo_indec' => ['nullable', 'string', 'max:50'],
-            'poblacion_total' => ['nullable', 'integer', 'min:0'],
-            'padron_electoral' => ['nullable', 'integer', 'min:0'],
-            'poblacion_urbana_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'poblacion_rural_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'hogares_nbi_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'latitud' => ['nullable', 'numeric'],
-            'longitud' => ['nullable', 'numeric'],
-        ]);
+        $validated = $request->validated();
 
         $poblacion = (int) ($validated['poblacion_total'] ?? $territorio->poblacion_total);
         $padron = (int) ($validated['padron_electoral'] ?? $territorio->padron_electoral);
@@ -407,7 +384,7 @@ class TerritorioController extends Controller
         $promedioPostsPorRed = round($totalPosts / $cantRedesActivas, 1);
         $scoreImpactoMeta = (int) max(500, round($promedioPostsPorRed * 500));
         $scoreImpactoPct = $scoreImpactoMeta > 0 ? round(($scoreImpactoTotal / $scoreImpactoMeta) * 100, 1) : 0;
-        $scoreImpactoBaseTexto = "{$promedioPostsPorRed} posts prom. / {$cantRedesActivas} " . ($cantRedesActivas === 1 ? 'red' : 'redes') . ' (x500 pts)';
+        $scoreImpactoBaseTexto = "{$promedioPostsPorRed} posts prom. / {$cantRedesActivas} ".($cantRedesActivas === 1 ? 'red' : 'redes').' (x500 pts)';
 
         // Métricas de Rendimiento Individual por Publicación (Promedios & Techo Máximo)
         $promedioInteraccionesPorPost = $totalPosts > 0 ? round($totalInteracciones / $totalPosts, 1) : 0;

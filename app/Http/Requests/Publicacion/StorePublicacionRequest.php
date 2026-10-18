@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Publicacion;
 
 use App\Helpers\WorkspaceHelper;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,7 +31,7 @@ class StorePublicacionRequest extends FormRequest
     /**
      * Reglas de validación aplicables a la petición.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
