@@ -57,6 +57,7 @@ onUnmounted(() => {
 
 const isRefreshing = ref(false);
 const refreshMessage = ref('');
+const refreshError = ref(false);
 
 // Sincronización Maestra (Seguidores + Posts activos ventana <=15 días con Modal de Progreso)
 const sincronizarCanal = async () => {
@@ -100,7 +101,7 @@ const sincronizarCanal = async () => {
     const data = await response.json();
     if (progressInterval) clearInterval(progressInterval);
 
-    if (data.success) {
+    if (response.ok && data.success) {
       syncProgress.value.percent = 100;
       syncProgress.value.current = data.posts_actualizados || 0;
       syncProgress.value.total = data.posts_total || 0;
@@ -111,7 +112,7 @@ const sincronizarCanal = async () => {
       syncProgress.value.currentUrl = '';
       syncProgress.value.isFinished = true;
     } else {
-      syncProgress.value.seguidoresInfo = data.mensaje || 'Hubo un inconveniente al sincronizar.';
+      syncProgress.value.seguidoresInfo = data.mensaje || data.message || 'Hubo un inconveniente al sincronizar.';
       syncProgress.value.currentUrl = '';
       syncProgress.value.isFinished = true;
     }
@@ -136,6 +137,7 @@ const cerrarSyncModal = () => {
 const reauditarCanal = async () => {
   if (!props.red.perfil_id || isRefreshing.value) return;
   isRefreshing.value = true;
+  refreshError.value = false;
   refreshMessage.value = 'Re-escaneando seguidores en vivo...';
 
   try {
@@ -148,7 +150,8 @@ const reauditarCanal = async () => {
       },
     });
     const data = await response.json();
-    if (data.success) {
+    if (response.ok && data.success) {
+      refreshError.value = false;
       refreshMessage.value = data.mensaje || '¡Canal re-auditado con éxito!';
       // Refresco reactivo mediante Inertia sin descarga de DOM ni pantalla azul
       router.reload({
@@ -160,10 +163,20 @@ const reauditarCanal = async () => {
         }
       });
     } else {
-      refreshMessage.value = data.mensaje || 'No se pudo re-auditar el canal.';
+      refreshError.value = true;
+      refreshMessage.value = data.mensaje || data.message || 'No se pudo re-auditar el canal.';
+      setTimeout(() => {
+        refreshMessage.value = '';
+        refreshError.value = false;
+      }, 5000);
     }
   } catch (e) {
+    refreshError.value = true;
     refreshMessage.value = 'Error al consultar el scraper en vivo.';
+    setTimeout(() => {
+      refreshMessage.value = '';
+      refreshError.value = false;
+    }, 5000);
   } finally {
     isRefreshing.value = false;
   }
@@ -290,8 +303,15 @@ const reauditarCanal = async () => {
     </div>
 
     <!-- Mensaje de feedback de re-auditar seguidores -->
-    <div v-if="refreshMessage" class="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-600 dark:text-purple-400 text-xs font-mono flex items-center gap-2">
-      <CheckCircle class="w-4 h-4 shrink-0" />
+    <div
+      v-if="refreshMessage"
+      class="p-2.5 rounded-xl border text-xs font-mono flex items-center gap-2 transition-all"
+      :class="refreshError
+        ? 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
+        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'"
+    >
+      <AlertCircle v-if="refreshError" class="w-4 h-4 shrink-0 text-rose-500" />
+      <CheckCircle v-else class="w-4 h-4 shrink-0 text-emerald-500" />
       <span>{{ refreshMessage }}</span>
     </div>
 

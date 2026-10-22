@@ -70,10 +70,12 @@ class WorkspaceHelper
         $workspaceIdRecurso = null;
         if (isset($recurso->workspace_id)) {
             $workspaceIdRecurso = $recurso->workspace_id;
-        } elseif (method_exists($recurso, 'candidato') && $recurso->candidato) {
-            $workspaceIdRecurso = $recurso->candidato->workspace_id;
         } elseif (isset($recurso->candidato_id) && class_exists(Candidato::class)) {
-            $workspaceIdRecurso = Candidato::find($recurso->candidato_id)?->workspace_id;
+            $workspaceIdRecurso = Candidato::where('id', $recurso->candidato_id)->value('workspace_id');
+        } elseif ($recurso instanceof \Illuminate\Database\Eloquent\Model && $recurso->relationLoaded('candidato') && $recurso->candidato) {
+            $workspaceIdRecurso = $recurso->candidato->workspace_id;
+        } elseif (method_exists($recurso, 'candidato')) {
+            $workspaceIdRecurso = $recurso->candidato()->value('workspace_id');
         }
 
         if ($workspaceIdRecurso !== null && (int) $workspaceIdRecurso !== (int) $workspace->id) {

@@ -166,8 +166,12 @@ class CandidatoController extends Controller
     /**
      * Re-auditar / Refrescar métricas en vivo para un perfil social específico.
      */
-    public function refrescarPerfilSocial(Request $request, PerfilSocial $perfilSocial, SocialProfileScraperService $scraper): JsonResponse|RedirectResponse
-    {
+    public function refrescarPerfilSocial(
+        Request $request,
+        PerfilSocial $perfilSocial,
+        SocialProfileScraperService $scraper,
+        MediaStorageService $mediaStorage
+    ): JsonResponse|RedirectResponse {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
 
@@ -183,6 +187,15 @@ class CandidatoController extends Controller
         }
 
         $scraped = $scraper->scrapeProfile($perfilSocial->url_perfil, $perfilSocial->plataforma);
+
+        if (! empty($scraped['foto_perfil_url'])) {
+            $prefijo = 'perfil_'.$perfilSocial->plataforma.'_'.$perfilSocial->candidato_id;
+            $fotoLocal = $mediaStorage->guardarAvatarLocal($scraped['foto_perfil_url'], $prefijo, $perfilSocial->foto_perfil_url);
+            if ($fotoLocal) {
+                $scraped['foto_perfil_url'] = $fotoLocal;
+                $perfilSocial->update(['foto_perfil_url' => $fotoLocal]);
+            }
+        }
 
         $metrica = $perfilSocial->registrarMedicion($scraped, 'auto_scraper');
 
@@ -234,6 +247,14 @@ class CandidatoController extends Controller
         if (! empty($perfilSocial->url_perfil)) {
             try {
                 $scrapedPerfil = $scraper->scrapeProfile($perfilSocial->url_perfil, $perfilSocial->plataforma);
+                if (! empty($scrapedPerfil['foto_perfil_url'])) {
+                    $prefijo = 'perfil_'.$perfilSocial->plataforma.'_'.$perfilSocial->candidato_id;
+                    $fotoLocal = $mediaStorage->guardarAvatarLocal($scrapedPerfil['foto_perfil_url'], $prefijo, $perfilSocial->foto_perfil_url);
+                    if ($fotoLocal) {
+                        $scrapedPerfil['foto_perfil_url'] = $fotoLocal;
+                        $perfilSocial->update(['foto_perfil_url' => $fotoLocal]);
+                    }
+                }
                 $metrica = $perfilSocial->registrarMedicion($scrapedPerfil, 'sync_maestro');
                 $deltaSeg = (int) $metrica->crecimiento_seguidores_dia;
                 $signo = $deltaSeg > 0 ? '+' : '';

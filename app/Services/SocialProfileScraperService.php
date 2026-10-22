@@ -102,16 +102,17 @@ class SocialProfileScraperService
         }
 
         if ($description) {
-            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Followers|seguidores)/i', $description, $m)) {
+            $descClean = preg_replace('/[\x{00a0}\s]+/u', ' ', $description);
+            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Followers|seguidores)/iu', $descClean, $m)) {
                 $result['seguidores'] = $this->parseFormattedNumber($m[1]);
             }
-            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Following|seguidos)/i', $description, $m)) {
+            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Following|seguidos)/iu', $descClean, $m)) {
                 $result['seguidos'] = $this->parseFormattedNumber($m[1]);
             }
-            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Posts|publicaciones)/i', $description, $m)) {
+            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:Posts|publicaciones)/iu', $descClean, $m)) {
                 $result['publicaciones'] = $this->parseFormattedNumber($m[1]);
             }
-            if (preg_match('/from\s+([^(@•]+)/i', $description, $nm)) {
+            if (preg_match('/from\s+([^(@•]+)/iu', $descClean, $nm)) {
                 $result['nombre_completo'] = trim(html_entity_decode($nm[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
             }
         }
@@ -183,12 +184,13 @@ class SocialProfileScraperService
         }
 
         if ($description) {
-            // "9466 Me gusta" o "9,4 mil seguidores" o "9.4K followers"
-            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:seguidores|followers|me gusta|likes)/i', $description, $m)) {
+            $descClean = preg_replace('/[\x{00a0}\s]+/u', ' ', $description);
+            // "9480 seguidores" o "9466 Me gusta" o "9,4 mil seguidores" o "9.4K followers"
+            if (preg_match('/(?:^|[\s\.,·])([\d][\d\.,KMkm\s]*(?:mil)?)\s*(?:seguidores|followers|me gusta|likes)/iu', $descClean, $m)) {
                 $result['seguidores'] = $this->parseFormattedNumber($m[1]);
             }
             // "58 seguidos" o "58 following"
-            if (preg_match('/([\d\.,KMkm\s]+(?:mil)?)\s*(?:seguidos|following)/i', $description, $m)) {
+            if (preg_match('/(?:^|[\s\.,·])([\d][\d\.,KMkm\s]*(?:mil)?)\s*(?:seguidos|following)/iu', $descClean, $m)) {
                 $result['seguidos'] = $this->parseFormattedNumber($m[1]);
             }
         }
