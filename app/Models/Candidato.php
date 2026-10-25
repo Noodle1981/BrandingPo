@@ -85,4 +85,39 @@ class Candidato extends Model
 
         return $query;
     }
+
+    /**
+     * Obtener la URL del avatar del candidato con fallback automático a fotos scrapeadas de sus redes.
+     */
+    public function getAvatarUrlAttribute(?string $value): ?string
+    {
+        if ($value && (str_starts_with($value, 'http://') || str_starts_with($value, 'https://'))) {
+            return $value;
+        }
+
+        if ($value && file_exists(public_path(ltrim($value, '/')))) {
+            return $value;
+        }
+
+        // Si no hay avatar propio o el archivo local no existe, buscar foto scrapeada de sus canales sociales
+        $perfiles = $this->relationLoaded('perfilesSociales')
+            ? $this->perfilesSociales
+            : $this->perfilesSociales()->get();
+
+        $ordenPlataformas = ['facebook', 'instagram', 'tiktok', 'threads'];
+        foreach ($ordenPlataformas as $red) {
+            $perfil = $perfiles->firstWhere('plataforma', $red);
+            if ($perfil && ! empty($perfil->foto_perfil_url) && file_exists(public_path(ltrim($perfil->foto_perfil_url, '/')))) {
+                return $perfil->foto_perfil_url;
+            }
+        }
+
+        foreach ($perfiles as $perfil) {
+            if (! empty($perfil->foto_perfil_url) && file_exists(public_path(ltrim($perfil->foto_perfil_url, '/')))) {
+                return $perfil->foto_perfil_url;
+            }
+        }
+
+        return $value;
+    }
 }

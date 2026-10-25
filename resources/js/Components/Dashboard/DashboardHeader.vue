@@ -9,7 +9,8 @@ import {
   ChevronDown,
   Sparkles,
   Radio,
-  Calendar
+  Calendar,
+  FileText
 } from '@lucide/vue';
 
 const props = defineProps({
@@ -122,6 +123,16 @@ const periodoActivoNombre = computed(() => {
             </select>
             <ChevronDown class="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
+
+          <a
+            :href="`/reportes/ejecutivo?candidato_id=${candidato.id}`"
+            target="_blank"
+            class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs transition-all shadow-xs hover:scale-102"
+            title="Generar y descargar informe trimestral en PDF"
+          >
+            <FileText class="w-3.5 h-3.5 text-cyan-400 dark:text-cyan-600" />
+            <span>Informe Trimestral (PDF)</span>
+          </a>
 
           <Link
             href="/mi-candidato"

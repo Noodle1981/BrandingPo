@@ -11,6 +11,7 @@ use App\Http\Controllers\EjesEstrategicosController;
 use App\Http\Controllers\MediosController;
 use App\Http\Controllers\PresupuestoController;
 use App\Http\Controllers\PublicacionController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\TerritorioController;
 use App\Http\Controllers\UserController;
 use App\Models\Workspace;
@@ -42,6 +43,7 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/reportes/ejecutivo', [ReporteController::class, 'ejecutivo'])->name('reportes.ejecutivo');
 
     // Gestión del Perfil Propio de Campaña
     Route::get('/mi-candidato', [CandidatoController::class, 'miCandidato'])->name('mi-candidato');

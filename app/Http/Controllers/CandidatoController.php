@@ -107,6 +107,11 @@ class CandidatoController extends Controller
         if (! empty($fotoPerfilLocal)) {
             $prefijo = 'perfil_'.$validated['plataforma'].'_'.$validated['candidato_id'];
             $fotoPerfilLocal = $mediaStorage->guardarAvatarLocal($fotoPerfilLocal, $prefijo, $perfilPrevio?->foto_perfil_url);
+
+            $candidato = Candidato::find($validated['candidato_id']);
+            if ($candidato && (empty($candidato->getRawOriginal('avatar_url')) || ! file_exists(public_path(ltrim($candidato->getRawOriginal('avatar_url'), '/'))))) {
+                $candidato->update(['avatar_url' => $fotoPerfilLocal]);
+            }
         }
 
         $perfil = PerfilSocial::updateOrCreate(
@@ -194,6 +199,11 @@ class CandidatoController extends Controller
             if ($fotoLocal) {
                 $scraped['foto_perfil_url'] = $fotoLocal;
                 $perfilSocial->update(['foto_perfil_url' => $fotoLocal]);
+
+                $candidato = $perfilSocial->candidato;
+                if ($candidato && (empty($candidato->getRawOriginal('avatar_url')) || ! file_exists(public_path(ltrim($candidato->getRawOriginal('avatar_url'), '/'))))) {
+                    $candidato->update(['avatar_url' => $fotoLocal]);
+                }
             }
         }
 
@@ -253,6 +263,11 @@ class CandidatoController extends Controller
                     if ($fotoLocal) {
                         $scrapedPerfil['foto_perfil_url'] = $fotoLocal;
                         $perfilSocial->update(['foto_perfil_url' => $fotoLocal]);
+
+                        $candidato = $perfilSocial->candidato;
+                        if ($candidato && (empty($candidato->getRawOriginal('avatar_url')) || ! file_exists(public_path(ltrim($candidato->getRawOriginal('avatar_url'), '/'))))) {
+                            $candidato->update(['avatar_url' => $fotoLocal]);
+                        }
                     }
                 }
                 $metrica = $perfilSocial->registrarMedicion($scrapedPerfil, 'sync_maestro');

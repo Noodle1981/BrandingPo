@@ -24,6 +24,7 @@ export default defineConfig({
         alias: {
             '@': path.resolve(import.meta.dirname, './resources/js'),
         },
+        dedupe: ['vue'],
     },
     build: {
         rollupOptions: {
