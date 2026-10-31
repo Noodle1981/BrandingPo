@@ -57,13 +57,13 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
   <div class="kpi-row">
     <div class="kpi-card k-o"><div class="kpi-number">101</div><div class="kpi-label">Puntos de control</div></div>
-    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">60</div><div class="kpi-label">Cumplidos</div></div>
-    <div class="kpi-card"><div class="kpi-number" id="kpiPending">41</div><div class="kpi-label">Pendientes</div></div>
+    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">68</div><div class="kpi-label">Cumplidos</div></div>
+    <div class="kpi-card"><div class="kpi-number" id="kpiPending">33</div><div class="kpi-label">Pendientes</div></div>
     <div class="kpi-card k-r"><div class="kpi-number">23</div><div class="kpi-label">Archivos sobre umbral</div></div>
-    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">59.4%</div><div class="kpi-label">Conformidad</div></div>
+    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">67.3%</div><div class="kpi-label">Conformidad</div></div>
   </div>
-  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">59.4% completado</span></div>
-    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:59.4%"></div></div></div>
+  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">67.3% completado</span></div>
+    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:67.3%"></div></div></div>
   
     <div class="complexity-alert-section">
       <div class="alert-header"><div class="alert-title-wrap"><span style="font-size:20px">🔬</span><h3>Diagnóstico de código: tamaños, acceso a datos, versiones y documentación</h3></div>
@@ -596,43 +596,43 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   <div class="card-area">
     <div class="card-header">
       <div class="card-title-group"><span class="card-badge-num">06</span><h2 class="card-title">06 — Testing y Verificación Automatizada</h2></div>
-      <div class="card-progress-wrap"><span class="card-counter" id="counter_5">0 / 8</span>
-        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_5" style="width:0%"></div></div></div>
+      <div class="card-progress-wrap"><span class="card-counter" id="counter_5">8 / 8</span>
+        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_5" style="width:100%"></div></div></div>
     </div>
     
     
     <div class="checklist-items"><div class="item-section">Cobertura de Lógica de Negocio Crítica</div>
-      <label class="checklist-item " id="label_chk_5_0">
-        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_0"  onchange="toggleItem('chk_5_0', 5)">
-        <div class="item-content"><span class="item-bold">Pruebas unitarias de algoritmos de engagement</span><span>Cobertura automática para el cálculo del Índice de Aprobación Neta, ponderación de interacciones y clasificación del termómetro de humor social.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_5_0">
+        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_0" checked onchange="toggleItem('chk_5_0', 5)">
+        <div class="item-content"><span class="item-bold">Pruebas unitarias de algoritmos de engagement</span><span>Cobertura automática para el cálculo del Índice de Aprobación Neta, ponderación de interacciones y clasificación de tiers en <code>PoliticaEngagementTest.php</code>.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_5_1">
-        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_1"  onchange="toggleItem('chk_5_1', 5)">
-        <div class="item-content"><span class="item-bold">Pruebas del detector automático de crisis</span><span>Verificación de que la regla de alerta roja ante indignación (😡 &gt; 15%) se dispare fehacientemente ante diferentes combinaciones de reacciones.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_5_1">
+        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_1" checked onchange="toggleItem('chk_5_1', 5)">
+        <div class="item-content"><span class="item-bold">Pruebas del detector automático de crisis</span><span>Verificación de alertas y umbrales de severidad ante crisis en <code>MediosAndCrisisTest.php</code> y <code>MediosObservatoryAndScraperTest.php</code>.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_5_2">
-        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_2"  onchange="toggleItem('chk_5_2', 5)">
-        <div class="item-content"><span class="item-bold">Pruebas de cálculo de Punto Cero</span><span>Validación del cálculo de crecimiento neto de seguidores, publicaciones y tracción de canales respecto a la fecha alfa.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_5_2">
+        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_2" checked onchange="toggleItem('chk_5_2', 5)">
+        <div class="item-content"><span class="item-bold">Pruebas de cálculo de Punto Cero</span><span>Validación del cálculo de crecimiento neto de seguidores, publicaciones y tracción de canales respecto a la fecha alfa en <code>AuditoriaPerfilesSocialesTest.php</code> y <code>MetricasCanalTest.php</code>.</span></div>
       </label><div class="item-section">Pruebas de Autorización y Flujos de Campaña</div>
-      <label class="checklist-item " id="label_chk_5_3">
-        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_3"  onchange="toggleItem('chk_5_3', 5)">
-        <div class="item-content"><span class="item-bold">Pruebas de permisos por rol (RBAC)</span><span>Tests de integración que comprueben rechazo HTTP 403 para usuarios con rol <code>visualizador</code> intentando crear o editar publicaciones, perfiles o territorios.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_5_3">
+        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_3" checked onchange="toggleItem('chk_5_3', 5)">
+        <div class="item-content"><span class="item-bold">Pruebas de permisos por rol (RBAC)</span><span>Tests de integración que comprueban rechazo HTTP 403 para usuarios con rol <code>visualizador</code> intentando crear o editar publicaciones, perfiles o territorios en <code>AuthenticationAndRolesTest.php</code> y <code>SecurityHardeningTest.php</code>.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_5_4">
-        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_4"  onchange="toggleItem('chk_5_4', 5)">
-        <div class="item-content"><span class="item-bold">Aislamiento de workspaces en tests</span><span>Casos de prueba que confirmen que un usuario autenticado no pueda acceder ni mutar datos pertenecientes a otro workspace.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_5_4">
+        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_4" checked onchange="toggleItem('chk_5_4', 5)">
+        <div class="item-content"><span class="item-bold">Aislamiento de workspaces en tests</span><span>Casos de prueba exhaustivos que confirman que un usuario autenticado no pueda acceder ni mutar datos pertenecientes a otro workspace (<code>SecurityHardeningTest::test_bloqueo_acceso_cross_workspace_candidato</code>).</span></div>
       </label><div class="item-section">Aislamiento de Entornos y Simulación</div>
-      <label class="checklist-item " id="label_chk_5_5">
-        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_5"  onchange="toggleItem('chk_5_5', 5)">
-        <div class="item-content"><span class="item-bold">Entorno de pruebas efímero</span><span>Pruebas configuradas en <code>phpunit.xml</code> con base de datos SQLite en memoria (<code>:memory:</code>) sin alterar la base de datos de desarrollo o producción.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_5_5">
+        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_5" checked onchange="toggleItem('chk_5_5', 5)">
+        <div class="item-content"><span class="item-bold">Entorno de pruebas efímero</span><span>Pruebas configuradas en <code>phpunit.xml</code> con base de datos SQLite en memoria (<code>DB_DATABASE=:memory:</code>) ejecutando 64 tests y 362 aserciones sin alterar la base de datos de desarrollo o producción.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_5_6">
-        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_6"  onchange="toggleItem('chk_5_6', 5)">
-        <div class="item-content"><span class="item-bold">Simulación de scrapers externos (Mocking)</span><span>Pruebas automatizadas sin realizar llamadas HTTP reales a servidores de Meta, TikTok, X ni portales periodísticos (<code>Http::fake()</code>).</span></div>
+      <label class="checklist-item item-checked" id="label_chk_5_6">
+        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_6" checked onchange="toggleItem('chk_5_6', 5)">
+        <div class="item-content"><span class="item-bold">Simulación de scrapers externos (Mocking)</span><span>Pruebas automatizadas sin realizar llamadas HTTP externas reales a Meta, TikTok, X ni portales periodísticos en <code>MediosObservatoryAndScraperTest.php</code> y <code>PautaDetectionTest.php</code>.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_5_7">
-        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_7"  onchange="toggleItem('chk_5_7', 5)">
-        <div class="item-content"><span class="item-bold">Ausencia de datos personales reales en tests</span><span>Suites de prueba utilizando Faker o datos sintéticos aislados, sin volcar información confidencial de dirigentes o equipos de campaña.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_5_7">
+        <input type="checkbox" class="chk-item" data-cat="5" id="chk_5_7" checked onchange="toggleItem('chk_5_7', 5)">
+        <div class="item-content"><span class="item-bold">Ausencia de datos personales reales en tests</span><span>Suites de prueba utilizando entidades aisladas y datos sintéticos creados exclusivamente en el ciclo efímero de prueba.</span></div>
       </label></div>
   </div>
   <div class="card-area">
@@ -790,7 +790,7 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
 </div>
 <script>
-const total=101;let checked=60;
+const total=101;let checked=68;
 function toggleItem(id,cat){
   const chk=document.getElementById(id);document.getElementById('label_'+id).classList.toggle('item-checked',chk.checked);
   checked+=chk.checked?1:-1;

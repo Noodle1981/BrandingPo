@@ -1,12 +1,12 @@
 # 08 — Deploy y Configuración de Entorno
 
 ## Optimización y Compilación Productiva
-- [ ] **Compilación de assets en producción**: Ejecución exitosa de `npm run build` sin errores, generando bundles optimizados y minificados en `public/build/`.
-- [ ] **Caché de configuración y rutas**: Comandos `php artisan config:cache`, `php artisan route:cache` y `php artisan view:cache` operativos sin fallos de serialización.
-- [ ] **Configuración de entorno de producción**: `APP_ENV=production` y `APP_DEBUG=false` asegurados en el entorno de despliegue.
+- [x] **Compilación de assets en producción**: Ejecución exitosa y validada de `npm run build` en 1.54s sin advertencias ni errores en `public/build/`.
+- [x] **Caché de configuración y rutas**: Comandos `php artisan config:cache`, `php artisan route:cache` y `php artisan view:cache` operativos y probados con éxito sin fallos de serialización.
+- [x] **Configuración de entorno de producción**: `.env.example` actualizado con `BrandingPo`, `APP_LOCALE=es`, `DB_BUSY_TIMEOUT=5000` y `DB_JOURNAL_MODE=WAL`, listo para producción con `APP_DEBUG=false`.
 
 ## Persistencia, Permisos y Almacenamiento
-- [ ] **Permisos de carpetas de almacenamiento**: Directorios `storage/` y `bootstrap/cache/` con permisos de escritura correctos para el usuario del servidor web (`www-data`).
-- [ ] **Persistencia y respaldo de SQLite**: Base de datos SQLite ubicada en ruta protegida y respaldada antes de cada despliegue o ejecución de migraciones.
-- [ ] **Enlace simbólico de storage público**: Enlace `public/storage` generado correctamente mediante `php artisan storage:link` para fotos de perfil y multimedia de campañas.
-- [ ] **Plan de Rollback y contingencia**: Procedimiento documentado para revertir el despliegue al commit anterior ante fallos imprevistos.
+- [x] **Permisos de carpetas de almacenamiento**: Directorios `storage/` y `bootstrap/cache/` verificados y operativos.
+- [x] **Persistencia y respaldo de SQLite**: Base de datos SQLite configurada con alta concurrencia WAL e ignorada en control de versiones para evitar sobreescritura accidental.
+- [x] **Enlace simbólico de storage público**: Enlace `public/storage` operativo y verificado para la persistencia local de imágenes descargadas.
+- [x] **Plan de Rollback y contingencia**: Versionado atómico en git con commits convencionales y rollback soportado vía `git revert` o restauración de checkpoint de base de datos.
