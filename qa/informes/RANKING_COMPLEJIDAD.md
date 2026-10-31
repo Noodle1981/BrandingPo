@@ -1,6 +1,6 @@
 # Ranking de complejidad — BrandingPo
 
-> Generado: 2026-10-31 · commit `b10b718` · rama `main`
+> Generado: 2026-10-31 · commit `a11d195` · rama `main`
 
 ## Vistas y componentes frontend (Vue) (umbral 500 lín · crítico 800 lín)
 
@@ -43,31 +43,31 @@ Archivos: 59 · sobre umbral: **14** · críticos: **4**
 
 ## Controladores backend (Laravel) (umbral 200 lín · crítico 300 lín)
 
-Archivos: 15 · sobre umbral: **6** · críticos: **5** · con acceso directo a datos: **10**
+Archivos: 15 · sobre umbral: **3** · críticos: **2** · con acceso directo a datos: **6**
 
 | Líneas | Estado | Archivo | Acceso a datos |
 |---:|---|---|---|
-| 723 | 🔴 Crítico | `app/Http/Controllers/TerritorioController.php` | `->where\(` (L39) |
-| 513 | 🔴 Crítico | `app/Http/Controllers/CandidatoController.php` | `->where\(` (L57) |
-| 496 | 🔴 Crítico | `app/Http/Controllers/MediosController.php` | `->where\(` (L46) |
-| 486 | 🔴 Crítico | `app/Http/Controllers/EjesEstrategicosController.php` | `->where\(` (L27) |
 | 378 | 🔴 Crítico | `app/Http/Controllers/PublicacionController.php` | — |
-| 206 | 🟡 Sobre umbral | `app/Http/Controllers/CalendarioController.php` | `->where\(` (L34) |
+| 308 | 🔴 Crítico | `app/Http/Controllers/CandidatoController.php` | `->where\(` (L56) |
+| 219 | 🟡 Sobre umbral | `app/Http/Controllers/MediosController.php` | — |
 | 168 | 🔵 Moderado | `app/Http/Controllers/CrisisController.php` | `->where\(` (L36) |
+| 131 | 🔵 Moderado | `app/Http/Controllers/TerritorioController.php` | — |
 | 125 | 🔵 Moderado | `app/Http/Controllers/PresupuestoController.php` | `->where\(` (L29) |
 | 117 | 🟢 Óptimo | `app/Http/Controllers/AnalyticsController.php` | `->where\(` (L44) |
 | 117 | 🟢 Óptimo | `app/Http/Controllers/UserController.php` | — |
 | 116 | 🟢 Óptimo | `app/Http/Controllers/BriefingController.php` | `->where\(` (L30) |
 | 114 | 🟢 Óptimo | `app/Http/Controllers/AuthController.php` | — |
+| 68 | 🟢 Óptimo | `app/Http/Controllers/CalendarioController.php` | — |
 | 62 | 🟢 Óptimo | `app/Http/Controllers/DashboardController.php` | — |
 | 51 | 🟢 Óptimo | `app/Http/Controllers/ReporteController.php` | `->where\(` (L32) |
+| 30 | 🟢 Óptimo | `app/Http/Controllers/EjesEstrategicosController.php` | — |
 | 9 | 🟢 Óptimo | `app/Http/Controllers/Controller.php` | — |
 
 **Acción sugerida:** Mover lógica a app/Services o FormRequests; el controlador solo adapta HTTP
 
 ## Servicios de negocio (Laravel) (umbral 300 lín · crítico 500 lín)
 
-Archivos: 12 · sobre umbral: **8** · críticos: **6**
+Archivos: 17 · sobre umbral: **11** · críticos: **7**
 
 | Líneas | Estado | Archivo | Acceso a datos |
 |---:|---|---|---|
@@ -75,20 +75,25 @@ Archivos: 12 · sobre umbral: **8** · críticos: **6**
 | 1119 | 🔴 Crítico | `app/Services/DashboardAggregationService.php` | — |
 | 1028 | 🔴 Crítico | `app/Services/CanalMetricasService.php` | — |
 | 732 | 🔴 Crítico | `app/Services/GenericMediaScraperService.php` | — |
+| 596 | 🔴 Crítico | `app/Services/TerritorioImpactoService.php` | — |
 | 537 | 🔴 Crítico | `app/Services/ReporteEjecutivoService.php` | — |
 | 508 | 🔴 Crítico | `app/Services/DemographicIntelligenceService.php` | — |
+| 440 | 🟡 Sobre umbral | `app/Services/EjesEstrategicosService.php` | — |
 | 413 | 🟡 Sobre umbral | `app/Services/PublicacionSyncService.php` | — |
+| 314 | 🟡 Sobre umbral | `app/Services/MediosClippingService.php` | — |
 | 310 | 🟡 Sobre umbral | `app/Services/CandidatoPresenterService.php` | — |
 | 259 | 🔵 Moderado | `app/Services/PublicacionFeedService.php` | — |
+| 256 | 🔵 Moderado | `app/Services/CanalSyncService.php` | — |
 | 192 | 🔵 Moderado | `app/Services/MediaStorageService.php` | — |
 | 162 | 🟢 Óptimo | `app/Services/PoliticaEngagementService.php` | — |
+| 156 | 🟢 Óptimo | `app/Services/CalendarioService.php` | — |
 | 126 | 🟢 Óptimo | `app/Services/AdsImpactPredictorService.php` | — |
 
 **Acción sugerida:** Dividir responsabilidades y extraer scrapers o procesadores específicos
 
 ## Control de versiones
 
-- Commits totales: 136
+- Commits totales: 137
 - Convención de commits (últimos 50): **100%**
 - Tags: 0 — **sin tags de versión**
 

@@ -43,4 +43,22 @@ class CicloCampana extends Model
     {
         return $this->hasMany(Candidato::class);
     }
+
+    /**
+     * Scope para filtrar ciclos de un workspace.
+     */
+    public function scopeDelWorkspace(\Illuminate\Database\Eloquent\Builder $query, int|Workspace $workspace): \Illuminate\Database\Eloquent\Builder
+    {
+        $workspaceId = $workspace instanceof Workspace ? $workspace->id : $workspace;
+
+        return $query->where('workspace_id', $workspaceId);
+    }
+
+    /**
+     * Scope para ciclo activo.
+     */
+    public function scopeActivo(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('es_activo', true);
+    }
 }

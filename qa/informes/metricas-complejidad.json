@@ -1,5 +1,5 @@
 {
-  "generado": "2026-10-31T16:24:52.356Z",
+  "generado": "2026-10-31T16:34:45.940Z",
   "proyecto": "BrandingPo",
   "categorias": [
     {
@@ -440,54 +440,6 @@
       "accion": "Mover lógica a app/Services o FormRequests; el controlador solo adapta HTTP",
       "archivos": [
         {
-          "ruta": "app/Http/Controllers/TerritorioController.php",
-          "nombre": "TerritorioController.php",
-          "lineas": 723,
-          "estado": "critico",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 39
-            }
-          ]
-        },
-        {
-          "ruta": "app/Http/Controllers/CandidatoController.php",
-          "nombre": "CandidatoController.php",
-          "lineas": 513,
-          "estado": "critico",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 57
-            }
-          ]
-        },
-        {
-          "ruta": "app/Http/Controllers/MediosController.php",
-          "nombre": "MediosController.php",
-          "lineas": 496,
-          "estado": "critico",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 46
-            }
-          ]
-        },
-        {
-          "ruta": "app/Http/Controllers/EjesEstrategicosController.php",
-          "nombre": "EjesEstrategicosController.php",
-          "lineas": 486,
-          "estado": "critico",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 27
-            }
-          ]
-        },
-        {
           "ruta": "app/Http/Controllers/PublicacionController.php",
           "nombre": "PublicacionController.php",
           "lineas": 378,
@@ -495,16 +447,23 @@
           "accesoDatos": []
         },
         {
-          "ruta": "app/Http/Controllers/CalendarioController.php",
-          "nombre": "CalendarioController.php",
-          "lineas": 206,
-          "estado": "sobre-umbral",
+          "ruta": "app/Http/Controllers/CandidatoController.php",
+          "nombre": "CandidatoController.php",
+          "lineas": 308,
+          "estado": "critico",
           "accesoDatos": [
             {
               "patron": "->where\\(",
-              "linea": 34
+              "linea": 56
             }
           ]
+        },
+        {
+          "ruta": "app/Http/Controllers/MediosController.php",
+          "nombre": "MediosController.php",
+          "lineas": 219,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
         },
         {
           "ruta": "app/Http/Controllers/CrisisController.php",
@@ -517,6 +476,13 @@
               "linea": 36
             }
           ]
+        },
+        {
+          "ruta": "app/Http/Controllers/TerritorioController.php",
+          "nombre": "TerritorioController.php",
+          "lineas": 131,
+          "estado": "moderado",
+          "accesoDatos": []
         },
         {
           "ruta": "app/Http/Controllers/PresupuestoController.php",
@@ -569,6 +535,13 @@
           "accesoDatos": []
         },
         {
+          "ruta": "app/Http/Controllers/CalendarioController.php",
+          "nombre": "CalendarioController.php",
+          "lineas": 68,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "app/Http/Controllers/DashboardController.php",
           "nombre": "DashboardController.php",
           "lineas": 62,
@@ -588,6 +561,13 @@
           ]
         },
         {
+          "ruta": "app/Http/Controllers/EjesEstrategicosController.php",
+          "nombre": "EjesEstrategicosController.php",
+          "lineas": 30,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "app/Http/Controllers/Controller.php",
           "nombre": "Controller.php",
           "lineas": 9,
@@ -597,9 +577,9 @@
       ],
       "resumen": {
         "total": 15,
-        "sobreUmbral": 6,
-        "criticos": 5,
-        "accesoDatos": 10
+        "sobreUmbral": 3,
+        "criticos": 2,
+        "accesoDatos": 6
       }
     },
     {
@@ -639,6 +619,13 @@
           "accesoDatos": []
         },
         {
+          "ruta": "app/Services/TerritorioImpactoService.php",
+          "nombre": "TerritorioImpactoService.php",
+          "lineas": 596,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
           "ruta": "app/Services/ReporteEjecutivoService.php",
           "nombre": "ReporteEjecutivoService.php",
           "lineas": 537,
@@ -653,9 +640,23 @@
           "accesoDatos": []
         },
         {
+          "ruta": "app/Services/EjesEstrategicosService.php",
+          "nombre": "EjesEstrategicosService.php",
+          "lineas": 440,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
           "ruta": "app/Services/PublicacionSyncService.php",
           "nombre": "PublicacionSyncService.php",
           "lineas": 413,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/MediosClippingService.php",
+          "nombre": "MediosClippingService.php",
+          "lineas": 314,
           "estado": "sobre-umbral",
           "accesoDatos": []
         },
@@ -674,6 +675,13 @@
           "accesoDatos": []
         },
         {
+          "ruta": "app/Services/CanalSyncService.php",
+          "nombre": "CanalSyncService.php",
+          "lineas": 256,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
           "ruta": "app/Services/MediaStorageService.php",
           "nombre": "MediaStorageService.php",
           "lineas": 192,
@@ -688,6 +696,13 @@
           "accesoDatos": []
         },
         {
+          "ruta": "app/Services/CalendarioService.php",
+          "nombre": "CalendarioService.php",
+          "lineas": 156,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "app/Services/AdsImpactPredictorService.php",
           "nombre": "AdsImpactPredictorService.php",
           "lineas": 126,
@@ -696,22 +711,22 @@
         }
       ],
       "resumen": {
-        "total": 12,
-        "sobreUmbral": 8,
-        "criticos": 6,
+        "total": 17,
+        "sobreUmbral": 11,
+        "criticos": 7,
         "accesoDatos": 0
       }
     }
   ],
   "versiones": {
-    "commitsTotales": 136,
+    "commitsTotales": 137,
     "commitsAnalizados": 50,
     "porcentajeConvencional": 100,
     "noConvencionalesEjemplo": [],
     "tags": 0,
     "ultimoTag": null,
     "ramaActual": "main",
-    "commitActual": "b10b718"
+    "commitActual": "a11d195"
   },
   "documentacion": {
     "rutasDocs": [

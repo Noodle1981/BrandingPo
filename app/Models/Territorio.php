@@ -110,4 +110,12 @@ class Territorio extends Model
 
         return $query->where('workspace_id', $workspaceId);
     }
+
+    /**
+     * Scope para ordenar alfabéticamente por nombre.
+     */
+    public function scopeOrdenados(Builder $query): Builder
+    {
+        return $query->orderBy('nombre');
+    }
 }
