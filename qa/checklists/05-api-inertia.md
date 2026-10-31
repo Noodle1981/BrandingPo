@@ -1,12 +1,12 @@
 # 05 — Integración Inertia.js y Contratos de Datos
 
 ## Contratos y Sincronización Cliente ↔ Servidor
-- [ ] **Sincronización de rutas con Ziggy**: Nombres de rutas en controladores coincidentes exactamente con llamadas `route('nombre.ruta')` en componentes Vue.
-- [ ] **Protección Anti Mass-Assignment**: Controladores y Form Requests mapean únicamente campos autorizados mediante `$request->validated()`, evitando inyección de atributos protegidos (`role`, `is_admin`, `workspace_id`).
-- [ ] **Optimización del Payload de Inertia**: Evitar el envío de colecciones masivas sin paginar en props de página; limitar proyecciones a los campos requeridos por la vista.
-- [ ] **Uso de Props Perezosas (Lazy / Deferred Props)**: Datos pesados de gráficos secundarios o cálculos territoriales cargados mediante `Inertia::lazy()` o deferred props para acelerar la carga inicial de la página.
+- [x] **Sincronización de rutas con Ziggy**: Rutas de controladores (`publicaciones.store`, `medios.index`, `territorios.impacto-electoral`, etc.) sincronizadas con llamadas en componentes Vue.
+- [x] **Protección Anti Mass-Assignment**: Controladores y Form Requests mapean exclusivamente campos autorizados mediante `$request->validated()`, impidiendo la inyección o alteración indebida de atributos protegidos (`role`, `workspace_id`).
+- [x] **Optimización del Payload de Inertia**: Proyecciones acotadas en `DashboardController` y serialización de publicaciones acotada en `PublicacionFeedService` para evitar transferencia de blobs o atributos redundantes hacia el cliente.
+- [x] **Uso de Props Perezosas (Lazy / Deferred Props)**: Datos compartidos globales (`workspaces_disponibles`, `flash`) encapsulados en closures diferidas (`fn () => ...`) en `HandleInertiaRequests` para evitar ejecución innecesaria en requests parciales.
 
 ## Estado, Flashes y Navegación Reactiva
-- [ ] **Manejo coherente de notificaciones y flashes**: Controladores retornan mensajes de éxito y advertencia con `with('success', ...)` y `with('error', ...)`, capturados uniformemente por el layout principal.
-- [ ] **Preservación de scroll y estado**: Filtros de feed, paginación y ordenamiento con `preserveScroll: true` y `preserveState: true` para una experiencia de usuario fluida sin saltos de pantalla.
-- [ ] **Manejo de respuestas de validación HTTP 422**: Errores de validación propagados reactivamente hacia el formulario del componente (`useForm`) con mensajes en español comprensibles.
+- [x] **Manejo coherente de notificaciones y flashes**: Controladores retornan mensajes de éxito, advertencia e información (`with('success', ...)`, `with('warning', ...)`, `with('error', ...)`) propagados por `HandleInertiaRequests.php` y renderizados con banners accesibles en `WarRoomLayout.vue`.
+- [x] **Preservación de scroll y estado**: Filtros de feed, cambio de territorio en `ImpactoElectoral.vue` y envío en `FeedFastFlowModal.vue` configurados con `preserveScroll: true` y `preserveState: true`.
+- [x] **Manejo de respuestas de validación HTTP 422**: Respuestas de validación propagadas reactivamente hacia `useForm` con soporte completo de traducciones al español en `lang/es/validation.php` con nombres legibles de atributos.

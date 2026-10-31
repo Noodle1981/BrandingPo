@@ -280,9 +280,17 @@ const logout = () => {
       <CheckCircle2 class="w-4 h-4 text-emerald-500 shrink-0" />
       <span>{{ flash.success }}</span>
     </div>
+    <div v-if="flash.warning" class="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
+      <AlertTriangle class="w-4 h-4 text-amber-500 shrink-0" />
+      <span>{{ flash.warning }}</span>
+    </div>
     <div v-if="flash.error" class="bg-rose-500/10 border-b border-rose-500/30 px-4 py-2 text-xs text-rose-800 dark:text-rose-300 flex items-center gap-2">
       <AlertCircle class="w-4 h-4 text-rose-500 shrink-0" />
       <span>{{ flash.error }}</span>
+    </div>
+    <div v-if="flash.info" class="bg-cyan-500/10 border-b border-cyan-500/30 px-4 py-2 text-xs text-cyan-800 dark:text-cyan-300 flex items-center gap-2">
+      <AlertCircle class="w-4 h-4 text-cyan-500 shrink-0" />
+      <span>{{ flash.info }}</span>
     </div>
 
     <!-- Layout Principal: Sidebar Fijo + Main Content -->

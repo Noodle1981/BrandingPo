@@ -57,13 +57,13 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
   <div class="kpi-row">
     <div class="kpi-card k-o"><div class="kpi-number">101</div><div class="kpi-label">Puntos de control</div></div>
-    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">47</div><div class="kpi-label">Cumplidos</div></div>
-    <div class="kpi-card"><div class="kpi-number" id="kpiPending">54</div><div class="kpi-label">Pendientes</div></div>
+    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">54</div><div class="kpi-label">Cumplidos</div></div>
+    <div class="kpi-card"><div class="kpi-number" id="kpiPending">47</div><div class="kpi-label">Pendientes</div></div>
     <div class="kpi-card k-r"><div class="kpi-number">23</div><div class="kpi-label">Archivos sobre umbral</div></div>
-    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">46.5%</div><div class="kpi-label">Conformidad</div></div>
+    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">53.5%</div><div class="kpi-label">Conformidad</div></div>
   </div>
-  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">46.5% completado</span></div>
-    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:46.5%"></div></div></div>
+  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">53.5% completado</span></div>
+    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:53.5%"></div></div></div>
   
     <div class="complexity-alert-section">
       <div class="alert-header"><div class="alert-title-wrap"><span style="font-size:20px">🔬</span><h3>Diagnóstico de código: tamaños, acceso a datos, versiones y documentación</h3></div>
@@ -558,39 +558,39 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   <div class="card-area">
     <div class="card-header">
       <div class="card-title-group"><span class="card-badge-num">05</span><h2 class="card-title">05 — Integración Inertia.js y Contratos de Datos</h2></div>
-      <div class="card-progress-wrap"><span class="card-counter" id="counter_4">0 / 7</span>
-        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_4" style="width:0%"></div></div></div>
+      <div class="card-progress-wrap"><span class="card-counter" id="counter_4">7 / 7</span>
+        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_4" style="width:100%"></div></div></div>
     </div>
     
     
     <div class="checklist-items"><div class="item-section">Contratos y Sincronización Cliente ↔ Servidor</div>
-      <label class="checklist-item " id="label_chk_4_0">
-        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_0"  onchange="toggleItem('chk_4_0', 4)">
-        <div class="item-content"><span class="item-bold">Sincronización de rutas con Ziggy</span><span>Nombres de rutas en controladores coincidentes exactamente con llamadas <code>route('nombre.ruta')</code> en componentes Vue.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_4_0">
+        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_0" checked onchange="toggleItem('chk_4_0', 4)">
+        <div class="item-content"><span class="item-bold">Sincronización de rutas con Ziggy</span><span>Rutas de controladores (<code>publicaciones.store</code>, <code>medios.index</code>, <code>territorios.impacto-electoral</code>, etc.) sincronizadas con llamadas en componentes Vue.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_4_1">
-        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_1"  onchange="toggleItem('chk_4_1', 4)">
-        <div class="item-content"><span class="item-bold">Protección Anti Mass-Assignment</span><span>Controladores y Form Requests mapean únicamente campos autorizados mediante <code>$request-&gt;validated()</code>, evitando inyección de atributos protegidos (<code>role</code>, <code>is_admin</code>, <code>workspace_id</code>).</span></div>
+      <label class="checklist-item item-checked" id="label_chk_4_1">
+        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_1" checked onchange="toggleItem('chk_4_1', 4)">
+        <div class="item-content"><span class="item-bold">Protección Anti Mass-Assignment</span><span>Controladores y Form Requests mapean exclusivamente campos autorizados mediante <code>$request-&gt;validated()</code>, impidiendo la inyección o alteración indebida de atributos protegidos (<code>role</code>, <code>workspace_id</code>).</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_4_2">
-        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_2"  onchange="toggleItem('chk_4_2', 4)">
-        <div class="item-content"><span class="item-bold">Optimización del Payload de Inertia</span><span>Evitar el envío de colecciones masivas sin paginar en props de página; limitar proyecciones a los campos requeridos por la vista.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_4_2">
+        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_2" checked onchange="toggleItem('chk_4_2', 4)">
+        <div class="item-content"><span class="item-bold">Optimización del Payload de Inertia</span><span>Proyecciones acotadas en <code>DashboardController</code> y serialización de publicaciones acotada en <code>PublicacionFeedService</code> para evitar transferencia de blobs o atributos redundantes hacia el cliente.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_4_3">
-        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_3"  onchange="toggleItem('chk_4_3', 4)">
-        <div class="item-content"><span class="item-bold">Uso de Props Perezosas (Lazy / Deferred Props)</span><span>Datos pesados de gráficos secundarios o cálculos territoriales cargados mediante <code>Inertia::lazy()</code> o deferred props para acelerar la carga inicial de la página.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_4_3">
+        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_3" checked onchange="toggleItem('chk_4_3', 4)">
+        <div class="item-content"><span class="item-bold">Uso de Props Perezosas (Lazy / Deferred Props)</span><span>Datos compartidos globales (<code>workspaces_disponibles</code>, <code>flash</code>) encapsulados en closures diferidas (<code>fn () =&gt; ...</code>) en <code>HandleInertiaRequests</code> para evitar ejecución innecesaria en requests parciales.</span></div>
       </label><div class="item-section">Estado, Flashes y Navegación Reactiva</div>
-      <label class="checklist-item " id="label_chk_4_4">
-        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_4"  onchange="toggleItem('chk_4_4', 4)">
-        <div class="item-content"><span class="item-bold">Manejo coherente de notificaciones y flashes</span><span>Controladores retornan mensajes de éxito y advertencia con <code>with('success', ...)</code> y <code>with('error', ...)</code>, capturados uniformemente por el layout principal.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_4_4">
+        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_4" checked onchange="toggleItem('chk_4_4', 4)">
+        <div class="item-content"><span class="item-bold">Manejo coherente de notificaciones y flashes</span><span>Controladores retornan mensajes de éxito, advertencia e información (<code>with('success', ...)</code>, <code>with('warning', ...)</code>, <code>with('error', ...)</code>) propagados por <code>HandleInertiaRequests.php</code> y renderizados con banners accesibles en <code>WarRoomLayout.vue</code>.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_4_5">
-        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_5"  onchange="toggleItem('chk_4_5', 4)">
-        <div class="item-content"><span class="item-bold">Preservación de scroll y estado</span><span>Filtros de feed, paginación y ordenamiento con <code>preserveScroll: true</code> y <code>preserveState: true</code> para una experiencia de usuario fluida sin saltos de pantalla.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_4_5">
+        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_5" checked onchange="toggleItem('chk_4_5', 4)">
+        <div class="item-content"><span class="item-bold">Preservación de scroll y estado</span><span>Filtros de feed, cambio de territorio en <code>ImpactoElectoral.vue</code> y envío en <code>FeedFastFlowModal.vue</code> configurados con <code>preserveScroll: true</code> y <code>preserveState: true</code>.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_4_6">
-        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_6"  onchange="toggleItem('chk_4_6', 4)">
-        <div class="item-content"><span class="item-bold">Manejo de respuestas de validación HTTP 422</span><span>Errores de validación propagados reactivamente hacia el formulario del componente (<code>useForm</code>) con mensajes en español comprensibles.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_4_6">
+        <input type="checkbox" class="chk-item" data-cat="4" id="chk_4_6" checked onchange="toggleItem('chk_4_6', 4)">
+        <div class="item-content"><span class="item-bold">Manejo de respuestas de validación HTTP 422</span><span>Respuestas de validación propagadas reactivamente hacia <code>useForm</code> con soporte completo de traducciones al español en <code>lang/es/validation.php</code> con nombres legibles de atributos.</span></div>
       </label></div>
   </div>
   <div class="card-area">
@@ -790,7 +790,7 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
 </div>
 <script>
-const total=101;let checked=47;
+const total=101;let checked=54;
 function toggleItem(id,cat){
   const chk=document.getElementById(id);document.getElementById('label_'+id).classList.toggle('item-checked',chk.checked);
   checked+=chk.checked?1:-1;
