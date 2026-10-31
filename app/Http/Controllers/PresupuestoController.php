@@ -26,7 +26,7 @@ class PresupuestoController extends Controller
             ->with(['cicloCampana', 'candidato']);
 
         if ($cicloId) {
-            $query->where('ciclo_campana_id', $cicloId);
+            $query->delCiclo($cicloId);
         }
 
         $partidas = $query->get()->map(function ($p) {
@@ -53,7 +53,7 @@ class PresupuestoController extends Controller
         $saldoTotal = $totalAsignado - $totalEjecutado;
         $porcentajeGlobal = $totalAsignado > 0 ? round(($totalEjecutado / $totalAsignado) * 100, 1) : 0;
 
-        $ciclos = CicloCampana::where('workspace_id', $workspace->id)
+        $ciclos = CicloCampana::delWorkspace($workspace)
             ->orderByDesc('anio')
             ->get(['id', 'nombre', 'anio']);
 

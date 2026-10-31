@@ -27,7 +27,7 @@ class BriefingController extends Controller
             ->orderByDesc('fecha_generacion');
 
         if ($cicloId) {
-            $query->where('ciclo_campana_id', $cicloId);
+            $query->delCiclo($cicloId);
         }
 
         $informes = $query->get()->map(function ($inf) {
@@ -44,7 +44,7 @@ class BriefingController extends Controller
             ];
         });
 
-        $ciclos = CicloCampana::where('workspace_id', $workspace->id)
+        $ciclos = CicloCampana::delWorkspace($workspace)
             ->orderByDesc('anio')
             ->get(['id', 'nombre', 'anio']);
 

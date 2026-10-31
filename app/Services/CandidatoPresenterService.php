@@ -8,6 +8,7 @@ use App\Models\CicloCampana;
 use App\Models\EjeTematico;
 use App\Models\Publicacion;
 use App\Models\Territorio;
+use App\Models\Workspace;
 use Illuminate\Http\Request;
 
 class CandidatoPresenterService
@@ -305,5 +306,107 @@ class CandidatoPresenterService
             'publicaciones' => $publicaciones,
             'ejes' => $ejes,
         ];
+    }
+
+    /**
+     * Obtener o inicializar el candidato propio del workspace activo.
+     */
+    public function obtenerOInicializarPropio(Workspace $workspace): Candidato
+    {
+        $candidato = Candidato::delWorkspace($workspace)
+            ->propios()
+            ->with(['perfilesSociales', 'territorio', 'cicloCampana'])
+            ->first();
+
+        if (! $candidato) {
+            $cicloActivo = CicloCampana::delWorkspace($workspace)->activo()->first()
+                ?? CicloCampana::delWorkspace($workspace)->first();
+            $territorioDefault = Territorio::delWorkspace($workspace)->first();
+
+            $cargoPorDefecto = match ($workspace->nivel_politico) {
+                'gobernador' => 'Candidato a Gobernador',
+                'legislador_nacional' => 'Candidato a Diputado Nacional',
+                'senador' => 'Candidato a Senador Nacional',
+                'concejal' => 'Candidato a Concejal',
+                default => 'Candidato a Intendente',
+            };
+
+            $candidato = Candidato::create([
+                'workspace_id' => $workspace->id,
+                'nombre_completo' => 'Mi Candidato ('.$workspace->nombre.')',
+                'partido_coalicion' => 'Frente de Campaña',
+                'cargo_aspirado' => $cargoPorDefecto,
+                'estado_politico' => 'candidato',
+                'ciclo_campana_id' => $cicloActivo?->id,
+                'territorio_id' => $territorioDefault?->id,
+                'color_hex' => '#06b6d4',
+                'es_propio' => true,
+                'bio_resumen' => 'Perfil del candidato oficial de campaña. Auditoría y seguimiento de crecimiento desde el Punto Cero.',
+            ]);
+            $candidato->load(['perfilesSociales', 'territorio', 'cicloCampana']);
+        }
+
+        return $candidato;
+    }
+
+    /**
+     * Crear un nuevo candidato rival en el workspace.
+     */
+    public function crearRival(Workspace $workspace, array $validated): Candidato
+    {
+        return Candidato::create([
+            'workspace_id' => $workspace->id,
+            'nombre_completo' => $validated['nombre_completo'],
+            'partido_coalicion' => $validated['partido_coalicion'],
+            'cargo_aspirado' => $validated['cargo_aspirado'] ?? null,
+            'estado_politico' => $validated['estado_politico'],
+            'ciclo_campana_id' => $validated['ciclo_campana_id'],
+            'territorio_id' => $validated['territorio_id'] ?? null,
+            'color_hex' => $validated['color_hex'] ?? '#8b5cf6',
+            'es_propio' => false,
+            'avatar_url' => $validated['avatar_url'] ?? null,
+            'bio_resumen' => $validated['bio_resumen'] ?? null,
+        ]);
+    }
+
+    /**
+     * Actualizar candidato y opcionalmente su territorio geográfico.
+     */
+    public function actualizarCandidato(Candidato $candidato, Workspace $workspace, array $validated): void
+    {
+        if (! empty($validated['workspace_nombre']) && $candidato->es_propio) {
+            $workspace->update(['nombre' => $validated['workspace_nombre']]);
+        }
+
+        $territorioId = $validated['territorio_id'] ?? $candidato->territorio_id;
+        if (! empty($validated['territorio_nombre'])) {
+            $padron = (int) ($validated['padron_electoral'] ?? 0);
+            $poblacion = (int) ($validated['poblacion_total'] ?? ($padron > 0 ? (int) round($padron * 1.3) : 0));
+
+            $territorio = Territorio::updateOrCreate(
+                [
+                    'workspace_id' => $workspace->id,
+                    'nombre' => $validated['territorio_nombre'],
+                ],
+                [
+                    'tipo' => $validated['tipo_territorio'] ?? 'departamento',
+                    'padron_electoral' => $padron,
+                    'poblacion_total' => $poblacion,
+                ]
+            );
+            $territorioId = $territorio->id;
+        }
+
+        $candidato->update([
+            'nombre_completo' => $validated['nombre_completo'],
+            'partido_coalicion' => $validated['partido_coalicion'],
+            'cargo_aspirado' => $validated['cargo_aspirado'] ?? null,
+            'estado_politico' => $validated['estado_politico'],
+            'ciclo_campana_id' => $validated['ciclo_campana_id'] ?? $candidato->ciclo_campana_id,
+            'territorio_id' => $territorioId,
+            'color_hex' => $validated['color_hex'] ?? $candidato->color_hex,
+            'avatar_url' => $validated['avatar_url'] ?? $candidato->avatar_url,
+            'bio_resumen' => $validated['bio_resumen'] ?? $candidato->bio_resumen,
+        ]);
     }
 }

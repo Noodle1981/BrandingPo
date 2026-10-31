@@ -24,12 +24,12 @@ class ReporteController extends Controller
         $workspace = WorkspaceHelper::activo($request);
         $candidatoId = $request->input('candidato_id');
 
-        $candidatoQuery = Candidato::where('workspace_id', $workspace->id)
+        $candidatoQuery = Candidato::delWorkspace($workspace)
             ->with(['perfilesSociales', 'territorio', 'cicloCampana']);
 
         $candidato = $candidatoId
             ? (clone $candidatoQuery)->find($candidatoId)
-            : (clone $candidatoQuery)->where('es_propio', true)->first();
+            : (clone $candidatoQuery)->propio()->first();
 
         if (! $candidato) {
             $candidato = (clone $candidatoQuery)->firstOrFail();
@@ -38,9 +38,8 @@ class ReporteController extends Controller
         $reporteData = $this->reporteService->generarReporteTrimestral($candidato);
 
         // Candidatos del workspace para permitir conmutar el reporte desde la vista
-        $candidatosLista = Candidato::where('workspace_id', $workspace->id)
-            ->select('id', 'nombre_completo', 'cargo_aspirado', 'es_propio', 'avatar_url')
-            ->get();
+        $candidatosLista = Candidato::delWorkspace($workspace)
+            ->get(['id', 'nombre_completo', 'cargo_aspirado', 'es_propio', 'avatar_url']);
 
         return Inertia::render('Reportes/Ejecutivo', [
             'reporte' => $reporteData,

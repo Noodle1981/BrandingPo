@@ -310,4 +310,49 @@ class MediosClippingService
             'mensaje' => "Sincronización masiva finalizada ({$medios->count()} medios): {$totalAnalizadas} notas revisadas, {$totalMenciones} menciones detectadas ({$totalNuevas} nuevas registradas).",
         ];
     }
+
+    /**
+     * Crear una nueva nota de prensa con cálculo de interacciones.
+     */
+    public function guardarNota(Workspace $workspace, array $datos, ?array $reacciones, bool $esTapa): NotaPrensa
+    {
+        $totalInteracciones = is_array($reacciones) && ! empty($reacciones)
+            ? array_sum(array_map('intval', $reacciones))
+            : (int) ($datos['interacciones_en_redes_del_medio'] ?? 0);
+
+        return NotaPrensa::create([
+            'workspace_id' => $workspace->id,
+            'medio_prensa_id' => $datos['medio_prensa_id'],
+            'candidato_id' => $datos['candidato_id'] ?? null,
+            'origen_tipo' => $datos['origen_tipo'] ?? 'web',
+            'tipo_mencion' => $datos['tipo_mencion'] ?? 'titular',
+            'fecha_publicacion' => $datos['fecha_publicacion'],
+            'titulo' => $datos['titulo'],
+            'resumen' => $datos['resumen'] ?? null,
+            'url_nota' => $datos['url_nota'] ?? null,
+            'tono_mencion' => $datos['tono_mencion'],
+            'puntuacion_sentimiento' => (float) ($datos['puntuacion_sentimiento'] ?? 0),
+            'es_tapa_o_principal' => $esTapa,
+            'interacciones_en_redes_del_medio' => $totalInteracciones,
+            'reacciones_desglose' => $reacciones,
+            'respuesta_replica_candidato' => $datos['respuesta_replica_candidato'] ?? null,
+        ]);
+    }
+
+    /**
+     * Actualizar una nota existente en el clipping.
+     */
+    public function actualizarNota(NotaPrensa $nota, array $datos, ?array $reacciones, bool $esTapa): bool
+    {
+        $totalInteracciones = is_array($reacciones) && ! empty($reacciones)
+            ? array_sum(array_map('intval', $reacciones))
+            : (int) ($datos['interacciones_en_redes_del_medio'] ?? $nota->interacciones_en_redes_del_medio);
+
+        return $nota->update(array_merge($datos, [
+            'es_tapa_o_principal' => $esTapa,
+            'interacciones_en_redes_del_medio' => $totalInteracciones,
+            'reacciones_desglose' => $reacciones,
+            'puntuacion_sentimiento' => (float) ($datos['puntuacion_sentimiento'] ?? 0),
+        ]));
+    }
 }

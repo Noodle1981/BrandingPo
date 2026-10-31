@@ -28,13 +28,13 @@ class CrisisController extends Controller
             ->with('candidato')
             ->orderByDesc('fecha_evento');
 
-        $queryAlianzas = AlianzaPolitica::where('workspace_id', $workspace->id)
+        $queryAlianzas = AlianzaPolitica::delWorkspace($workspace)
             ->with('candidato')
             ->orderBy('nombre_figura');
 
         if ($candidatoId) {
-            $queryCrisis->where('candidato_id', $candidatoId);
-            $queryAlianzas->where('candidato_id', $candidatoId);
+            $queryCrisis->deCandidato($candidatoId);
+            $queryAlianzas->deCandidato($candidatoId);
         }
 
         $eventos = $queryCrisis->get()->map(function ($e) {
@@ -74,9 +74,9 @@ class CrisisController extends Controller
             ->orderBy('nombre_completo')
             ->get(['id', 'nombre_completo', 'es_propio']);
 
-        $totalCriticos = $eventos->where('nivel_gravedad', 'critico')->where('estado', '!=', 'resuelto')->count();
-        $totalModerados = $eventos->where('nivel_gravedad', 'moderado')->where('estado', '!=', 'resuelto')->count();
-        $totalResueltos = $eventos->where('estado', 'resuelto')->count();
+        $totalCriticos = $eventos->filter(fn ($e) => $e['nivel_gravedad'] === 'critico' && $e['estado'] !== 'resuelto')->count();
+        $totalModerados = $eventos->filter(fn ($e) => $e['nivel_gravedad'] === 'moderado' && $e['estado'] !== 'resuelto')->count();
+        $totalResueltos = $eventos->filter(fn ($e) => $e['estado'] === 'resuelto')->count();
         $promedioRespuestaMin = (int) $eventos->avg('minutos_tiempo_respuesta');
 
         return Inertia::render('Crisis/Index', [

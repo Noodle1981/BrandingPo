@@ -53,17 +53,17 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
     <div><div class="meta-label">Sistema</div><div class="meta-val">BrandingPo</div></div>
     <div><div class="meta-label">Fecha de emisión</div><div class="meta-val">2026-10-31</div></div>
     <div><div class="meta-label">Destinatarios</div><div class="meta-val">Equipo de Desarrollo</div></div>
-    <div><div class="meta-label">Commit</div><div class="meta-val">a11d195</div></div>
+    <div><div class="meta-label">Commit</div><div class="meta-val">585eb2a</div></div>
   </div>
   <div class="kpi-row">
     <div class="kpi-card k-o"><div class="kpi-number">101</div><div class="kpi-label">Puntos de control</div></div>
-    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">21</div><div class="kpi-label">Cumplidos</div></div>
-    <div class="kpi-card"><div class="kpi-number" id="kpiPending">80</div><div class="kpi-label">Pendientes</div></div>
-    <div class="kpi-card k-r"><div class="kpi-number">28</div><div class="kpi-label">Archivos sobre umbral · 6 acc. datos</div></div>
-    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">20.8%</div><div class="kpi-label">Conformidad</div></div>
+    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">26</div><div class="kpi-label">Cumplidos</div></div>
+    <div class="kpi-card"><div class="kpi-number" id="kpiPending">75</div><div class="kpi-label">Pendientes</div></div>
+    <div class="kpi-card k-r"><div class="kpi-number">25</div><div class="kpi-label">Archivos sobre umbral</div></div>
+    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">25.7%</div><div class="kpi-label">Conformidad</div></div>
   </div>
-  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">20.8% completado</span></div>
-    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:20.8%"></div></div></div>
+  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">25.7% completado</span></div>
+    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:25.7%"></div></div></div>
   
     <div class="complexity-alert-section">
       <div class="alert-header"><div class="alert-title-wrap"><span style="font-size:20px">🔬</span><h3>Diagnóstico de código: tamaños, acceso a datos, versiones y documentación</h3></div>
@@ -74,14 +74,14 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
         <p>59 archivos analizados · 4 críticos.<br><strong>Acción:</strong> Extraer subcomponentes a Components/ o lógica reactiva a composables/</p>
       </div>
       <div class="mini-alert-card alert-danger">
-        <h4>Controladores backend (Laravel): 3 sobre umbral (200 lín)</h4>
-        <p>15 archivos analizados · 2 críticos · <strong>6 con acceso directo a datos</strong>.<br><strong>Acción:</strong> Mover lógica a app/Services o FormRequests; el controlador solo adapta HTTP</p>
+        <h4>Controladores backend (Laravel): 1 sobre umbral (200 lín)</h4>
+        <p>15 archivos analizados · 1 críticos.<br><strong>Acción:</strong> Mover lógica a app/Services o FormRequests; el controlador solo adapta HTTP</p>
       </div>
       <div class="mini-alert-card alert-danger">
-        <h4>Servicios de negocio (Laravel): 11 sobre umbral (300 lín)</h4>
-        <p>17 archivos analizados · 7 críticos.<br><strong>Acción:</strong> Dividir responsabilidades y extraer scrapers o procesadores específicos</p>
+        <h4>Servicios de negocio (Laravel): 10 sobre umbral (300 lín)</h4>
+        <p>17 archivos analizados · 5 críticos.<br><strong>Acción:</strong> Dividir responsabilidades y extraer scrapers o procesadores específicos</p>
       </div></div>
-      <div class="extra-metrics">🗂️ <strong>Versiones:</strong> 100% commits convencionales · 0 tags · commit <code>a11d195</code><br>📚 <strong>Documentación:</strong> última actualización nunca · — commits de código desde entonces</div>
+      <div class="extra-metrics">🗂️ <strong>Versiones:</strong> 100% commits convencionales · 0 tags · commit <code>585eb2a</code><br>📚 <strong>Documentación:</strong> última actualización nunca · — commits de código desde entonces</div>
       
       <details open style="margin-bottom:14px;">
         <summary class="det-summary">▶ Vistas y componentes frontend (Vue) — umbral 500 lín / crítico 800 lín</summary>
@@ -171,31 +171,31 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
           <td style="text-align:right;font-weight:800;font-family:monospace">378</td>
           <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
           <td>—</td></tr><tr><td><strong>CandidatoController.php</strong><br><span class="table-subtext">app/Http/Controllers/CandidatoController.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">308</td>
-          <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
-          <td><span class="table-badge badge-danger">L56</span></td></tr><tr><td><strong>MediosController.php</strong><br><span class="table-subtext">app/Http/Controllers/MediosController.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">219</td>
-          <td><span class="table-badge badge-warning">🟡 Sobre umbral</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">200</td>
+          <td><span class="table-badge badge-info">🔵 Moderado</span></td>
+          <td>—</td></tr><tr><td><strong>MediosController.php</strong><br><span class="table-subtext">app/Http/Controllers/MediosController.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">191</td>
+          <td><span class="table-badge badge-info">🔵 Moderado</span></td>
           <td>—</td></tr><tr><td><strong>CrisisController.php</strong><br><span class="table-subtext">app/Http/Controllers/CrisisController.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">168</td>
           <td><span class="table-badge badge-info">🔵 Moderado</span></td>
-          <td><span class="table-badge badge-danger">L36</span></td></tr><tr><td><strong>TerritorioController.php</strong><br><span class="table-subtext">app/Http/Controllers/TerritorioController.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">131</td>
+          <td>—</td></tr><tr><td><strong>TerritorioController.php</strong><br><span class="table-subtext">app/Http/Controllers/TerritorioController.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">129</td>
           <td><span class="table-badge badge-info">🔵 Moderado</span></td>
           <td>—</td></tr><tr><td><strong>PresupuestoController.php</strong><br><span class="table-subtext">app/Http/Controllers/PresupuestoController.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">125</td>
           <td><span class="table-badge badge-info">🔵 Moderado</span></td>
-          <td><span class="table-badge badge-danger">L29</span></td></tr><tr><td><strong>AnalyticsController.php</strong><br><span class="table-subtext">app/Http/Controllers/AnalyticsController.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">117</td>
+          <td>—</td></tr><tr><td><strong>AnalyticsController.php</strong><br><span class="table-subtext">app/Http/Controllers/AnalyticsController.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">120</td>
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
-          <td><span class="table-badge badge-danger">L44</span></td></tr><tr><td><strong>UserController.php</strong><br><span class="table-subtext">app/Http/Controllers/UserController.php</span></td>
+          <td>—</td></tr><tr><td><strong>UserController.php</strong><br><span class="table-subtext">app/Http/Controllers/UserController.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">117</td>
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
           <td>—</td></tr><tr><td><strong>BriefingController.php</strong><br><span class="table-subtext">app/Http/Controllers/BriefingController.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">116</td>
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
-          <td><span class="table-badge badge-danger">L30</span></td></tr><tr><td><strong>AuthController.php</strong><br><span class="table-subtext">app/Http/Controllers/AuthController.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">114</td>
+          <td>—</td></tr><tr><td><strong>AuthController.php</strong><br><span class="table-subtext">app/Http/Controllers/AuthController.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">106</td>
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
           <td>—</td></tr><tr><td><strong>CalendarioController.php</strong><br><span class="table-subtext">app/Http/Controllers/CalendarioController.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">68</td>
@@ -204,9 +204,9 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
           <td style="text-align:right;font-weight:800;font-family:monospace">62</td>
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
           <td>—</td></tr><tr><td><strong>ReporteController.php</strong><br><span class="table-subtext">app/Http/Controllers/ReporteController.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">51</td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">50</td>
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
-          <td><span class="table-badge badge-danger">L32</span></td></tr><tr><td><strong>EjesEstrategicosController.php</strong><br><span class="table-subtext">app/Http/Controllers/EjesEstrategicosController.php</span></td>
+          <td>—</td></tr><tr><td><strong>EjesEstrategicosController.php</strong><br><span class="table-subtext">app/Http/Controllers/EjesEstrategicosController.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">30</td>
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
           <td>—</td></tr><tr><td><strong>Controller.php</strong><br><span class="table-subtext">app/Http/Controllers/Controller.php</span></td>
@@ -218,17 +218,11 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
       <details  style="margin-bottom:14px;">
         <summary class="det-summary">▶ Servicios de negocio (Laravel) — umbral 300 lín / crítico 500 lín</summary>
         <table class="loc-table"><thead><tr><th>Archivo</th><th style="text-align:right">Líneas</th><th>Estado</th><th>Acceso a datos</th></tr></thead><tbody>
-        <tr><td><strong>SocialProfileScraperService.php</strong><br><span class="table-subtext">app/Services/SocialProfileScraperService.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">1761</td>
-          <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
-          <td>—</td></tr><tr><td><strong>DashboardAggregationService.php</strong><br><span class="table-subtext">app/Services/DashboardAggregationService.php</span></td>
+        <tr><td><strong>DashboardAggregationService.php</strong><br><span class="table-subtext">app/Services/DashboardAggregationService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">1119</td>
           <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
           <td>—</td></tr><tr><td><strong>CanalMetricasService.php</strong><br><span class="table-subtext">app/Services/CanalMetricasService.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">1028</td>
-          <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
-          <td>—</td></tr><tr><td><strong>GenericMediaScraperService.php</strong><br><span class="table-subtext">app/Services/GenericMediaScraperService.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">732</td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">803</td>
           <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
           <td>—</td></tr><tr><td><strong>TerritorioImpactoService.php</strong><br><span class="table-subtext">app/Services/TerritorioImpactoService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">596</td>
@@ -242,14 +236,17 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
           <td>—</td></tr><tr><td><strong>EjesEstrategicosService.php</strong><br><span class="table-subtext">app/Services/EjesEstrategicosService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">440</td>
           <td><span class="table-badge badge-warning">🟡 Sobre umbral</span></td>
+          <td>—</td></tr><tr><td><strong>CandidatoPresenterService.php</strong><br><span class="table-subtext">app/Services/CandidatoPresenterService.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">413</td>
+          <td><span class="table-badge badge-warning">🟡 Sobre umbral</span></td>
           <td>—</td></tr><tr><td><strong>PublicacionSyncService.php</strong><br><span class="table-subtext">app/Services/PublicacionSyncService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">413</td>
           <td><span class="table-badge badge-warning">🟡 Sobre umbral</span></td>
-          <td>—</td></tr><tr><td><strong>MediosClippingService.php</strong><br><span class="table-subtext">app/Services/MediosClippingService.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">314</td>
+          <td>—</td></tr><tr><td><strong>GenericMediaScraperService.php</strong><br><span class="table-subtext">app/Services/GenericMediaScraperService.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">380</td>
           <td><span class="table-badge badge-warning">🟡 Sobre umbral</span></td>
-          <td>—</td></tr><tr><td><strong>CandidatoPresenterService.php</strong><br><span class="table-subtext">app/Services/CandidatoPresenterService.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">310</td>
+          <td>—</td></tr><tr><td><strong>MediosClippingService.php</strong><br><span class="table-subtext">app/Services/MediosClippingService.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">359</td>
           <td><span class="table-badge badge-warning">🟡 Sobre umbral</span></td>
           <td>—</td></tr><tr><td><strong>PublicacionFeedService.php</strong><br><span class="table-subtext">app/Services/PublicacionFeedService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">259</td>
@@ -268,6 +265,9 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
           <td>—</td></tr><tr><td><strong>AdsImpactPredictorService.php</strong><br><span class="table-subtext">app/Services/AdsImpactPredictorService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">126</td>
+          <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
+          <td>—</td></tr><tr><td><strong>SocialProfileScraperService.php</strong><br><span class="table-subtext">app/Services/SocialProfileScraperService.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">66</td>
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
           <td>—</td></tr>
         </tbody></table>
@@ -336,10 +336,10 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   <div class="card-area">
     <div class="card-header">
       <div class="card-title-group"><span class="card-badge-num">02</span><h2 class="card-title">02 — Backend y Arquitectura Laravel</h2></div>
-      <div class="card-progress-wrap"><span class="card-counter" id="counter_1">10 / 17</span>
-        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_1" style="width:59%"></div></div></div>
+      <div class="card-progress-wrap"><span class="card-counter" id="counter_1">15 / 17</span>
+        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_1" style="width:88%"></div></div></div>
     </div>
-    <div class="card-warning-banner">⚠️ <strong>3 archivo(s) de "Controladores backend (Laravel)" superan 200 líneas:</strong> <code>PublicacionController.php (378)</code>, <code>CandidatoController.php (308)</code>, <code>MediosController.php (219)</code><br><strong>6 con acceso directo a datos:</strong> <code>CandidatoController.php</code>, <code>CrisisController.php</code>, <code>PresupuestoController.php</code>, <code>AnalyticsController.php</code>, <code>BriefingController.php</code>, <code>ReporteController.php</code><br><strong>11 archivo(s) de "Servicios de negocio (Laravel)" superan 300 líneas:</strong> <code>SocialProfileScraperService.php (1761)</code>, <code>DashboardAggregationService.php (1119)</code>, <code>CanalMetricasService.php (1028)</code>, <code>GenericMediaScraperService.php (732)</code>, <code>TerritorioImpactoService.php (596)</code>, <code>ReporteEjecutivoService.php (537)</code>, <code>DemographicIntelligenceService.php (508)</code>, <code>EjesEstrategicosService.php (440)</code>…</div>
+    <div class="card-warning-banner">⚠️ <strong>1 archivo(s) de "Controladores backend (Laravel)" superan 200 líneas:</strong> <code>PublicacionController.php (378)</code><br><strong>10 archivo(s) de "Servicios de negocio (Laravel)" superan 300 líneas:</strong> <code>DashboardAggregationService.php (1119)</code>, <code>CanalMetricasService.php (803)</code>, <code>TerritorioImpactoService.php (596)</code>, <code>ReporteEjecutivoService.php (537)</code>, <code>DemographicIntelligenceService.php (508)</code>, <code>EjesEstrategicosService.php (440)</code>, <code>CandidatoPresenterService.php (413)</code>, <code>PublicacionSyncService.php (413)</code>…</div>
     
     <div class="checklist-items"><div class="item-section">Arquitectura y Separación de Responsabilidades</div>
       <label class="checklist-item item-checked" id="label_chk_1_0">
@@ -350,8 +350,8 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_1" checked onchange="toggleItem('chk_1_1', 1)">
         <div class="item-content"><span class="item-bold">Cero acceso directo a datos en controladores</span><span>Prohibido inyectar o consultar directamente la base de datos (queries raw o encadenamientos complejos <code>-&gt;where(</code>) desde controladores; toda interacción se delega a servicios, query scopes o repositorios. (obligatorio)</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_1_2">
-        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_2"  onchange="toggleItem('chk_1_2', 1)">
+      <label class="checklist-item item-checked" id="label_chk_1_2">
+        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_2" checked onchange="toggleItem('chk_1_2', 1)">
         <div class="item-content"><span class="item-bold">Validación mediante Form Requests</span><span>Reemplazar validaciones manuales <code>$request-&gt;validate([...])</code> dispersas en controladores por clases de <code>FormRequest</code> tipadas con autorización (<code>authorize()</code>) y reglas semánticas.</span></div>
       </label>
       <label class="checklist-item " id="label_chk_1_3">
@@ -362,9 +362,9 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_4"  onchange="toggleItem('chk_1_4', 1)">
         <div class="item-content"><span class="item-bold">Manejo centralizado de errores y excepciones</span><span>Excepciones de servicios externos (scrapers caídos, timeouts de red) capturadas ordenadamente sin volcar error 500 al cliente.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_1_5">
-        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_5"  onchange="toggleItem('chk_1_5', 1)">
-        <div class="item-content"><span class="item-bold">Encapsulación de lógica de scrapers</span><span>Scrapers de perfiles sociales y medios periodísticos encapsulados con interfaces claras, respetando SRP y manejando reintentos con backoff exponencial.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_1_5">
+        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_5" checked onchange="toggleItem('chk_1_5', 1)">
+        <div class="item-content"><span class="item-bold">Encapsulación de lógica de scrapers</span><span>Scrapers de perfiles sociales y medios periodísticos encapsulados con interfaces y clases especializadas, respetando SRP y separando parsers de feeds, análisis léxico y scrapers por formato.</span></div>
       </label><div class="item-section">Hallazgos de la Medición — Controladores sobre Umbral</div>
       <label class="checklist-item item-checked" id="label_chk_1_6">
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_6" checked onchange="toggleItem('chk_1_6', 1)">
@@ -376,15 +376,15 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
       </label>
       <label class="checklist-item item-checked" id="label_chk_1_8">
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_8" checked onchange="toggleItem('chk_1_8', 1)">
-        <div class="item-content"><span class="item-bold">Dividir <code>TerritorioController.php</code> (723 lín)</span><span>Desacoplar cálculos de penetración electoral y cruce demográfico hacia <code>TerritorioImpactoService</code>. (Resuelto: reducido a 131 líneas).</span></div>
+        <div class="item-content"><span class="item-bold">Dividir <code>TerritorioController.php</code> (723 lín)</span><span>Desacoplar cálculos de penetración electoral y cruce demográfico hacia <code>TerritorioImpactoService</code>. (Resuelto: reducido a 129 líneas).</span></div>
       </label>
       <label class="checklist-item item-checked" id="label_chk_1_9">
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_9" checked onchange="toggleItem('chk_1_9', 1)">
-        <div class="item-content"><span class="item-bold">Dividir <code>CandidatoController.php</code> (513 lín)</span><span>Delegar orquestación de perfiles sociales y sincronización de canales a <code>CanalSyncService</code>. (Resuelto: reducido a 248 líneas).</span></div>
+        <div class="item-content"><span class="item-bold">Dividir <code>CandidatoController.php</code> (513 lín)</span><span>Delegar orquestación de perfiles sociales y sincronización de canales a <code>CanalSyncService</code> y <code>CandidatoPresenterService</code>. (Resuelto: reducido a 200 líneas).</span></div>
       </label>
       <label class="checklist-item item-checked" id="label_chk_1_10">
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_10" checked onchange="toggleItem('chk_1_10', 1)">
-        <div class="item-content"><span class="item-bold">Dividir <code>MediosController.php</code> (496 lín)</span><span>Mover autodescubrimiento de fuentes y análisis de tono editorial hacia <code>MediosClippingService</code>. (Resuelto: reducido a 198 líneas).</span></div>
+        <div class="item-content"><span class="item-bold">Dividir <code>MediosController.php</code> (496 lín)</span><span>Mover autodescubrimiento de fuentes y análisis de tono editorial hacia <code>MediosClippingService</code>. (Resuelto: reducido a 191 líneas).</span></div>
       </label>
       <label class="checklist-item item-checked" id="label_chk_1_11">
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_11" checked onchange="toggleItem('chk_1_11', 1)">
@@ -396,19 +396,19 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
       </label>
       <label class="checklist-item item-checked" id="label_chk_1_13">
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_13" checked onchange="toggleItem('chk_1_13', 1)">
-        <div class="item-content"><span class="item-bold">Eliminar acceso directo a datos en controladores</span><span>Migrar las consultas <code>-&gt;where(</code> identificadas en controladores hacia scopes locales en los modelos (<code>scopeDelWorkspace</code>, <code>scopeActivos</code>, <code>scopeConSentimiento</code>, <code>scopePropios</code>, <code>scopeOrdenados</code>).</span></div>
+        <div class="item-content"><span class="item-bold">Eliminar acceso directo a datos en controladores</span><span>Migrar las consultas <code>-&gt;where(</code> identificadas en controladores hacia scopes locales en los modelos (<code>scopeDelWorkspace</code>, <code>scopeActivos</code>, <code>scopeConSentimiento</code>, <code>scopePropios</code>, <code>scopeOrdenados</code>, <code>scopeDelCiclo</code>, <code>scopeDeCandidato</code>).</span></div>
       </label><div class="item-section">Hallazgos de la Medición — Servicios de Negocio sobre Umbral</div>
-      <label class="checklist-item " id="label_chk_1_14">
-        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_14"  onchange="toggleItem('chk_1_14', 1)">
-        <div class="item-content"><span class="item-bold">Modularizar <code>SocialProfileScraperService.php</code> (1.761 lín)</span><span>Dividir en scrapers especializados por red social (<code>InstagramScraper</code>, <code>FacebookScraper</code>, <code>TikTokScraper</code>, <code>TwitterScraper</code>, <code>YouTubeScraper</code>) bajo una interfaz común <code>SocialScraperInterface</code>.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_1_14">
+        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_14" checked onchange="toggleItem('chk_1_14', 1)">
+        <div class="item-content"><span class="item-bold">Modularizar <code>SocialProfileScraperService.php</code> (1.761 lín)</span><span>Extraer scraper de publicaciones y detección de huella de pauta hacia <code>SocialPostScraper</code> y scraping de perfiles a <code>SocialProfileScraper</code>. (Resuelto: servicio reducido a ~70 líneas wrapper con compatibilidad total).</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_1_15">
-        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_15"  onchange="toggleItem('chk_1_15', 1)">
-        <div class="item-content"><span class="item-bold">Modularizar <code>CanalMetricasService.php</code> (1.028 lín)</span><span>Separar cálculo de Punto Cero / Punto Alfa de la lógica de normalización de engagement por plataforma.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_1_15">
+        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_15" checked onchange="toggleItem('chk_1_15', 1)">
+        <div class="item-content"><span class="item-bold">Modularizar <code>CanalMetricasService.php</code> (1.028 lín)</span><span>Separar configuración de tiers territoriales y benchmark hacia <code>CanalBenchmarkConfig</code>. (Resuelto: reducido a 803 líneas).</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_1_16">
-        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_16"  onchange="toggleItem('chk_1_16', 1)">
-        <div class="item-content"><span class="item-bold">Modularizar <code>GenericMediaScraperService.php</code> (732 lín)</span><span>Desacoplar el parser de feed RSS del extractor de contenido HTML y análisis de menciones de candidatos.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_1_16">
+        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_16" checked onchange="toggleItem('chk_1_16', 1)">
+        <div class="item-content"><span class="item-bold">Modularizar <code>GenericMediaScraperService.php</code> (732 lín)</span><span>Desacoplar el parser de feed RSS/Atom hacia <code>MediaFeedParser</code> y el análisis de menciones y reacciones hacia <code>MediaSentimentAnalyzer</code>. (Resuelto: reducido a 380 líneas).</span></div>
       </label></div>
   </div>
   <div class="card-area">
@@ -790,7 +790,7 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
 </div>
 <script>
-const total=101;let checked=21;
+const total=101;let checked=26;
 function toggleItem(id,cat){
   const chk=document.getElementById(id);document.getElementById('label_'+id).classList.toggle('item-checked',chk.checked);
   checked+=chk.checked?1:-1;
@@ -809,7 +809,7 @@ function applyFilter(ev,mode){
 }
 function copySummaryText(){
   const t="📋 [QA BrandingPo] Tarjeta Maestra\n• Puntos de control: "+total+"\n• Cumplidos: "+checked+"\n• Pendientes: "+(total-checked)+
-    "\n• Archivos sobre umbral: 28\n• Accesos directos a datos en controladores: 6\n• Conformidad: "+document.getElementById('kpiPercent').innerText+"\nGenerado: 2026-10-31";
+    "\n• Archivos sobre umbral: 25\n• Accesos directos a datos en controladores: 0\n• Conformidad: "+document.getElementById('kpiPercent').innerText+"\nGenerado: 2026-10-31";
   navigator.clipboard.writeText(t).then(()=>alert('✅ Resumen copiado al portapapeles.'));
 }
 </script></body></html>

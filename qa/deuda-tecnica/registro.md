@@ -9,7 +9,7 @@ Alcance vigente: ver `alcance.md`. Última actualización: 2026-10-31 · commit 
 | AUD-002 | Alta | Backend | `DashboardController.php` acumula 1.192 lín y queries directas | Thin Controllers < 200 lín | 2026-10-31 | Resuelto | 2026-10-31 | Reducido a 57 lín delegando en `DashboardAggregationService` |
 | AUD-003 | Alta | Backend | `PublicacionController.php` acumula 980 lín y scraping acoplado | Thin Controllers < 200 lín | 2026-10-31 | Resuelto | 2026-10-31 | Reducido a 378 lín delegando en `PublicacionSyncService` y `PublicacionFeedService` |
 | AUD-004 | Media | Frontend | Componente `SocialCard.vue` supera umbral crítico (1.065 lín) | Componentes UI < 500 lín | 2026-10-31 | Abierto | — | Descomponer reacciones y embeds |
-| AUD-005 | Media | Backend | `SocialProfileScraperService.php` monolítico con 1.761 lín | Principio de Responsabilidad Única | 2026-10-31 | Abierto | — | Dividir por adaptadores de plataforma |
+| AUD-005 | Media | Backend | `SocialProfileScraperService.php` monolítico con 1.761 lín | Principio de Responsabilidad Única | 2026-10-31 | Resuelto | 2026-10-31 | Modularizado en `SocialProfileScraper` y `SocialPostScraper`, reduciendo el servicio a ~70 lín |
 | AUD-006 | Baja | Git | Ausencia de etiquetado de versiones (0 tags en repo) | SemVer y trazabilidad de despliegue | 2026-10-31 | Abierto | — | Crear tags versionados en hitos estables |
 
 ## Notas privadas para fases futuras (no se auditan hoy)

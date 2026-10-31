@@ -3,14 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Candidato\ScrapePerfilSocialRequest;
 use App\Http\Requests\Candidato\StoreCandidatoRequest;
 use App\Http\Requests\Candidato\StorePerfilSocialRequest;
 use App\Http\Requests\Candidato\UpdateCandidatoRequest;
 use App\Http\Requests\Candidato\UpdatePerfilSocialRequest;
 use App\Models\Candidato;
-use App\Models\CicloCampana;
 use App\Models\PerfilSocial;
-use App\Models\Territorio;
 use App\Services\CanalMetricasService;
 use App\Services\CanalSyncService;
 use App\Services\CandidatoPresenterService;
@@ -30,17 +29,11 @@ class CandidatoController extends Controller
         protected CanalSyncService $canalSyncService
     ) {}
 
-    /**
-     * Redirección al perfil oficial de campaña.
-     */
     public function index(Request $request): RedirectResponse
     {
         return redirect()->route('mi-candidato');
     }
 
-    /**
-     * Redirección al perfil oficial de campaña.
-     */
     public function benchmarking(Request $request): RedirectResponse
     {
         return redirect()->route('mi-candidato');
@@ -52,41 +45,7 @@ class CandidatoController extends Controller
     public function miCandidato(Request $request): Response
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        $cicloActivo = CicloCampana::delWorkspace($workspace)->activo()->first()
-            ?? CicloCampana::delWorkspace($workspace)->first();
-
-        $territorioDefault = Territorio::delWorkspace($workspace)->first();
-
-        // Buscar o inicializar el candidato propio del workspace
-        $candidato = Candidato::delWorkspace($workspace)
-            ->propios()
-            ->with(['perfilesSociales', 'territorio', 'cicloCampana'])
-            ->first();
-
-        if (! $candidato) {
-            $cargoPorDefecto = match ($workspace->nivel_politico) {
-                'gobernador' => 'Candidato a Gobernador',
-                'legislador_nacional' => 'Candidato a Diputado Nacional',
-                'senador' => 'Candidato a Senador Nacional',
-                'concejal' => 'Candidato a Concejal',
-                default => 'Candidato a Intendente',
-            };
-
-            $candidato = Candidato::create([
-                'workspace_id' => $workspace->id,
-                'nombre_completo' => 'Mi Candidato ('.$workspace->nombre.')',
-                'partido_coalicion' => 'Frente de Campaña',
-                'cargo_aspirado' => $cargoPorDefecto,
-                'estado_politico' => 'candidato',
-                'ciclo_campana_id' => $cicloActivo?->id,
-                'territorio_id' => $territorioDefault?->id,
-                'color_hex' => '#06b6d4',
-                'es_propio' => true,
-                'bio_resumen' => 'Perfil del candidato oficial de campaña. Auditoría y seguimiento de crecimiento desde el Punto Cero.',
-            ]);
-            $candidato->load(['perfilesSociales', 'territorio', 'cicloCampana']);
-        }
+        $candidato = $this->candidatoPresenter->obtenerOInicializarPropio($workspace);
 
         return Inertia::render('Candidatos/MiPerfil', $this->candidatoPresenter->prepararPayloadDetalle($candidato, $request));
     }
@@ -96,26 +55,20 @@ class CandidatoController extends Controller
      */
     public function storePerfilSocial(StorePerfilSocialRequest $request, MediaStorageService $mediaStorage): RedirectResponse
     {
-        $validated = $request->validated();
-        $this->canalSyncService->guardarPuntoCero($validated, $mediaStorage);
+        $val = $request->validated();
+        $this->canalSyncService->guardarPuntoCero($val, $mediaStorage);
 
-        return redirect()->back()
-            ->with('success', "Canal {$validated['plataforma']} configurado y Punto Cero establecido.");
+        return redirect()->back()->with('success', "Canal {$val['plataforma']} configurado y Punto Cero establecido.");
     }
 
     /**
      * Auto-extracción de datos desde el enlace público del perfil.
      */
-    public function scrapePerfilSocial(Request $request, SocialProfileScraperService $scraper): JsonResponse
+    public function scrapePerfilSocial(ScrapePerfilSocialRequest $request, SocialProfileScraperService $scraper): JsonResponse
     {
-        $validated = $request->validate([
-            'url' => ['required', 'url'],
-            'plataforma' => ['required', 'string'],
-        ]);
+        $validated = $request->validated();
 
-        $data = $scraper->scrapeProfile($validated['url'], $validated['plataforma']);
-
-        return response()->json($data);
+        return response()->json($scraper->scrapeProfile($validated['url'], $validated['plataforma']));
     }
 
     /**
@@ -133,16 +86,12 @@ class CandidatoController extends Controller
         $resultado = $this->canalSyncService->auditarPerfil($perfilSocial, $scraper, $mediaStorage);
 
         if ($request->expectsJson() && ! $request->header('X-Inertia')) {
-            $status = ! empty($resultado['success']) ? 200 : 422;
-
-            return response()->json($resultado, $status);
+            return response()->json($resultado, ! empty($resultado['success']) ? 200 : 422);
         }
 
-        if (empty($resultado['success'])) {
-            return redirect()->back()->with('error', $resultado['mensaje']);
-        }
+        $flashKey = ! empty($resultado['success']) ? 'success' : 'error';
 
-        return redirect()->back()->with('success', $resultado['mensaje']);
+        return redirect()->back()->with($flashKey, $resultado['mensaje']);
     }
 
     /**
@@ -157,9 +106,7 @@ class CandidatoController extends Controller
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
 
-        $resultado = $this->canalSyncService->sincronizarCanalMaestro($perfilSocial, $scraper, $mediaStorage);
-
-        return response()->json($resultado);
+        return response()->json($this->canalSyncService->sincronizarCanalMaestro($perfilSocial, $scraper, $mediaStorage));
     }
 
     /**
@@ -169,7 +116,6 @@ class CandidatoController extends Controller
     {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
-
         $perfilSocial->update($request->validated());
 
         return redirect()->back()
@@ -183,7 +129,6 @@ class CandidatoController extends Controller
     {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
-
         $plataforma = $perfilSocial->plataforma;
         $perfilSocial->delete();
 
@@ -208,21 +153,7 @@ class CandidatoController extends Controller
     public function store(StoreCandidatoRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-        $validated = $request->validated();
-
-        $candidato = Candidato::create([
-            'workspace_id' => $workspace->id,
-            'nombre_completo' => $validated['nombre_completo'],
-            'partido_coalicion' => $validated['partido_coalicion'],
-            'cargo_aspirado' => $validated['cargo_aspirado'] ?? null,
-            'estado_politico' => $validated['estado_politico'],
-            'ciclo_campana_id' => $validated['ciclo_campana_id'],
-            'territorio_id' => $validated['territorio_id'] ?? null,
-            'color_hex' => $validated['color_hex'] ?? '#8b5cf6',
-            'es_propio' => false,
-            'avatar_url' => $validated['avatar_url'] ?? null,
-            'bio_resumen' => $validated['bio_resumen'] ?? null,
-        ]);
+        $candidato = $this->candidatoPresenter->crearRival($workspace, $request->validated());
 
         return redirect()->route('candidatos.show', $candidato->id)
             ->with('success', "Candidato rival {$candidato->nombre_completo} registrado. Ahora puedes vincular sus redes sociales y Punto Cero.");
@@ -235,43 +166,7 @@ class CandidatoController extends Controller
     {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($candidato, $workspace);
-
-        $validated = $request->validated();
-
-        if (! empty($validated['workspace_nombre']) && $candidato->es_propio) {
-            $workspace->update(['nombre' => $validated['workspace_nombre']]);
-        }
-
-        $territorioId = $validated['territorio_id'] ?? $candidato->territorio_id;
-        if (! empty($validated['territorio_nombre'])) {
-            $padron = (int) ($validated['padron_electoral'] ?? 0);
-            $poblacion = (int) ($validated['poblacion_total'] ?? ($padron > 0 ? (int) round($padron * 1.3) : 0));
-
-            $territorio = Territorio::updateOrCreate(
-                [
-                    'workspace_id' => $workspace->id,
-                    'nombre' => $validated['territorio_nombre'],
-                ],
-                [
-                    'tipo' => $validated['tipo_territorio'] ?? 'departamento',
-                    'padron_electoral' => $padron,
-                    'poblacion_total' => $poblacion,
-                ]
-            );
-            $territorioId = $territorio->id;
-        }
-
-        $candidato->update([
-            'nombre_completo' => $validated['nombre_completo'],
-            'partido_coalicion' => $validated['partido_coalicion'],
-            'cargo_aspirado' => $validated['cargo_aspirado'] ?? null,
-            'estado_politico' => $validated['estado_politico'],
-            'ciclo_campana_id' => $validated['ciclo_campana_id'] ?? $candidato->ciclo_campana_id,
-            'territorio_id' => $territorioId,
-            'color_hex' => $validated['color_hex'] ?? $candidato->color_hex,
-            'avatar_url' => $validated['avatar_url'] ?? $candidato->avatar_url,
-            'bio_resumen' => $validated['bio_resumen'] ?? $candidato->bio_resumen,
-        ]);
+        $this->candidatoPresenter->actualizarCandidato($candidato, $workspace, $request->validated());
 
         return redirect()->back()
             ->with('success', "Datos y territorio geográfico de {$candidato->nombre_completo} actualizados correctamente.");
@@ -284,7 +179,6 @@ class CandidatoController extends Controller
     {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($candidato, $workspace);
-
         $nombre = $candidato->nombre_completo;
         $candidato->delete();
 
@@ -300,8 +194,6 @@ class CandidatoController extends Controller
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
 
-        $payload = $this->canalMetricasService->calcularMetricas($request, $perfilSocial);
-
-        return Inertia::render('Candidatos/MetricasCanal', $payload);
+        return Inertia::render('Candidatos/MetricasCanal', $this->canalMetricasService->calcularMetricas($request, $perfilSocial));
     }
 }

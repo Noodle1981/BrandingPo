@@ -49,4 +49,14 @@ class EventoCrisis extends Model
 
         return $query->where('workspace_id', $workspaceId);
     }
+
+    /**
+     * Scope para filtrar eventos de crisis por candidato.
+     */
+    public function scopeDeCandidato(Builder $query, int|Candidato $candidato): Builder
+    {
+        $candidatoId = $candidato instanceof Candidato ? $candidato->id : $candidato;
+
+        return $query->where('candidato_id', $candidatoId);
+    }
 }

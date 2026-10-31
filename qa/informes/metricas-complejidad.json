@@ -1,5 +1,5 @@
 {
-  "generado": "2026-10-31T16:34:45.940Z",
+  "generado": "2026-10-31T16:58:44.154Z",
   "proyecto": "BrandingPo",
   "categorias": [
     {
@@ -449,20 +449,15 @@
         {
           "ruta": "app/Http/Controllers/CandidatoController.php",
           "nombre": "CandidatoController.php",
-          "lineas": 308,
-          "estado": "critico",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 56
-            }
-          ]
+          "lineas": 200,
+          "estado": "moderado",
+          "accesoDatos": []
         },
         {
           "ruta": "app/Http/Controllers/MediosController.php",
           "nombre": "MediosController.php",
-          "lineas": 219,
-          "estado": "sobre-umbral",
+          "lineas": 191,
+          "estado": "moderado",
           "accesoDatos": []
         },
         {
@@ -470,17 +465,12 @@
           "nombre": "CrisisController.php",
           "lineas": 168,
           "estado": "moderado",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 36
-            }
-          ]
+          "accesoDatos": []
         },
         {
           "ruta": "app/Http/Controllers/TerritorioController.php",
           "nombre": "TerritorioController.php",
-          "lineas": 131,
+          "lineas": 129,
           "estado": "moderado",
           "accesoDatos": []
         },
@@ -489,24 +479,14 @@
           "nombre": "PresupuestoController.php",
           "lineas": 125,
           "estado": "moderado",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 29
-            }
-          ]
+          "accesoDatos": []
         },
         {
           "ruta": "app/Http/Controllers/AnalyticsController.php",
           "nombre": "AnalyticsController.php",
-          "lineas": 117,
+          "lineas": 120,
           "estado": "optimo",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 44
-            }
-          ]
+          "accesoDatos": []
         },
         {
           "ruta": "app/Http/Controllers/UserController.php",
@@ -520,17 +500,12 @@
           "nombre": "BriefingController.php",
           "lineas": 116,
           "estado": "optimo",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 30
-            }
-          ]
+          "accesoDatos": []
         },
         {
           "ruta": "app/Http/Controllers/AuthController.php",
           "nombre": "AuthController.php",
-          "lineas": 114,
+          "lineas": 106,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -551,14 +526,9 @@
         {
           "ruta": "app/Http/Controllers/ReporteController.php",
           "nombre": "ReporteController.php",
-          "lineas": 51,
+          "lineas": 50,
           "estado": "optimo",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 32
-            }
-          ]
+          "accesoDatos": []
         },
         {
           "ruta": "app/Http/Controllers/EjesEstrategicosController.php",
@@ -577,9 +547,9 @@
       ],
       "resumen": {
         "total": 15,
-        "sobreUmbral": 3,
-        "criticos": 2,
-        "accesoDatos": 6
+        "sobreUmbral": 1,
+        "criticos": 1,
+        "accesoDatos": 0
       }
     },
     {
@@ -591,13 +561,6 @@
       "accion": "Dividir responsabilidades y extraer scrapers o procesadores específicos",
       "archivos": [
         {
-          "ruta": "app/Services/SocialProfileScraperService.php",
-          "nombre": "SocialProfileScraperService.php",
-          "lineas": 1761,
-          "estado": "critico",
-          "accesoDatos": []
-        },
-        {
           "ruta": "app/Services/DashboardAggregationService.php",
           "nombre": "DashboardAggregationService.php",
           "lineas": 1119,
@@ -607,14 +570,7 @@
         {
           "ruta": "app/Services/CanalMetricasService.php",
           "nombre": "CanalMetricasService.php",
-          "lineas": 1028,
-          "estado": "critico",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "app/Services/GenericMediaScraperService.php",
-          "nombre": "GenericMediaScraperService.php",
-          "lineas": 732,
+          "lineas": 803,
           "estado": "critico",
           "accesoDatos": []
         },
@@ -647,6 +603,13 @@
           "accesoDatos": []
         },
         {
+          "ruta": "app/Services/CandidatoPresenterService.php",
+          "nombre": "CandidatoPresenterService.php",
+          "lineas": 413,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
           "ruta": "app/Services/PublicacionSyncService.php",
           "nombre": "PublicacionSyncService.php",
           "lineas": 413,
@@ -654,16 +617,16 @@
           "accesoDatos": []
         },
         {
-          "ruta": "app/Services/MediosClippingService.php",
-          "nombre": "MediosClippingService.php",
-          "lineas": 314,
+          "ruta": "app/Services/GenericMediaScraperService.php",
+          "nombre": "GenericMediaScraperService.php",
+          "lineas": 380,
           "estado": "sobre-umbral",
           "accesoDatos": []
         },
         {
-          "ruta": "app/Services/CandidatoPresenterService.php",
-          "nombre": "CandidatoPresenterService.php",
-          "lineas": 310,
+          "ruta": "app/Services/MediosClippingService.php",
+          "nombre": "MediosClippingService.php",
+          "lineas": 359,
           "estado": "sobre-umbral",
           "accesoDatos": []
         },
@@ -708,25 +671,32 @@
           "lineas": 126,
           "estado": "optimo",
           "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/SocialProfileScraperService.php",
+          "nombre": "SocialProfileScraperService.php",
+          "lineas": 66,
+          "estado": "optimo",
+          "accesoDatos": []
         }
       ],
       "resumen": {
         "total": 17,
-        "sobreUmbral": 11,
-        "criticos": 7,
+        "sobreUmbral": 10,
+        "criticos": 5,
         "accesoDatos": 0
       }
     }
   ],
   "versiones": {
-    "commitsTotales": 137,
+    "commitsTotales": 138,
     "commitsAnalizados": 50,
     "porcentajeConvencional": 100,
     "noConvencionalesEjemplo": [],
     "tags": 0,
     "ultimoTag": null,
     "ramaActual": "main",
-    "commitActual": "a11d195"
+    "commitActual": "585eb2a"
   },
   "documentacion": {
     "rutasDocs": [

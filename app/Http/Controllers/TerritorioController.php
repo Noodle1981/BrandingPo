@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Territorio\AutoDetectTerritorioRequest;
 use App\Http\Requests\Territorio\StoreTerritorioRequest;
 use App\Http\Requests\Territorio\UpdateTerritorioRequest;
 use App\Models\Territorio;
@@ -39,16 +40,13 @@ class TerritorioController extends Controller
     /**
      * Autodetectar datos demográficos y coordenadas con 1 clic (Georef / INDEC).
      */
-    public function autoDetect(Request $request): JsonResponse
+    public function autoDetect(AutoDetectTerritorioRequest $request): JsonResponse
     {
-        $request->validate([
-            'nombre' => ['required', 'string', 'max:255'],
-            'provincia' => ['nullable', 'string', 'max:255'],
-        ]);
+        $validated = $request->validated();
 
         $data = $this->demographicService->consultarGeoref(
-            $request->input('nombre'),
-            $request->input('provincia', 'San Juan')
+            $validated['nombre'],
+            $validated['provincia'] ?? 'San Juan'
         );
 
         if (! empty($data['poblacion_total']) && ! empty($data['padron_electoral'])) {

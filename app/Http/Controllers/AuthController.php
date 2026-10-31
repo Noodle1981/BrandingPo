@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\QuickLoginRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,16 +30,9 @@ class AuthController extends Controller
     /**
      * Procesar intento de autenticación estándar.
      */
-    public function login(Request $request): RedirectResponse
+    public function login(LoginRequest $request): RedirectResponse
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ], [
-            'email.required' => 'El correo electrónico es obligatorio.',
-            'email.email' => 'Debes ingresar un correo válido.',
-            'password.required' => 'La contraseña es obligatoria.',
-        ]);
+        $credentials = $request->validated();
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
@@ -57,15 +51,13 @@ class AuthController extends Controller
     /**
      * Acceso rápido de demostración para evaluación por rol.
      */
-    public function quickLogin(Request $request): RedirectResponse
+    public function quickLogin(QuickLoginRequest $request): RedirectResponse
     {
         if (! app()->environment('local', 'testing')) {
             abort(403, 'El acceso rápido de demostración está deshabilitado en este entorno.');
         }
 
-        $validated = $request->validate([
-            'role' => ['nullable', 'string', Rule::in(['admin', 'consultor', 'visualizador'])],
-        ]);
+        $validated = $request->validated();
 
         $role = $validated['role'] ?? 'admin';
         $user = User::where('role', $role)->first();

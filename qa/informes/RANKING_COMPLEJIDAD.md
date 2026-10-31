@@ -1,6 +1,6 @@
 # Ranking de complejidad — BrandingPo
 
-> Generado: 2026-10-31 · commit `a11d195` · rama `main`
+> Generado: 2026-10-31 · commit `585eb2a` · rama `main`
 
 ## Vistas y componentes frontend (Vue) (umbral 500 lín · crítico 800 lín)
 
@@ -43,23 +43,23 @@ Archivos: 59 · sobre umbral: **14** · críticos: **4**
 
 ## Controladores backend (Laravel) (umbral 200 lín · crítico 300 lín)
 
-Archivos: 15 · sobre umbral: **3** · críticos: **2** · con acceso directo a datos: **6**
+Archivos: 15 · sobre umbral: **1** · críticos: **1**
 
 | Líneas | Estado | Archivo | Acceso a datos |
 |---:|---|---|---|
 | 378 | 🔴 Crítico | `app/Http/Controllers/PublicacionController.php` | — |
-| 308 | 🔴 Crítico | `app/Http/Controllers/CandidatoController.php` | `->where\(` (L56) |
-| 219 | 🟡 Sobre umbral | `app/Http/Controllers/MediosController.php` | — |
-| 168 | 🔵 Moderado | `app/Http/Controllers/CrisisController.php` | `->where\(` (L36) |
-| 131 | 🔵 Moderado | `app/Http/Controllers/TerritorioController.php` | — |
-| 125 | 🔵 Moderado | `app/Http/Controllers/PresupuestoController.php` | `->where\(` (L29) |
-| 117 | 🟢 Óptimo | `app/Http/Controllers/AnalyticsController.php` | `->where\(` (L44) |
+| 200 | 🔵 Moderado | `app/Http/Controllers/CandidatoController.php` | — |
+| 191 | 🔵 Moderado | `app/Http/Controllers/MediosController.php` | — |
+| 168 | 🔵 Moderado | `app/Http/Controllers/CrisisController.php` | — |
+| 129 | 🔵 Moderado | `app/Http/Controllers/TerritorioController.php` | — |
+| 125 | 🔵 Moderado | `app/Http/Controllers/PresupuestoController.php` | — |
+| 120 | 🟢 Óptimo | `app/Http/Controllers/AnalyticsController.php` | — |
 | 117 | 🟢 Óptimo | `app/Http/Controllers/UserController.php` | — |
-| 116 | 🟢 Óptimo | `app/Http/Controllers/BriefingController.php` | `->where\(` (L30) |
-| 114 | 🟢 Óptimo | `app/Http/Controllers/AuthController.php` | — |
+| 116 | 🟢 Óptimo | `app/Http/Controllers/BriefingController.php` | — |
+| 106 | 🟢 Óptimo | `app/Http/Controllers/AuthController.php` | — |
 | 68 | 🟢 Óptimo | `app/Http/Controllers/CalendarioController.php` | — |
 | 62 | 🟢 Óptimo | `app/Http/Controllers/DashboardController.php` | — |
-| 51 | 🟢 Óptimo | `app/Http/Controllers/ReporteController.php` | `->where\(` (L32) |
+| 50 | 🟢 Óptimo | `app/Http/Controllers/ReporteController.php` | — |
 | 30 | 🟢 Óptimo | `app/Http/Controllers/EjesEstrategicosController.php` | — |
 | 9 | 🟢 Óptimo | `app/Http/Controllers/Controller.php` | — |
 
@@ -67,33 +67,33 @@ Archivos: 15 · sobre umbral: **3** · críticos: **2** · con acceso directo a 
 
 ## Servicios de negocio (Laravel) (umbral 300 lín · crítico 500 lín)
 
-Archivos: 17 · sobre umbral: **11** · críticos: **7**
+Archivos: 17 · sobre umbral: **10** · críticos: **5**
 
 | Líneas | Estado | Archivo | Acceso a datos |
 |---:|---|---|---|
-| 1761 | 🔴 Crítico | `app/Services/SocialProfileScraperService.php` | — |
 | 1119 | 🔴 Crítico | `app/Services/DashboardAggregationService.php` | — |
-| 1028 | 🔴 Crítico | `app/Services/CanalMetricasService.php` | — |
-| 732 | 🔴 Crítico | `app/Services/GenericMediaScraperService.php` | — |
+| 803 | 🔴 Crítico | `app/Services/CanalMetricasService.php` | — |
 | 596 | 🔴 Crítico | `app/Services/TerritorioImpactoService.php` | — |
 | 537 | 🔴 Crítico | `app/Services/ReporteEjecutivoService.php` | — |
 | 508 | 🔴 Crítico | `app/Services/DemographicIntelligenceService.php` | — |
 | 440 | 🟡 Sobre umbral | `app/Services/EjesEstrategicosService.php` | — |
+| 413 | 🟡 Sobre umbral | `app/Services/CandidatoPresenterService.php` | — |
 | 413 | 🟡 Sobre umbral | `app/Services/PublicacionSyncService.php` | — |
-| 314 | 🟡 Sobre umbral | `app/Services/MediosClippingService.php` | — |
-| 310 | 🟡 Sobre umbral | `app/Services/CandidatoPresenterService.php` | — |
+| 380 | 🟡 Sobre umbral | `app/Services/GenericMediaScraperService.php` | — |
+| 359 | 🟡 Sobre umbral | `app/Services/MediosClippingService.php` | — |
 | 259 | 🔵 Moderado | `app/Services/PublicacionFeedService.php` | — |
 | 256 | 🔵 Moderado | `app/Services/CanalSyncService.php` | — |
 | 192 | 🔵 Moderado | `app/Services/MediaStorageService.php` | — |
 | 162 | 🟢 Óptimo | `app/Services/PoliticaEngagementService.php` | — |
 | 156 | 🟢 Óptimo | `app/Services/CalendarioService.php` | — |
 | 126 | 🟢 Óptimo | `app/Services/AdsImpactPredictorService.php` | — |
+| 66 | 🟢 Óptimo | `app/Services/SocialProfileScraperService.php` | — |
 
 **Acción sugerida:** Dividir responsabilidades y extraer scrapers o procesadores específicos
 
 ## Control de versiones
 
-- Commits totales: 137
+- Commits totales: 138
 - Convención de commits (últimos 50): **100%**
 - Tags: 0 — **sin tags de versión**
 

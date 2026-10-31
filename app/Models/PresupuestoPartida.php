@@ -52,4 +52,14 @@ class PresupuestoPartida extends Model
 
         return $query->where('workspace_id', $workspaceId);
     }
+
+    /**
+     * Scope para filtrar por ciclo de campaña.
+     */
+    public function scopeDelCiclo(Builder $query, int|CicloCampana $ciclo): Builder
+    {
+        $cicloId = $ciclo instanceof CicloCampana ? $ciclo->id : $ciclo;
+
+        return $query->where('ciclo_campana_id', $cicloId);
+    }
 }

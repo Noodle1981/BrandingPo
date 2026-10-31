@@ -29,7 +29,7 @@ class AnalyticsController extends Controller
             ->with(['perfilesSociales', 'cicloCampana'])
             ->get();
 
-        $publicaciones = Publicacion::where('workspace_id', $workspace->id)
+        $publicaciones = Publicacion::delWorkspace($workspace)
             ->with(['candidato', 'perfilSocial'])
             ->get();
 
@@ -39,9 +39,12 @@ class AnalyticsController extends Controller
         $totalCompartidos = $publicaciones->sum('total_compartidos');
         $totalPauta = $publicaciones->sum('monto_invertido_pauta');
 
+        $publicacionesPorCandidato = $publicaciones->groupBy('candidato_id');
+
         // Share of Voice por Candidato (Volumen de Vistas)
-        $shareOfVoice = $candidatos->map(function ($c) use ($totalVistas, $publicaciones) {
-            $vistasCand = $publicaciones->where('candidato_id', $c->id)->sum('total_vistas');
+        $shareOfVoice = $candidatos->map(function ($c) use ($totalVistas, $publicacionesPorCandidato) {
+            $postsCand = $publicacionesPorCandidato->get($c->id, collect());
+            $vistasCand = $postsCand->sum('total_vistas');
             $porcentaje = $totalVistas > 0 ? round(($vistasCand / $totalVistas) * 100, 1) : 0;
 
             return [
@@ -52,8 +55,8 @@ class AnalyticsController extends Controller
                 'vistas' => $vistasCand,
                 'porcentaje' => $porcentaje,
                 'seguidores' => $c->perfilesSociales->sum('seguidores_actuales'),
-                'posts_count' => $publicaciones->where('candidato_id', $c->id)->count(),
-                'pauta_invertida' => $publicaciones->where('candidato_id', $c->id)->sum('monto_invertido_pauta'),
+                'posts_count' => $postsCand->count(),
+                'pauta_invertida' => $postsCand->sum('monto_invertido_pauta'),
             ];
         });
 

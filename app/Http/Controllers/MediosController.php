@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\WorkspaceHelper;
+use App\Http\Requests\Medios\DetectarFuentesMedioRequest;
 use App\Http\Requests\Medios\StoreMedioRequest;
 use App\Http\Requests\Medios\StoreNotaRequest;
 use App\Http\Requests\Medios\UpdateMedioRequest;
@@ -86,15 +87,11 @@ class MediosController extends Controller
     /**
      * Autodescubrir feed RSS y avatar de Facebook en 1 clic.
      */
-    public function detectarFuentes(Request $request): JsonResponse
+    public function detectarFuentes(DetectarFuentesMedioRequest $request): JsonResponse
     {
-        $request->validate([
-            'url_sitio' => ['nullable', 'url', 'max:500'],
-            'url_facebook' => ['nullable', 'url', 'max:500'],
-        ]);
-
-        $urlSitio = $request->input('url_sitio');
-        $urlFacebook = $request->input('url_facebook');
+        $validated = $request->validated();
+        $urlSitio = $validated['url_sitio'] ?? null;
+        $urlFacebook = $validated['url_facebook'] ?? null;
 
         if (empty($urlSitio) && empty($urlFacebook)) {
             return response()->json([
@@ -147,30 +144,12 @@ class MediosController extends Controller
     public function storeNota(StoreNotaRequest $request): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-        $validated = $request->validated();
-
-        $reacciones = $request->input('reacciones_desglose');
-        $totalInteracciones = is_array($reacciones) && ! empty($reacciones)
-            ? array_sum(array_map('intval', $reacciones))
-            : (int) ($validated['interacciones_en_redes_del_medio'] ?? 0);
-
-        NotaPrensa::create([
-            'workspace_id' => $workspace->id,
-            'medio_prensa_id' => $validated['medio_prensa_id'],
-            'candidato_id' => $validated['candidato_id'] ?? null,
-            'origen_tipo' => $validated['origen_tipo'] ?? 'web',
-            'tipo_mencion' => $validated['tipo_mencion'] ?? 'titular',
-            'fecha_publicacion' => $validated['fecha_publicacion'],
-            'titulo' => $validated['titulo'],
-            'resumen' => $validated['resumen'] ?? null,
-            'url_nota' => $validated['url_nota'] ?? null,
-            'tono_mencion' => $validated['tono_mencion'],
-            'puntuacion_sentimiento' => (float) ($validated['puntuacion_sentimiento'] ?? 0),
-            'es_tapa_o_principal' => $request->boolean('es_tapa_o_principal'),
-            'interacciones_en_redes_del_medio' => $totalInteracciones,
-            'reacciones_desglose' => $reacciones,
-            'respuesta_replica_candidato' => $validated['respuesta_replica_candidato'] ?? null,
-        ]);
+        $this->clippingService->guardarNota(
+            $workspace,
+            $request->validated(),
+            $request->input('reacciones_desglose'),
+            $request->boolean('es_tapa_o_principal')
+        );
 
         return redirect()->route('medios.index')
             ->with('success', 'Nota de prensa agregada al clipping exitosamente.');
@@ -184,19 +163,12 @@ class MediosController extends Controller
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($nota, $workspace);
 
-        $validated = $request->validated();
-
-        $reacciones = $request->input('reacciones_desglose');
-        $totalInteracciones = is_array($reacciones) && ! empty($reacciones)
-            ? array_sum(array_map('intval', $reacciones))
-            : (int) ($validated['interacciones_en_redes_del_medio'] ?? $nota->interacciones_en_redes_del_medio);
-
-        $nota->update(array_merge($validated, [
-            'es_tapa_o_principal' => $request->boolean('es_tapa_o_principal'),
-            'interacciones_en_redes_del_medio' => $totalInteracciones,
-            'reacciones_desglose' => $reacciones,
-            'puntuacion_sentimiento' => (float) ($validated['puntuacion_sentimiento'] ?? 0),
-        ]));
+        $this->clippingService->actualizarNota(
+            $nota,
+            $request->validated(),
+            $request->input('reacciones_desglose'),
+            $request->boolean('es_tapa_o_principal')
+        );
 
         return redirect()->route('medios.index')
             ->with('success', 'Nota de prensa actualizada.');
