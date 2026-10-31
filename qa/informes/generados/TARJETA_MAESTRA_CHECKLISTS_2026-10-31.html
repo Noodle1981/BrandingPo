@@ -57,13 +57,13 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
   <div class="kpi-row">
     <div class="kpi-card k-o"><div class="kpi-number">101</div><div class="kpi-label">Puntos de control</div></div>
-    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">99</div><div class="kpi-label">Cumplidos</div></div>
-    <div class="kpi-card"><div class="kpi-number" id="kpiPending">2</div><div class="kpi-label">Pendientes</div></div>
+    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">101</div><div class="kpi-label">Cumplidos</div></div>
+    <div class="kpi-card"><div class="kpi-number" id="kpiPending">0</div><div class="kpi-label">Pendientes</div></div>
     <div class="kpi-card k-r"><div class="kpi-number">11</div><div class="kpi-label">Archivos sobre umbral</div></div>
-    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">98.0%</div><div class="kpi-label">Conformidad</div></div>
+    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">100.0%</div><div class="kpi-label">Conformidad</div></div>
   </div>
-  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">98.0% completado</span></div>
-    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:98.0%"></div></div></div>
+  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">100.0% completado</span></div>
+    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:100.0%"></div></div></div>
   
     <div class="complexity-alert-section">
       <div class="alert-header"><div class="alert-title-wrap"><span style="font-size:20px">🔬</span><h3>Diagnóstico de código: tamaños, acceso a datos, versiones y documentación</h3></div>
@@ -336,8 +336,8 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   <div class="card-area">
     <div class="card-header">
       <div class="card-title-group"><span class="card-badge-num">02</span><h2 class="card-title">02 — Backend y Arquitectura Laravel</h2></div>
-      <div class="card-progress-wrap"><span class="card-counter" id="counter_1">15 / 17</span>
-        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_1" style="width:88%"></div></div></div>
+      <div class="card-progress-wrap"><span class="card-counter" id="counter_1">17 / 17</span>
+        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_1" style="width:100%"></div></div></div>
     </div>
     <div class="card-warning-banner">⚠️ <strong>1 archivo(s) de "Controladores backend (Laravel)" superan 200 líneas:</strong> <code>PublicacionController.php (304)</code><br><strong>10 archivo(s) de "Servicios de negocio (Laravel)" superan 300 líneas:</strong> <code>DashboardAggregationService.php (1119)</code>, <code>CanalMetricasService.php (803)</code>, <code>TerritorioImpactoService.php (596)</code>, <code>ReporteEjecutivoService.php (537)</code>, <code>PublicacionSyncService.php (523)</code>, <code>DemographicIntelligenceService.php (508)</code>, <code>EjesEstrategicosService.php (440)</code>, <code>CandidatoPresenterService.php (413)</code>…</div>
     
@@ -354,13 +354,13 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_2" checked onchange="toggleItem('chk_1_2', 1)">
         <div class="item-content"><span class="item-bold">Validación mediante Form Requests</span><span>Reemplazar validaciones manuales <code>$request-&gt;validate([...])</code> dispersas en controladores por clases de <code>FormRequest</code> tipadas con autorización (<code>authorize()</code>) y reglas semánticas.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_1_3">
-        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_3"  onchange="toggleItem('chk_1_3', 1)">
-        <div class="item-content"><span class="item-bold">Transformación y serialización de datos</span><span>Uso de Resources o Transformers de Laravel para estructurar los datos enviados al frontend mediante Inertia, evitando exponer modelos Eloquent completos con atributos sensibles.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_1_3">
+        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_3" checked onchange="toggleItem('chk_1_3', 1)">
+        <div class="item-content"><span class="item-bold">Transformación y serialización de datos</span><span>Uso de Resources o Transformers de Laravel (<code>app/Http/Resources/</code>) para estructurar los datos enviados al frontend mediante Inertia (<code>CandidatoResource</code>, <code>PublicacionResource</code>, <code>MedioResource</code>, <code>TerritorioResource</code>), evitando exponer modelos Eloquent completos con atributos sensibles.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_1_4">
-        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_4"  onchange="toggleItem('chk_1_4', 1)">
-        <div class="item-content"><span class="item-bold">Manejo centralizado de errores y excepciones</span><span>Excepciones de servicios externos (scrapers caídos, timeouts de red) capturadas ordenadamente sin volcar error 500 al cliente.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_1_4">
+        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_4" checked onchange="toggleItem('chk_1_4', 1)">
+        <div class="item-content"><span class="item-bold">Manejo centralizado de errores y excepciones</span><span>Excepciones de servicios externos (scrapers caídos, timeouts de red) capturadas ordenadamente en <code>bootstrap/app.php</code> (<code>ExternalServiceException</code>, <code>ConnectionException</code>, <code>RequestException</code>) sin volcar error 500 al cliente.</span></div>
       </label>
       <label class="checklist-item item-checked" id="label_chk_1_5">
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_5" checked onchange="toggleItem('chk_1_5', 1)">
@@ -790,7 +790,7 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
 </div>
 <script>
-const total=101;let checked=99;
+const total=101;let checked=101;
 function toggleItem(id,cat){
   const chk=document.getElementById(id);document.getElementById('label_'+id).classList.toggle('item-checked',chk.checked);
   checked+=chk.checked?1:-1;

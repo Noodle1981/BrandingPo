@@ -4,8 +4,8 @@
 - [x] **Controladores delgados (Thin Controllers < 200 lín)**: Los controladores actúan como adaptadores HTTP finos sin acumular lógica de negocio ni cálculos complejos. (obligatorio)
 - [x] **Cero acceso directo a datos en controladores**: Prohibido inyectar o consultar directamente la base de datos (queries raw o encadenamientos complejos `->where(`) desde controladores; toda interacción se delega a servicios, query scopes o repositorios. (obligatorio)
 - [x] **Validación mediante Form Requests**: Reemplazar validaciones manuales `$request->validate([...])` dispersas en controladores por clases de `FormRequest` tipadas con autorización (`authorize()`) y reglas semánticas.
-- [ ] **Transformación y serialización de datos**: Uso de Resources o Transformers de Laravel para estructurar los datos enviados al frontend mediante Inertia, evitando exponer modelos Eloquent completos con atributos sensibles.
-- [ ] **Manejo centralizado de errores y excepciones**: Excepciones de servicios externos (scrapers caídos, timeouts de red) capturadas ordenadamente sin volcar error 500 al cliente.
+- [x] **Transformación y serialización de datos**: Uso de Resources o Transformers de Laravel (`app/Http/Resources/`) para estructurar los datos enviados al frontend mediante Inertia (`CandidatoResource`, `PublicacionResource`, `MedioResource`, `TerritorioResource`), evitando exponer modelos Eloquent completos con atributos sensibles.
+- [x] **Manejo centralizado de errores y excepciones**: Excepciones de servicios externos (scrapers caídos, timeouts de red) capturadas ordenadamente en `bootstrap/app.php` (`ExternalServiceException`, `ConnectionException`, `RequestException`) sin volcar error 500 al cliente.
 - [x] **Encapsulación de lógica de scrapers**: Scrapers de perfiles sociales y medios periodísticos encapsulados con interfaces y clases especializadas, respetando SRP y separando parsers de feeds, análisis léxico y scrapers por formato.
 
 ## Hallazgos de la Medición — Controladores sobre Umbral

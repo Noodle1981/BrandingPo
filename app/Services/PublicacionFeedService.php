@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Resources\CandidatoResource;
 use App\Models\Candidato;
 use App\Models\EjeTematico;
 use App\Models\Publicacion;
@@ -233,7 +234,7 @@ class PublicacionFeedService
 
         return [
             'publicaciones' => $publicaciones,
-            'candidatos' => $candidatos,
+            'candidatos' => CandidatoResource::collection($candidatos)->resolve(),
             'ejes' => $ejes,
             'anios_disponibles' => $aniosDisponibles,
             'meses_disponibles' => $mesesDisponibles,

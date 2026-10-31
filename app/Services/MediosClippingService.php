@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Http\Resources\CandidatoResource;
+use App\Http\Resources\MedioResource;
 use App\Models\Candidato;
 use App\Models\MedioPrensa;
 use App\Models\NotaPrensa;
@@ -234,9 +236,9 @@ class MediosClippingService
         $progresoUmbral = min(100, round(($totalMediosRegistrados / 5) * 100));
 
         return [
-            'medios' => $medios,
+            'medios' => MedioResource::collection($medios)->resolve(),
             'notas' => $notas,
-            'candidatos' => $candidatos,
+            'candidatos' => CandidatoResource::collection($candidatos)->resolve(),
             'pestana_activa' => $pestanaActiva,
             'filtros' => [
                 'candidato_id' => $candidatoId ? (int) $candidatoId : null,
