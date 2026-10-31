@@ -57,13 +57,13 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
   <div class="kpi-row">
     <div class="kpi-card k-o"><div class="kpi-number">101</div><div class="kpi-label">Puntos de control</div></div>
-    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">54</div><div class="kpi-label">Cumplidos</div></div>
-    <div class="kpi-card"><div class="kpi-number" id="kpiPending">47</div><div class="kpi-label">Pendientes</div></div>
+    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">60</div><div class="kpi-label">Cumplidos</div></div>
+    <div class="kpi-card"><div class="kpi-number" id="kpiPending">41</div><div class="kpi-label">Pendientes</div></div>
     <div class="kpi-card k-r"><div class="kpi-number">23</div><div class="kpi-label">Archivos sobre umbral</div></div>
-    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">53.5%</div><div class="kpi-label">Conformidad</div></div>
+    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">59.4%</div><div class="kpi-label">Conformidad</div></div>
   </div>
-  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">53.5% completado</span></div>
-    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:53.5%"></div></div></div>
+  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">59.4% completado</span></div>
+    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:59.4%"></div></div></div>
   
     <div class="complexity-alert-section">
       <div class="alert-header"><div class="alert-title-wrap"><span style="font-size:20px">🔬</span><h3>Diagnóstico de código: tamaños, acceso a datos, versiones y documentación</h3></div>
@@ -638,35 +638,35 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   <div class="card-area">
     <div class="card-header">
       <div class="card-title-group"><span class="card-badge-num">07</span><h2 class="card-title">07 — Legacy, Limpieza y Mantenibilidad</h2></div>
-      <div class="card-progress-wrap"><span class="card-counter" id="counter_6">0 / 6</span>
-        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_6" style="width:0%"></div></div></div>
+      <div class="card-progress-wrap"><span class="card-counter" id="counter_6">6 / 6</span>
+        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_6" style="width:100%"></div></div></div>
     </div>
     
     
     <div class="checklist-items"><div class="item-section">Limpieza del Repositorio y Archivos Huérfanos</div>
-      <label class="checklist-item " id="label_chk_6_0">
-        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_0"  onchange="toggleItem('chk_6_0', 6)">
-        <div class="item-content"><span class="item-bold">Eliminación de volcados de base de datos obsoletos</span><span>Retirar del repositorio archivos huérfanos como <code>database/database_old.sqlite</code> o copias de seguridad locales.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_6_0">
+        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_0" checked onchange="toggleItem('chk_6_0', 6)">
+        <div class="item-content"><span class="item-bold">Eliminación de volcados de base de datos obsoletos</span><span>Retirado el volcado huérfano <code>database/database_old.sqlite</code> (352 KB) y agregadas las exclusiones correspondientes a <code>.gitignore</code> (<code>*.sqlite</code>, <code>*.sqlite-wal</code>, <code>*.sqlite-shm</code>).</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_6_1">
-        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_1"  onchange="toggleItem('chk_6_1', 6)">
-        <div class="item-content"><span class="item-bold">Unificación de gestores de paquetes</span><span>Resolver duplicidad entre <code>package-lock.json</code> y <code>pnpm-lock.yaml</code>, manteniendo exclusivamente el gestor oficial adoptado por el equipo (<code>npm</code> o <code>pnpm</code>).</span></div>
+      <label class="checklist-item item-checked" id="label_chk_6_1">
+        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_1" checked onchange="toggleItem('chk_6_1', 6)">
+        <div class="item-content"><span class="item-bold">Unificación de gestores de paquetes</span><span>Eliminada la duplicidad de gestores retirando <code>pnpm-lock.yaml</code> y consolidando <code>npm</code> con <code>package-lock.json</code> como el gestor oficial y consistente del proyecto.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_6_2">
-        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_2"  onchange="toggleItem('chk_6_2', 6)">
-        <div class="item-content"><span class="item-bold">Sin artefactos temporales de build</span><span>Verificación de que directorios temporales de compilación (<code>.vite/</code>, <code>storage/framework/cache/</code>, <code>public/hot</code>) permanezcan ignorados por git.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_6_2">
+        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_2" checked onchange="toggleItem('chk_6_2', 6)">
+        <div class="item-content"><span class="item-bold">Sin artefactos temporales de build</span><span>Verificación y protección de directorios temporales de compilación (<code>.vite/</code>, <code>public/build/</code>, <code>public/hot/</code>, <code>storage/framework/cache/</code>) correctamente ignorados en <code>.gitignore</code>.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_6_3">
-        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_3"  onchange="toggleItem('chk_6_3', 6)">
-        <div class="item-content"><span class="item-bold">Limpieza de código comentado y funciones deprecadas</span><span>Controladores y servicios sin bloques masivos de código comentado o métodos antiguos en desuso.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_6_3">
+        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_3" checked onchange="toggleItem('chk_6_3', 6)">
+        <div class="item-content"><span class="item-bold">Limpieza de código comentado y funciones deprecadas</span><span>Controladores (<code>PublicacionController</code>, <code>DashboardController</code>, <code>MediosController</code>) y componentes principales depurados y libres de bloques masivos de código muerto o comentado.</span></div>
       </label><div class="item-section">Consistencia de Modelos y Migraciones</div>
-      <label class="checklist-item " id="label_chk_6_4">
-        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_4"  onchange="toggleItem('chk_6_4', 6)">
-        <div class="item-content"><span class="item-bold">Sin migraciones redundantes o destructivas</span><span>Archivos de migración ordenados y sin llamadas repetidas de alteración sobre las mismas tablas que puedan consolidarse.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_6_4">
+        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_4" checked onchange="toggleItem('chk_6_4', 6)">
+        <div class="item-content"><span class="item-bold">Sin migraciones redundantes o destructivas</span><span>Historial cronológico limpio en <code>database/migrations/</code>, con depuración previa de rivales (<code>remove_contrincantes_from_database</code>) e índices compuestos atómicos.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_6_5">
-        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_5"  onchange="toggleItem('chk_6_5', 6)">
-        <div class="item-content"><span class="item-bold">Sin datos simulados en código productivo</span><span>Código fuente sin diccionarios de fallback falsos o publicaciones dummy embebidas en frontend o backend.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_6_5">
+        <input type="checkbox" class="chk-item" data-cat="6" id="chk_6_5" checked onchange="toggleItem('chk_6_5', 6)">
+        <div class="item-content"><span class="item-bold">Sin datos simulados en código productivo</span><span>Código fuente productivo sin diccionarios de fallback falsos o publicaciones dummy embebidas, con guard estricto de entorno en <code>PublicacionSeeder.php</code> cumpliendo la regla de negocio <code>datos-reales-publicaciones</code>.</span></div>
       </label></div>
   </div>
   <div class="card-area">
@@ -790,7 +790,7 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
 </div>
 <script>
-const total=101;let checked=54;
+const total=101;let checked=60;
 function toggleItem(id,cat){
   const chk=document.getElementById(id);document.getElementById('label_'+id).classList.toggle('item-checked',chk.checked);
   checked+=chk.checked?1:-1;
