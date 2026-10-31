@@ -26,7 +26,7 @@ class CalendarioController extends Controller
         $candidatoId = $request->input('candidato_id');
         $ejeTematicoId = $request->input('eje_tematico_id');
 
-        $query = EventoCalendario::where('workspace_id', $workspace->id)
+        $query = EventoCalendario::delWorkspace($workspace)
             ->with(['candidato', 'cicloCampana', 'ejeTematico'])
             ->orderBy('fecha_inicio');
 
@@ -70,16 +70,16 @@ class CalendarioController extends Controller
         });
 
         // Publicaciones del workspace para cruce y diagnóstico estratégico por eje
-        $publicacionesPorEje = Publicacion::where('workspace_id', $workspace->id)
+        $publicacionesPorEje = Publicacion::delWorkspace($workspace)
             ->whereNotNull('eje_tematico_id')
             ->get(['id', 'eje_tematico_id', 'total_likes', 'total_comentarios', 'total_vistas', 'score_interacciones']);
 
         // Eventos agendados agrupados por eje
-        $eventosPorEje = EventoCalendario::where('workspace_id', $workspace->id)
+        $eventosPorEje = EventoCalendario::delWorkspace($workspace)
             ->whereNotNull('eje_tematico_id')
             ->get(['id', 'eje_tematico_id']);
 
-        $ejes = EjeTematico::where('workspace_id', $workspace->id)
+        $ejes = EjeTematico::delWorkspace($workspace)
             ->orderBy('orden')
             ->get()
             ->map(function ($eje) use ($publicacionesPorEje, $eventosPorEje) {
@@ -137,7 +137,7 @@ class CalendarioController extends Controller
             ->orderByDesc('anio')
             ->get(['id', 'nombre', 'anio']);
 
-        $candidatos = Candidato::where('workspace_id', $workspace->id)
+        $candidatos = Candidato::delWorkspace($workspace)
             ->orderByDesc('es_propio')
             ->orderBy('nombre_completo')
             ->get(['id', 'nombre_completo', 'es_propio']);

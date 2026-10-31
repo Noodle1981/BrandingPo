@@ -22,7 +22,7 @@ class PresupuestoController extends Controller
         $workspace = WorkspaceHelper::activo($request);
         $cicloId = $request->input('ciclo_id');
 
-        $query = PresupuestoPartida::where('workspace_id', $workspace->id)
+        $query = PresupuestoPartida::delWorkspace($workspace)
             ->with(['cicloCampana', 'candidato']);
 
         if ($cicloId) {
@@ -57,7 +57,7 @@ class PresupuestoController extends Controller
             ->orderByDesc('anio')
             ->get(['id', 'nombre', 'anio']);
 
-        $candidatos = Candidato::where('workspace_id', $workspace->id)
+        $candidatos = Candidato::delWorkspace($workspace)
             ->orderByDesc('es_propio')
             ->orderBy('nombre_completo')
             ->get(['id', 'nombre_completo', 'es_propio']);

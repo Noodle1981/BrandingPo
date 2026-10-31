@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,5 +47,23 @@ class MedioPrensa extends Model
     public function notasPrensa(): HasMany
     {
         return $this->hasMany(NotaPrensa::class);
+    }
+
+    /**
+     * Scope para filtrar medios de un workspace específico.
+     */
+    public function scopeDelWorkspace(Builder $query, int|Workspace $workspace): Builder
+    {
+        $workspaceId = $workspace instanceof Workspace ? $workspace->id : $workspace;
+
+        return $query->where('workspace_id', $workspaceId);
+    }
+
+    /**
+     * Scope para filtrar medios que tienen Fanpage de Facebook vinculada.
+     */
+    public function scopeConFacebook(Builder $query): Builder
+    {
+        return $query->whereNotNull('url_facebook')->where('url_facebook', '!=', '');
     }
 }

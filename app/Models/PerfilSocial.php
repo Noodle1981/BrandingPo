@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -178,5 +179,39 @@ class PerfilSocial extends Model
         $this->update($updateFields);
 
         return $metrica;
+    }
+
+    /**
+     * Scope para filtrar perfiles activos.
+     */
+    public function scopeActivos(Builder $query): Builder
+    {
+        return $query->where('esta_activo', true);
+    }
+
+    /**
+     * Scope para filtrar perfiles verificados oficialmente.
+     */
+    public function scopeVerificados(Builder $query): Builder
+    {
+        return $query->where('esta_verificado', true);
+    }
+
+    /**
+     * Scope para filtrar perfiles de un workspace específico a través de su candidato.
+     */
+    public function scopeDelWorkspace(Builder $query, int|Workspace $workspace): Builder
+    {
+        $workspaceId = $workspace instanceof Workspace ? $workspace->id : $workspace;
+
+        return $query->whereHas('candidato', fn ($q) => $q->where('workspace_id', $workspaceId));
+    }
+
+    /**
+     * Scope para filtrar por plataforma social.
+     */
+    public function scopePorPlataforma(Builder $query, string $plataforma): Builder
+    {
+        return $query->where('plataforma', $plataforma);
     }
 }

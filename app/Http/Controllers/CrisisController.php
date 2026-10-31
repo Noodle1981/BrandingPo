@@ -24,7 +24,7 @@ class CrisisController extends Controller
         $workspace = WorkspaceHelper::activo($request);
         $candidatoId = $request->input('candidato_id');
 
-        $queryCrisis = EventoCrisis::where('workspace_id', $workspace->id)
+        $queryCrisis = EventoCrisis::delWorkspace($workspace)
             ->with('candidato')
             ->orderByDesc('fecha_evento');
 
@@ -69,7 +69,7 @@ class CrisisController extends Controller
             ];
         });
 
-        $candidatos = Candidato::where('workspace_id', $workspace->id)
+        $candidatos = Candidato::delWorkspace($workspace)
             ->orderByDesc('es_propio')
             ->orderBy('nombre_completo')
             ->get(['id', 'nombre_completo', 'es_propio']);

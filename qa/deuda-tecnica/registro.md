@@ -6,8 +6,8 @@ Alcance vigente: ver `alcance.md`. Última actualización: 2026-10-31 · commit 
 | ID | Sev. | Área | Título | Regla | Detectado | Estado | Cierre | Tarea |
 |---|---|---|---|---|---|---|---|---|
 | AUD-001 | Alta | Frontend | Componente `DashboardChartsSection.vue` supera umbral crítico (1.938 lín) | Componentes UI < 500 lín | 2026-10-31 | Abierto | — | Extraer gráficos a subcomponentes dedicados |
-| AUD-002 | Alta | Backend | `DashboardController.php` acumula 1.192 lín y queries directas | Thin Controllers < 200 lín | 2026-10-31 | Abierto | — | Delegar agregaciones en servicios y scopes |
-| AUD-003 | Alta | Backend | `PublicacionController.php` acumula 980 lín y scraping acoplado | Thin Controllers < 200 lín | 2026-10-31 | Abierto | — | Extraer sincronización a `PublicacionSyncService` |
+| AUD-002 | Alta | Backend | `DashboardController.php` acumula 1.192 lín y queries directas | Thin Controllers < 200 lín | 2026-10-31 | Resuelto | 2026-10-31 | Reducido a 57 lín delegando en `DashboardAggregationService` |
+| AUD-003 | Alta | Backend | `PublicacionController.php` acumula 980 lín y scraping acoplado | Thin Controllers < 200 lín | 2026-10-31 | Resuelto | 2026-10-31 | Reducido a 378 lín delegando en `PublicacionSyncService` y `PublicacionFeedService` |
 | AUD-004 | Media | Frontend | Componente `SocialCard.vue` supera umbral crítico (1.065 lín) | Componentes UI < 500 lín | 2026-10-31 | Abierto | — | Descomponer reacciones y embeds |
 | AUD-005 | Media | Backend | `SocialProfileScraperService.php` monolítico con 1.761 lín | Principio de Responsabilidad Única | 2026-10-31 | Abierto | — | Dividir por adaptadores de plataforma |
 | AUD-006 | Baja | Git | Ausencia de etiquetado de versiones (0 tags en repo) | SemVer y trazabilidad de despliegue | 2026-10-31 | Abierto | — | Crear tags versionados en hitos estables |

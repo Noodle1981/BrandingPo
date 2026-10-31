@@ -53,17 +53,17 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
     <div><div class="meta-label">Sistema</div><div class="meta-val">BrandingPo</div></div>
     <div><div class="meta-label">Fecha de emisión</div><div class="meta-val">2026-10-31</div></div>
     <div><div class="meta-label">Destinatarios</div><div class="meta-val">Equipo de Desarrollo</div></div>
-    <div><div class="meta-label">Commit</div><div class="meta-val">4334159</div></div>
+    <div><div class="meta-label">Commit</div><div class="meta-val">b10b718</div></div>
   </div>
   <div class="kpi-row">
     <div class="kpi-card k-o"><div class="kpi-number">101</div><div class="kpi-label">Puntos de control</div></div>
-    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">11</div><div class="kpi-label">Cumplidos</div></div>
-    <div class="kpi-card"><div class="kpi-number" id="kpiPending">90</div><div class="kpi-label">Pendientes</div></div>
-    <div class="kpi-card k-r"><div class="kpi-number">27</div><div class="kpi-label">Archivos sobre umbral · 12 acc. datos</div></div>
-    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">10.9%</div><div class="kpi-label">Conformidad</div></div>
+    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">13</div><div class="kpi-label">Cumplidos</div></div>
+    <div class="kpi-card"><div class="kpi-number" id="kpiPending">88</div><div class="kpi-label">Pendientes</div></div>
+    <div class="kpi-card k-r"><div class="kpi-number">28</div><div class="kpi-label">Archivos sobre umbral · 10 acc. datos</div></div>
+    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">12.9%</div><div class="kpi-label">Conformidad</div></div>
   </div>
-  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">10.9% completado</span></div>
-    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:10.9%"></div></div></div>
+  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">12.9% completado</span></div>
+    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:12.9%"></div></div></div>
   
     <div class="complexity-alert-section">
       <div class="alert-header"><div class="alert-title-wrap"><span style="font-size:20px">🔬</span><h3>Diagnóstico de código: tamaños, acceso a datos, versiones y documentación</h3></div>
@@ -74,14 +74,14 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
         <p>59 archivos analizados · 4 críticos.<br><strong>Acción:</strong> Extraer subcomponentes a Components/ o lógica reactiva a composables/</p>
       </div>
       <div class="mini-alert-card alert-danger">
-        <h4>Controladores backend (Laravel): 7 sobre umbral (200 lín)</h4>
-        <p>15 archivos analizados · 6 críticos · <strong>12 con acceso directo a datos</strong>.<br><strong>Acción:</strong> Mover lógica a app/Services o FormRequests; el controlador solo adapta HTTP</p>
+        <h4>Controladores backend (Laravel): 6 sobre umbral (200 lín)</h4>
+        <p>15 archivos analizados · 5 críticos · <strong>10 con acceso directo a datos</strong>.<br><strong>Acción:</strong> Mover lógica a app/Services o FormRequests; el controlador solo adapta HTTP</p>
       </div>
       <div class="mini-alert-card alert-danger">
-        <h4>Servicios de negocio (Laravel): 6 sobre umbral (300 lín)</h4>
-        <p>9 archivos analizados · 5 críticos.<br><strong>Acción:</strong> Dividir responsabilidades y extraer scrapers o procesadores específicos</p>
+        <h4>Servicios de negocio (Laravel): 8 sobre umbral (300 lín)</h4>
+        <p>12 archivos analizados · 6 críticos.<br><strong>Acción:</strong> Dividir responsabilidades y extraer scrapers o procesadores específicos</p>
       </div></div>
-      <div class="extra-metrics">🗂️ <strong>Versiones:</strong> 100% commits convencionales · 0 tags · commit <code>4334159</code><br>📚 <strong>Documentación:</strong> última actualización nunca · — commits de código desde entonces</div>
+      <div class="extra-metrics">🗂️ <strong>Versiones:</strong> 100% commits convencionales · 0 tags · commit <code>b10b718</code><br>📚 <strong>Documentación:</strong> última actualización nunca · — commits de código desde entonces</div>
       
       <details open style="margin-bottom:14px;">
         <summary class="det-summary">▶ Vistas y componentes frontend (Vue) — umbral 500 lín / crítico 800 lín</summary>
@@ -167,13 +167,7 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
       <details  style="margin-bottom:14px;">
         <summary class="det-summary">▶ Controladores backend (Laravel) — umbral 200 lín / crítico 300 lín</summary>
         <table class="loc-table"><thead><tr><th>Archivo</th><th style="text-align:right">Líneas</th><th>Estado</th><th>Acceso a datos</th></tr></thead><tbody>
-        <tr><td><strong>DashboardController.php</strong><br><span class="table-subtext">app/Http/Controllers/DashboardController.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">1192</td>
-          <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
-          <td><span class="table-badge badge-danger">L34</span></td></tr><tr><td><strong>PublicacionController.php</strong><br><span class="table-subtext">app/Http/Controllers/PublicacionController.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">980</td>
-          <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
-          <td><span class="table-badge badge-danger">L174</span></td></tr><tr><td><strong>TerritorioController.php</strong><br><span class="table-subtext">app/Http/Controllers/TerritorioController.php</span></td>
+        <tr><td><strong>TerritorioController.php</strong><br><span class="table-subtext">app/Http/Controllers/TerritorioController.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">723</td>
           <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
           <td><span class="table-badge badge-danger">L39</span></td></tr><tr><td><strong>CandidatoController.php</strong><br><span class="table-subtext">app/Http/Controllers/CandidatoController.php</span></td>
@@ -185,7 +179,10 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
           <td><span class="table-badge badge-danger">L46</span></td></tr><tr><td><strong>EjesEstrategicosController.php</strong><br><span class="table-subtext">app/Http/Controllers/EjesEstrategicosController.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">486</td>
           <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
-          <td><span class="table-badge badge-danger">L27</span></td></tr><tr><td><strong>CalendarioController.php</strong><br><span class="table-subtext">app/Http/Controllers/CalendarioController.php</span></td>
+          <td><span class="table-badge badge-danger">L27</span></td></tr><tr><td><strong>PublicacionController.php</strong><br><span class="table-subtext">app/Http/Controllers/PublicacionController.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">378</td>
+          <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
+          <td>—</td></tr><tr><td><strong>CalendarioController.php</strong><br><span class="table-subtext">app/Http/Controllers/CalendarioController.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">206</td>
           <td><span class="table-badge badge-warning">🟡 Sobre umbral</span></td>
           <td><span class="table-badge badge-danger">L34</span></td></tr><tr><td><strong>CrisisController.php</strong><br><span class="table-subtext">app/Http/Controllers/CrisisController.php</span></td>
@@ -204,7 +201,10 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
           <td style="text-align:right;font-weight:800;font-family:monospace">116</td>
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
           <td><span class="table-badge badge-danger">L30</span></td></tr><tr><td><strong>AuthController.php</strong><br><span class="table-subtext">app/Http/Controllers/AuthController.php</span></td>
-          <td style="text-align:right;font-weight:800;font-family:monospace">112</td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">114</td>
+          <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
+          <td>—</td></tr><tr><td><strong>DashboardController.php</strong><br><span class="table-subtext">app/Http/Controllers/DashboardController.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">62</td>
           <td><span class="table-badge badge-success">🟢 Óptimo</span></td>
           <td>—</td></tr><tr><td><strong>ReporteController.php</strong><br><span class="table-subtext">app/Http/Controllers/ReporteController.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">51</td>
@@ -221,6 +221,9 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
         <tr><td><strong>SocialProfileScraperService.php</strong><br><span class="table-subtext">app/Services/SocialProfileScraperService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">1761</td>
           <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
+          <td>—</td></tr><tr><td><strong>DashboardAggregationService.php</strong><br><span class="table-subtext">app/Services/DashboardAggregationService.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">1119</td>
+          <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
           <td>—</td></tr><tr><td><strong>CanalMetricasService.php</strong><br><span class="table-subtext">app/Services/CanalMetricasService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">1028</td>
           <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
@@ -233,9 +236,15 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
           <td>—</td></tr><tr><td><strong>DemographicIntelligenceService.php</strong><br><span class="table-subtext">app/Services/DemographicIntelligenceService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">508</td>
           <td><span class="table-badge badge-danger">🔴 Crítico</span></td>
+          <td>—</td></tr><tr><td><strong>PublicacionSyncService.php</strong><br><span class="table-subtext">app/Services/PublicacionSyncService.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">413</td>
+          <td><span class="table-badge badge-warning">🟡 Sobre umbral</span></td>
           <td>—</td></tr><tr><td><strong>CandidatoPresenterService.php</strong><br><span class="table-subtext">app/Services/CandidatoPresenterService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">310</td>
           <td><span class="table-badge badge-warning">🟡 Sobre umbral</span></td>
+          <td>—</td></tr><tr><td><strong>PublicacionFeedService.php</strong><br><span class="table-subtext">app/Services/PublicacionFeedService.php</span></td>
+          <td style="text-align:right;font-weight:800;font-family:monospace">259</td>
+          <td><span class="table-badge badge-info">🔵 Moderado</span></td>
           <td>—</td></tr><tr><td><strong>MediaStorageService.php</strong><br><span class="table-subtext">app/Services/MediaStorageService.php</span></td>
           <td style="text-align:right;font-weight:800;font-family:monospace">192</td>
           <td><span class="table-badge badge-info">🔵 Moderado</span></td>
@@ -312,10 +321,10 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   <div class="card-area">
     <div class="card-header">
       <div class="card-title-group"><span class="card-badge-num">02</span><h2 class="card-title">02 — Backend y Arquitectura Laravel</h2></div>
-      <div class="card-progress-wrap"><span class="card-counter" id="counter_1">0 / 17</span>
-        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_1" style="width:0%"></div></div></div>
+      <div class="card-progress-wrap"><span class="card-counter" id="counter_1">2 / 17</span>
+        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_1" style="width:12%"></div></div></div>
     </div>
-    <div class="card-warning-banner">⚠️ <strong>7 archivo(s) de "Controladores backend (Laravel)" superan 200 líneas:</strong> <code>DashboardController.php (1192)</code>, <code>PublicacionController.php (980)</code>, <code>TerritorioController.php (723)</code>, <code>CandidatoController.php (513)</code>, <code>MediosController.php (496)</code>, <code>EjesEstrategicosController.php (486)</code>, <code>CalendarioController.php (206)</code><br><strong>12 con acceso directo a datos:</strong> <code>DashboardController.php</code>, <code>PublicacionController.php</code>, <code>TerritorioController.php</code>, <code>CandidatoController.php</code>, <code>MediosController.php</code>, <code>EjesEstrategicosController.php</code>, <code>CalendarioController.php</code>, <code>CrisisController.php</code>, <code>PresupuestoController.php</code>, <code>AnalyticsController.php</code>, <code>BriefingController.php</code>, <code>ReporteController.php</code><br><strong>6 archivo(s) de "Servicios de negocio (Laravel)" superan 300 líneas:</strong> <code>SocialProfileScraperService.php (1761)</code>, <code>CanalMetricasService.php (1028)</code>, <code>GenericMediaScraperService.php (732)</code>, <code>ReporteEjecutivoService.php (537)</code>, <code>DemographicIntelligenceService.php (508)</code>, <code>CandidatoPresenterService.php (310)</code></div>
+    <div class="card-warning-banner">⚠️ <strong>6 archivo(s) de "Controladores backend (Laravel)" superan 200 líneas:</strong> <code>TerritorioController.php (723)</code>, <code>CandidatoController.php (513)</code>, <code>MediosController.php (496)</code>, <code>EjesEstrategicosController.php (486)</code>, <code>PublicacionController.php (378)</code>, <code>CalendarioController.php (206)</code><br><strong>10 con acceso directo a datos:</strong> <code>TerritorioController.php</code>, <code>CandidatoController.php</code>, <code>MediosController.php</code>, <code>EjesEstrategicosController.php</code>, <code>CalendarioController.php</code>, <code>CrisisController.php</code>, <code>PresupuestoController.php</code>, <code>AnalyticsController.php</code>, <code>BriefingController.php</code>, <code>ReporteController.php</code><br><strong>8 archivo(s) de "Servicios de negocio (Laravel)" superan 300 líneas:</strong> <code>SocialProfileScraperService.php (1761)</code>, <code>DashboardAggregationService.php (1119)</code>, <code>CanalMetricasService.php (1028)</code>, <code>GenericMediaScraperService.php (732)</code>, <code>ReporteEjecutivoService.php (537)</code>, <code>DemographicIntelligenceService.php (508)</code>, <code>PublicacionSyncService.php (413)</code>, <code>CandidatoPresenterService.php (310)</code></div>
     
     <div class="checklist-items"><div class="item-section">Arquitectura y Separación de Responsabilidades</div>
       <label class="checklist-item " id="label_chk_1_0">
@@ -342,13 +351,13 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_5"  onchange="toggleItem('chk_1_5', 1)">
         <div class="item-content"><span class="item-bold">Encapsulación de lógica de scrapers</span><span>Scrapers de perfiles sociales y medios periodísticos encapsulados con interfaces claras, respetando SRP y manejando reintentos con backoff exponencial.</span></div>
       </label><div class="item-section">Hallazgos de la Medición — Controladores sobre Umbral</div>
-      <label class="checklist-item " id="label_chk_1_6">
-        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_6"  onchange="toggleItem('chk_1_6', 1)">
-        <div class="item-content"><span class="item-bold">Dividir <code>DashboardController.php</code> (1.192 lín)</span><span>Extraer agregaciones de métricas territoriales, pauta y engagement a <code>DashboardAggregationService</code> o query scopes dedicados.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_1_6">
+        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_6" checked onchange="toggleItem('chk_1_6', 1)">
+        <div class="item-content"><span class="item-bold">Dividir <code>DashboardController.php</code> (1.192 lín)</span><span>Extraer agregaciones de métricas territoriales, pauta y engagement a <code>DashboardAggregationService</code> o query scopes dedicados. (Resuelto: reducido a 57 líneas).</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_1_7">
-        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_7"  onchange="toggleItem('chk_1_7', 1)">
-        <div class="item-content"><span class="item-bold">Dividir <code>PublicacionController.php</code> (980 lín)</span><span>Separar sincronización de feeds y scraping de posts a <code>PublicacionSyncService</code>; mover filtros de búsqueda a <code>PublicacionQueryFilter</code>.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_1_7">
+        <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_7" checked onchange="toggleItem('chk_1_7', 1)">
+        <div class="item-content"><span class="item-bold">Dividir <code>PublicacionController.php</code> (980 lín)</span><span>Separar sincronización de feeds y scraping de posts a <code>PublicacionSyncService</code>; mover filtros de búsqueda a <code>PublicacionFeedService</code>. (Resuelto: reducido a 378 líneas delegando lógica a servicios dedicados).</span></div>
       </label>
       <label class="checklist-item " id="label_chk_1_8">
         <input type="checkbox" class="chk-item" data-cat="1" id="chk_1_8"  onchange="toggleItem('chk_1_8', 1)">
@@ -766,7 +775,7 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
 </div>
 <script>
-const total=101;let checked=11;
+const total=101;let checked=13;
 function toggleItem(id,cat){
   const chk=document.getElementById(id);document.getElementById('label_'+id).classList.toggle('item-checked',chk.checked);
   checked+=chk.checked?1:-1;
@@ -785,7 +794,7 @@ function applyFilter(ev,mode){
 }
 function copySummaryText(){
   const t="📋 [QA BrandingPo] Tarjeta Maestra\n• Puntos de control: "+total+"\n• Cumplidos: "+checked+"\n• Pendientes: "+(total-checked)+
-    "\n• Archivos sobre umbral: 27\n• Accesos directos a datos en controladores: 12\n• Conformidad: "+document.getElementById('kpiPercent').innerText+"\nGenerado: 2026-10-31";
+    "\n• Archivos sobre umbral: 28\n• Accesos directos a datos en controladores: 10\n• Conformidad: "+document.getElementById('kpiPercent').innerText+"\nGenerado: 2026-10-31";
   navigator.clipboard.writeText(t).then(()=>alert('✅ Resumen copiado al portapapeles.'));
 }
 </script></body></html>

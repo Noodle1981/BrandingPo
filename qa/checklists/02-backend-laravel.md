@@ -9,8 +9,8 @@
 - [ ] **Encapsulación de lógica de scrapers**: Scrapers de perfiles sociales y medios periodísticos encapsulados con interfaces claras, respetando SRP y manejando reintentos con backoff exponencial.
 
 ## Hallazgos de la Medición — Controladores sobre Umbral
-- [ ] **Dividir `DashboardController.php` (1.192 lín)**: Extraer agregaciones de métricas territoriales, pauta y engagement a `DashboardAggregationService` o query scopes dedicados.
-- [ ] **Dividir `PublicacionController.php` (980 lín)**: Separar sincronización de feeds y scraping de posts a `PublicacionSyncService`; mover filtros de búsqueda a `PublicacionQueryFilter`.
+- [x] **Dividir `DashboardController.php` (1.192 lín)**: Extraer agregaciones de métricas territoriales, pauta y engagement a `DashboardAggregationService` o query scopes dedicados. (Resuelto: reducido a 57 líneas).
+- [x] **Dividir `PublicacionController.php` (980 lín)**: Separar sincronización de feeds y scraping de posts a `PublicacionSyncService`; mover filtros de búsqueda a `PublicacionFeedService`. (Resuelto: reducido a 378 líneas delegando lógica a servicios dedicados).
 - [ ] **Dividir `TerritorioController.php` (723 lín)**: Desacoplar cálculos de penetración electoral y cruce demográfico hacia `DemographicIntelligenceService`.
 - [ ] **Dividir `CandidatoController.php` (513 lín)**: Delegar orquestación de perfiles sociales y sincronización de canales a `CandidatoPresenterService` y `CanalMetricasService`.
 - [ ] **Dividir `MediosController.php` (496 lín)**: Mover autodescubrimiento de fuentes y análisis de tono editorial hacia `GenericMediaScraperService`.

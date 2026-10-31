@@ -87,6 +87,40 @@ class Candidato extends Model
     }
 
     /**
+     * Scope para filtrar candidatos pertenecientes a un workspace específico.
+     */
+    public function scopeDelWorkspace(Builder $query, int|Workspace $workspace): Builder
+    {
+        $workspaceId = $workspace instanceof Workspace ? $workspace->id : $workspace;
+
+        return $query->where('workspace_id', $workspaceId);
+    }
+
+    /**
+     * Scope para ordenar alfabéticamente por nombre completo.
+     */
+    public function scopeOrdenados(Builder $query): Builder
+    {
+        return $query->orderBy('nombre_completo');
+    }
+
+    /**
+     * Scope para filtrar exclusivamente el candidato propio / oficial de campaña.
+     */
+    public function scopePropios(Builder $query): Builder
+    {
+        return $query->where('es_propio', true);
+    }
+
+    /**
+     * Scope para filtrar candidatos de la oposición / rivales.
+     */
+    public function scopeOposicion(Builder $query): Builder
+    {
+        return $query->where('es_propio', false);
+    }
+
+    /**
      * Obtener la URL del avatar del candidato con fallback automático a fotos scrapeadas de sus redes.
      */
     public function getAvatarUrlAttribute(?string $value): ?string

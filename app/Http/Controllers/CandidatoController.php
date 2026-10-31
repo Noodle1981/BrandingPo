@@ -57,11 +57,11 @@ class CandidatoController extends Controller
         $cicloActivo = CicloCampana::where('workspace_id', $workspace->id)->where('es_activo', true)->first()
             ?? CicloCampana::where('workspace_id', $workspace->id)->first();
 
-        $territorioDefault = Territorio::where('workspace_id', $workspace->id)->first();
+        $territorioDefault = Territorio::delWorkspace($workspace)->first();
 
         // Buscar o inicializar el candidato propio del workspace
-        $candidato = Candidato::where('workspace_id', $workspace->id)
-            ->where('es_propio', true)
+        $candidato = Candidato::delWorkspace($workspace)
+            ->propios()
             ->with(['perfilesSociales', 'territorio', 'cicloCampana'])
             ->first();
 

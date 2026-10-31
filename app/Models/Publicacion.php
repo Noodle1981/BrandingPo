@@ -258,6 +258,66 @@ class Publicacion extends Model
     }
 
     /**
+     * Scope para filtrar publicaciones pertenecientes a un workspace específico.
+     */
+    public function scopeDelWorkspace(Builder $query, int|Workspace $workspace): Builder
+    {
+        $workspaceId = $workspace instanceof Workspace ? $workspace->id : $workspace;
+
+        return $query->where('workspace_id', $workspaceId);
+    }
+
+    /**
+     * Scope para filtrar publicaciones de un candidato específico.
+     */
+    public function scopeDeCandidato(Builder $query, int|Candidato $candidato): Builder
+    {
+        $candidatoId = $candidato instanceof Candidato ? $candidato->id : $candidato;
+
+        return $query->where('candidato_id', $candidatoId);
+    }
+
+    /**
+     * Scope para filtrar publicaciones de candidatos propios de campaña.
+     */
+    public function scopeDePropios(Builder $query): Builder
+    {
+        return $query->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
+    }
+
+    /**
+     * Scope para filtrar publicaciones de candidatos opositores / rivales.
+     */
+    public function scopeDeOposicion(Builder $query): Builder
+    {
+        return $query->whereHas('candidato', fn ($q) => $q->where('es_propio', false));
+    }
+
+    /**
+     * Scope para filtrar por sentimiento predominante.
+     */
+    public function scopeConSentimiento(Builder $query, ?string $sentimiento): Builder
+    {
+        return $sentimiento ? $query->where('sentimiento_predominante', $sentimiento) : $query;
+    }
+
+    /**
+     * Scope para ordenar por fecha de publicación descendente (recientes primero).
+     */
+    public function scopeRecientes(Builder $query): Builder
+    {
+        return $query->orderByDesc('fecha_publicacion')->orderByDesc('id');
+    }
+
+    /**
+     * Scope con relaciones completas habituales precargadas.
+     */
+    public function scopeConRelacionesCompletas(Builder $query): Builder
+    {
+        return $query->with(['candidato', 'perfilSocial', 'ejeTematico', 'pautaEventos']);
+    }
+
+    /**
      * Buscar si existe una publicación duplicada por URL canonicalizada o por huella digital de contenido/fecha.
      */
     public static function buscarDuplicado(

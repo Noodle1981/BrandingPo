@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,5 +37,15 @@ class InformeEjecutivo extends Model
     public function cicloCampana(): BelongsTo
     {
         return $this->belongsTo(CicloCampana::class);
+    }
+
+    /**
+     * Scope para filtrar informes ejecutivos de un workspace específico.
+     */
+    public function scopeDelWorkspace(Builder $query, int|Workspace $workspace): Builder
+    {
+        $workspaceId = $workspace instanceof Workspace ? $workspace->id : $workspace;
+
+        return $query->where('workspace_id', $workspaceId);
     }
 }

@@ -100,4 +100,14 @@ class Territorio extends Model
     {
         return $query->whereIn('tipo', ['municipio', 'departamento']);
     }
+
+    /**
+     * Scope para filtrar territorios de un workspace específico.
+     */
+    public function scopeDelWorkspace(Builder $query, int|Workspace $workspace): Builder
+    {
+        $workspaceId = $workspace instanceof Workspace ? $workspace->id : $workspace;
+
+        return $query->where('workspace_id', $workspaceId);
+    }
 }

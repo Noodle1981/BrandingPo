@@ -22,7 +22,7 @@ class BriefingController extends Controller
         $workspace = WorkspaceHelper::activo($request);
         $cicloId = $request->input('ciclo_id');
 
-        $query = InformeEjecutivo::where('workspace_id', $workspace->id)
+        $query = InformeEjecutivo::delWorkspace($workspace)
             ->with('cicloCampana')
             ->orderByDesc('fecha_generacion');
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -49,5 +50,15 @@ class EventoCalendario extends Model
     public function ejeTematico(): BelongsTo
     {
         return $this->belongsTo(EjeTematico::class, 'eje_tematico_id');
+    }
+
+    /**
+     * Scope para filtrar eventos de un workspace específico.
+     */
+    public function scopeDelWorkspace(Builder $query, int|Workspace $workspace): Builder
+    {
+        $workspaceId = $workspace instanceof Workspace ? $workspace->id : $workspace;
+
+        return $query->where('workspace_id', $workspaceId);
     }
 }

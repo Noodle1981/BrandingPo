@@ -1,5 +1,5 @@
 {
-  "generado": "2026-10-31T15:27:48.316Z",
+  "generado": "2026-10-31T16:24:52.356Z",
   "proyecto": "BrandingPo",
   "categorias": [
     {
@@ -284,16 +284,16 @@
           "accesoDatos": []
         },
         {
-          "ruta": "resources/js/Components/Dashboard/DashboardHeader.vue",
-          "nombre": "DashboardHeader.vue",
-          "lineas": 179,
+          "ruta": "resources/js/Pages/Auth/Login.vue",
+          "nombre": "Login.vue",
+          "lineas": 183,
           "estado": "optimo",
           "accesoDatos": []
         },
         {
-          "ruta": "resources/js/Pages/Auth/Login.vue",
-          "nombre": "Login.vue",
-          "lineas": 176,
+          "ruta": "resources/js/Components/Dashboard/DashboardHeader.vue",
+          "nombre": "DashboardHeader.vue",
+          "lineas": 179,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -440,30 +440,6 @@
       "accion": "Mover lógica a app/Services o FormRequests; el controlador solo adapta HTTP",
       "archivos": [
         {
-          "ruta": "app/Http/Controllers/DashboardController.php",
-          "nombre": "DashboardController.php",
-          "lineas": 1192,
-          "estado": "critico",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 34
-            }
-          ]
-        },
-        {
-          "ruta": "app/Http/Controllers/PublicacionController.php",
-          "nombre": "PublicacionController.php",
-          "lineas": 980,
-          "estado": "critico",
-          "accesoDatos": [
-            {
-              "patron": "->where\\(",
-              "linea": 174
-            }
-          ]
-        },
-        {
           "ruta": "app/Http/Controllers/TerritorioController.php",
           "nombre": "TerritorioController.php",
           "lineas": 723,
@@ -510,6 +486,13 @@
               "linea": 27
             }
           ]
+        },
+        {
+          "ruta": "app/Http/Controllers/PublicacionController.php",
+          "nombre": "PublicacionController.php",
+          "lineas": 378,
+          "estado": "critico",
+          "accesoDatos": []
         },
         {
           "ruta": "app/Http/Controllers/CalendarioController.php",
@@ -581,7 +564,14 @@
         {
           "ruta": "app/Http/Controllers/AuthController.php",
           "nombre": "AuthController.php",
-          "lineas": 112,
+          "lineas": 114,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Http/Controllers/DashboardController.php",
+          "nombre": "DashboardController.php",
+          "lineas": 62,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -607,9 +597,9 @@
       ],
       "resumen": {
         "total": 15,
-        "sobreUmbral": 7,
-        "criticos": 6,
-        "accesoDatos": 12
+        "sobreUmbral": 6,
+        "criticos": 5,
+        "accesoDatos": 10
       }
     },
     {
@@ -624,6 +614,13 @@
           "ruta": "app/Services/SocialProfileScraperService.php",
           "nombre": "SocialProfileScraperService.php",
           "lineas": 1761,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/DashboardAggregationService.php",
+          "nombre": "DashboardAggregationService.php",
+          "lineas": 1119,
           "estado": "critico",
           "accesoDatos": []
         },
@@ -656,10 +653,24 @@
           "accesoDatos": []
         },
         {
+          "ruta": "app/Services/PublicacionSyncService.php",
+          "nombre": "PublicacionSyncService.php",
+          "lineas": 413,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
           "ruta": "app/Services/CandidatoPresenterService.php",
           "nombre": "CandidatoPresenterService.php",
           "lineas": 310,
           "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/PublicacionFeedService.php",
+          "nombre": "PublicacionFeedService.php",
+          "lineas": 259,
+          "estado": "moderado",
           "accesoDatos": []
         },
         {
@@ -685,22 +696,22 @@
         }
       ],
       "resumen": {
-        "total": 9,
-        "sobreUmbral": 6,
-        "criticos": 5,
+        "total": 12,
+        "sobreUmbral": 8,
+        "criticos": 6,
         "accesoDatos": 0
       }
     }
   ],
   "versiones": {
-    "commitsTotales": 135,
+    "commitsTotales": 136,
     "commitsAnalizados": 50,
     "porcentajeConvencional": 100,
     "noConvencionalesEjemplo": [],
     "tags": 0,
     "ultimoTag": null,
     "ramaActual": "main",
-    "commitActual": "4334159"
+    "commitActual": "b10b718"
   },
   "documentacion": {
     "rutasDocs": [

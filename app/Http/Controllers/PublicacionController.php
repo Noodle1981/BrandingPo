@@ -9,12 +9,11 @@ use App\Http\Requests\Publicacion\UpdatePublicacionRequest;
 use App\Models\Candidato;
 use App\Models\EjeTematico;
 use App\Models\PerfilSocial;
-use App\Models\PerfilSocialMetrica;
 use App\Models\Publicacion;
-use App\Models\PublicacionPautaEvento;
 use App\Services\MediaStorageService;
+use App\Services\PublicacionFeedService;
+use App\Services\PublicacionSyncService;
 use App\Services\SocialProfileScraperService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,8 +23,13 @@ use Inertia\Response;
 
 class PublicacionController extends Controller
 {
+    public function __construct(
+        protected PublicacionSyncService $syncService,
+        protected PublicacionFeedService $feedService
+    ) {}
+
     /**
-     * Extraer datos públicos de una publicación (Instagram, Facebook, TikTok, YouTube, etc.) con 1 clic.
+     * Extraer datos públicos de una publicación con 1 clic.
      */
     public function scrapePost(Request $request, SocialProfileScraperService $scraper, MediaStorageService $mediaStorage): JsonResponse
     {
@@ -40,7 +44,6 @@ class PublicacionController extends Controller
             ], 422);
         }
 
-        // Verificar si la publicación ya existe en el workspace
         $canonicalUrl = SocialProfileScraperService::canonicalizePostUrl($inputUrl) ?? $inputUrl;
         $duplicado = Publicacion::buscarDuplicado($workspace->id, $canonicalUrl);
 
@@ -58,7 +61,6 @@ class PublicacionController extends Controller
 
         $data = $scraper->scrapePost($inputUrl, $plataforma);
 
-        // Si se extrajo una imagen/portada externa, guardarla de inmediato localmente en storage propio
         if (! empty($data['media_url'])) {
             $localMedia = $mediaStorage->guardarMediaLocal($data['media_url']);
             if ($localMedia) {
@@ -81,258 +83,41 @@ class PublicacionController extends Controller
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($publicacion, $workspace);
 
-        if (empty($publicacion->url_post)) {
-            return response()->json(['success' => false, 'mensaje' => 'La publicación no tiene enlace URL.']);
-        }
+        $resultado = $this->syncService->sincronizarIndividual($publicacion, $scraper, $mediaStorage);
 
-        $scraped = $scraper->scrapePost($publicacion->url_post, $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma);
-        if (! $scraped['success']) {
-            return response()->json(['success' => false, 'mensaje' => $scraped['mensaje'] ?? 'No se pudo leer la URL pública.']);
-        }
-
-        $oldLikes = (int) $publicacion->total_likes;
-        $oldComments = (int) $publicacion->total_comentarios;
-        $freshLikes = (! empty($scraped['total_likes']) && (int) $scraped['total_likes'] > 0) ? (int) $scraped['total_likes'] : $oldLikes;
-        $freshComments = (! empty($scraped['total_comentarios']) && (int) $scraped['total_comentarios'] > 0) ? (int) $scraped['total_comentarios'] : $oldComments;
-
-        $deltaLikes = max(0, $freshLikes - $oldLikes);
-        $deltaComments = max(0, $freshComments - $oldComments);
-
-        $plataforma = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
-        $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes, $plataforma);
-
-        $freshVistas = (! empty($scraped['total_vistas']) && (int) $scraped['total_vistas'] > 0) ? (int) $scraped['total_vistas'] : (int) $publicacion->total_vistas;
-
-        $updateFields = [
-            'total_likes' => $freshLikes,
-            'total_comentarios' => $freshComments,
-            'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
-            'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
-            'termometro_humor_social' => $aiEmocional['termometro_humor_social'],
-        ];
-
-        if ($freshVistas > 0) {
-            $updateFields['total_vistas'] = $freshVistas;
-        }
-
-        // Guardar o actualizar la imagen descargándola localmente
-        if (! empty($scraped['media_url'])) {
-            $localMedia = $mediaStorage->guardarMediaLocal($scraped['media_url'], $publicacion->media_url);
-            if ($localMedia) {
-                $updateFields['media_url'] = $localMedia;
-            }
-        }
-
-        $publicacion->update($updateFields);
-
-        // Detección heurística de pauta durante la sincronización
-        $sospechaPauta = false;
-        $motivoPauta = '';
-
-        if ($publicacion->tipo_pauta === 'organico') {
-            // Caso 1: La URL tiene o tenía parámetros publicitarios
-            if (! empty($scraped['sospecha_pauta'])) {
-                $sospechaPauta = true;
-                $motivoPauta = $scraped['motivo_sospecha_pauta'] ?? 'Se detectaron tokens de pauta activa en el enlace.';
-            }
-            // Caso 2: Crecimiento explosivo no lineal (deltaLikes >= 40 y duplicación de base previa)
-            elseif ($deltaLikes >= 40 && ($oldLikes === 0 || ($deltaLikes / max(1, $oldLikes)) >= 0.75)) {
-                $sospechaPauta = true;
-                $motivoPauta = "Salto abrupto de interacciones (+{$deltaLikes} reacciones en sincronización). Crecimiento característico de post impulsado (Boost).";
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-            'mensaje' => 'Sincronizado exitosamente',
-            'delta_likes' => $deltaLikes,
-            'delta_comentarios' => $deltaComments,
-            'total_likes' => $freshLikes,
-            'total_comentarios' => $freshComments,
-            'url_post' => $publicacion->url_post,
-            'fecha' => $publicacion->fecha_publicacion?->format('d/m/Y') ?? 'Reciente',
-            'resumen' => Str::limit($publicacion->contenido_resumen ?? '', 45),
-            'sospecha_pauta' => $sospechaPauta,
-            'motivo_sospecha_pauta' => $motivoPauta,
-            'tipo_pauta_actual' => $publicacion->tipo_pauta,
-            'tipo_pauta_sugerido' => $sospechaPauta ? 'organico_impulsado' : $publicacion->tipo_pauta,
-        ]);
+        return response()->json($resultado);
     }
 
     /**
      * Sincronizar en vivo métricas de publicaciones en la ventana activa de 15 días.
-     * Si la publicación tiene >= 16 días, su métrica queda congelada como histórico consolidado.
      */
     public function sincronizarRecientes(Request $request, PerfilSocial $perfilSocial, SocialProfileScraperService $scraper, MediaStorageService $mediaStorage): RedirectResponse|JsonResponse
     {
         $workspace = WorkspaceHelper::activo($request);
         WorkspaceHelper::validarPertenencia($perfilSocial, $workspace);
 
-        $fechaLimite = Carbon::now()->subDays(15)->startOfDay();
-
-        $publicaciones = Publicacion::where('perfil_social_id', $perfilSocial->id)
-            ->where('fecha_publicacion', '>=', $fechaLimite)
-            ->whereNotNull('url_post')
-            ->where('url_post', '!=', '')
-            ->get();
-
-        if ($publicaciones->isEmpty()) {
-            $msg = 'No hay publicaciones dentro de la ventana de los últimos 15 días para sincronizar.';
-            if ($request->wantsJson()) {
-                return response()->json(['success' => false, 'mensaje' => $msg, 'actualizadas' => 0]);
-            }
-
-            return redirect()->back()->with('warning', $msg);
-        }
-
-        $actualizadas = 0;
-        $nuevosLikes = 0;
-        $nuevosComentarios = 0;
-
-        foreach ($publicaciones as $pub) {
-            $scraped = $scraper->scrapePost($pub->url_post, $perfilSocial->plataforma);
-            if ($scraped['success']) {
-                $oldLikes = (int) $pub->total_likes;
-                $oldComments = (int) $pub->total_comentarios;
-                $freshLikes = (! empty($scraped['total_likes']) && (int) $scraped['total_likes'] > 0) ? (int) $scraped['total_likes'] : $oldLikes;
-                $freshComments = (! empty($scraped['total_comentarios']) && (int) $scraped['total_comentarios'] > 0) ? (int) $scraped['total_comentarios'] : $oldComments;
-                $freshVistas = (! empty($scraped['total_vistas']) && (int) $scraped['total_vistas'] > 0) ? (int) $scraped['total_vistas'] : (int) $pub->total_vistas;
-
-                // Si encontramos datos más frescos o mayores
-                if ($freshLikes > $oldLikes || $freshComments > $oldComments || $freshLikes > 0 || ! empty($scraped['media_url'])) {
-                    $deltaLikes = max(0, $freshLikes - $oldLikes);
-                    $deltaComments = max(0, $freshComments - $oldComments);
-                    $nuevosLikes += $deltaLikes;
-                    $nuevosComentarios += $deltaComments;
-
-                    // Recalcular reacciones emocionales con los nuevos likes
-                    $aiEmocional = $this->calcularInteligenciaEmocional([], $freshLikes, $perfilSocial->plataforma);
-
-                    $pubUpdate = [
-                        'total_likes' => $freshLikes,
-                        'total_comentarios' => $freshComments,
-                        'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
-                        'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
-                        'termometro_humor_social' => $aiEmocional['termometro_humor_social'],
-                    ];
-
-                    if ($freshVistas > 0) {
-                        $pubUpdate['total_vistas'] = $freshVistas;
-                    }
-
-                    // Guardar o actualizar la imagen localmente
-                    if (! empty($scraped['media_url'])) {
-                        $localMedia = $mediaStorage->guardarMediaLocal($scraped['media_url'], $pub->media_url);
-                        if ($localMedia) {
-                            $pubUpdate['media_url'] = $localMedia;
-                        }
-                    }
-
-                    $pub->update($pubUpdate);
-
-                    $actualizadas++;
-                }
-            }
-        }
-
-        if ($actualizadas > 0) {
-            $msg = "✨ Se sincronizaron {$actualizadas} publicaciones recientes (+{$nuevosLikes} likes y +{$nuevosComentarios} comentarios nuevos).";
-        } else {
-            $msg = "✨ Se verificaron {$publicaciones->count()} publicaciones de los últimos 15 días y ya estaban al día.";
-        }
+        $resultado = $this->syncService->sincronizarRecientes($perfilSocial, $scraper, $mediaStorage);
 
         if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'mensaje' => $msg,
-                'actualizadas' => $actualizadas,
-                'nuevos_likes' => $nuevosLikes,
-                'nuevos_comentarios' => $nuevosComentarios,
-            ]);
+            return response()->json($resultado);
         }
 
-        return redirect()->back()->with('success', $msg);
+        if (! empty($resultado['success'])) {
+            return redirect()->back()->with('success', $resultado['mensaje']);
+        }
+
+        return redirect()->back()->with('warning', $resultado['mensaje']);
     }
 
     /**
      * Escaneo proactivo y masivo de Huellas de Pauta sobre publicaciones filtradas.
-     * Analiza todas las redes (Meta, TikTok, X, YouTube, LinkedIn) buscando tokens publicitarios en posts orgánicos.
      */
     public function detectarHuellasPauta(Request $request): JsonResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-        $candidatoId = $request->input('candidato_id');
-        $plataforma = $request->input('plataforma');
-        $anio = $request->input('anio');
-        $mes = $request->input('mes');
-        $filtro = $request->input('filtro'); // 'propio' | 'oposicion'
+        $resultado = $this->syncService->detectarHuellasPauta($workspace->id, $request->all());
 
-        $query = Publicacion::with('perfilSocial')
-            ->where('workspace_id', $workspace->id)
-            ->where('tipo_pauta', 'organico');
-
-        if ($filtro === 'propio') {
-            $query->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
-        } elseif ($filtro === 'oposicion') {
-            $query->whereHas('candidato', fn ($q) => $q->where('es_propio', false));
-        }
-
-        if ($candidatoId) {
-            $query->where('candidato_id', $candidatoId);
-        }
-
-        if ($plataforma) {
-            $platforms = match ($plataforma) {
-                'x_twitter', 'twitter' => ['x_twitter', 'twitter'],
-                default => [$plataforma],
-            };
-            $query->whereHas('perfilSocial', fn ($q) => $q->whereIn('plataforma', $platforms));
-        }
-
-        if ($anio && $mes) {
-            $query->whereYear('fecha_publicacion', $anio)
-                ->whereMonth('fecha_publicacion', (int) $mes);
-        } elseif ($anio) {
-            $query->whereYear('fecha_publicacion', $anio);
-        } elseif ($mes) {
-            $query->whereMonth('fecha_publicacion', (int) $mes);
-        }
-
-        $publicaciones = $query->get();
-        $totalRevisadas = $publicaciones->count();
-        $conHuella = [];
-
-        foreach ($publicaciones as $pub) {
-            $analisis = SocialProfileScraperService::analizarHuellaPauta($pub->url_post, $pub->contenido_resumen);
-
-            if ($analisis['tiene_huella']) {
-                $insights = $pub->insights_internos_propios ?? [];
-                $insights['huella_pauta'] = $analisis;
-                $pub->update(['insights_internos_propios' => $insights]);
-
-                $conHuella[] = [
-                    'id' => $pub->id,
-                    'resumen' => Str::limit($pub->contenido_resumen ?? 'Sin descripción', 40),
-                    'plataforma' => $pub->perfilSocial?->plataforma ?? $pub->plataforma,
-                    'red' => $analisis['red'],
-                    'token' => $analisis['token_detectado'],
-                    'motivo' => $analisis['motivo'],
-                ];
-            }
-        }
-
-        $totalDetectadas = count($conHuella);
-        $mensaje = $totalDetectadas > 0
-            ? "🎯 Se escanearon {$totalRevisadas} publicaciones orgánicas: ¡Se detectaron {$totalDetectadas} con huella de pauta!"
-            : "✨ Se escanearon {$totalRevisadas} publicaciones orgánicas del filtro: ninguna presenta huella de pauta publicitaria.";
-
-        return response()->json([
-            'success' => true,
-            'total_revisadas' => $totalRevisadas,
-            'total_detectadas' => $totalDetectadas,
-            'publicaciones_detectadas' => $conHuella,
-            'mensaje' => $mensaje,
-        ]);
+        return response()->json($resultado);
     }
 
     /**
@@ -341,248 +126,9 @@ class PublicacionController extends Controller
     public function feed(Request $request): Response
     {
         $workspace = WorkspaceHelper::activo($request);
-        $candidatoId = $request->input('candidato_id');
-        $plataforma = $request->input('plataforma');
-        $tipoPauta = $request->input('tipo_pauta');
-        $ejeTematicoId = $request->input('eje_tematico_id');
-        $anio = $request->input('anio');
-        $mes = $request->input('mes');
-        $search = $request->input('search');
-        $filtro = $request->input('filtro'); // 'propio' | 'oposicion'
+        $feedData = $this->feedService->obtenerFeedData($workspace->id, $request->all());
 
-        // Obtener Años y Meses reales que existen en la base de datos para este workspace (fechas de origen fecha_publicacion)
-        $baseFechasQuery = Publicacion::where('workspace_id', $workspace->id)
-            ->whereNotNull('fecha_publicacion')
-            ->whereHas('candidato', fn ($q) => $q->where('es_propio', true));
-
-        if ($candidatoId) {
-            $baseFechasQuery->where('candidato_id', $candidatoId);
-        }
-
-        if ($plataforma) {
-            $platforms = match ($plataforma) {
-                'x_twitter', 'twitter' => ['x_twitter', 'twitter'],
-                default => [$plataforma],
-            };
-            $baseFechasQuery->whereHas('perfilSocial', fn ($q) => $q->whereIn('plataforma', $platforms));
-        }
-
-        $nombresMeses = [
-            '01' => 'Enero', '02' => 'Febrero', '03' => 'Marzo', '04' => 'Abril',
-            '05' => 'Mayo', '06' => 'Junio', '07' => 'Julio', '08' => 'Agosto',
-            '09' => 'Septiembre', '10' => 'Octubre', '11' => 'Noviembre', '12' => 'Diciembre',
-        ];
-
-        $aniosDisponibles = (clone $baseFechasQuery)->pluck('fecha_publicacion')
-            ->map(fn ($f) => Carbon::parse($f)->format('Y'))
-            ->unique()
-            ->sortDesc()
-            ->values();
-
-        // Para los meses: si hay un año seleccionado, filtrar únicamente los meses con publicaciones de ese año
-        $fechasMesesQuery = clone $baseFechasQuery;
-        if ($anio) {
-            $fechasMesesQuery->whereYear('fecha_publicacion', $anio);
-        }
-
-        $mesesDisponibles = $fechasMesesQuery->pluck('fecha_publicacion')
-            ->map(function ($f) use ($nombresMeses) {
-                $numMes = Carbon::parse($f)->format('m');
-
-                return [
-                    'numero' => $numMes,
-                    'nombre' => $nombresMeses[$numMes] ?? $numMes,
-                ];
-            })->unique('numero')->sortBy('numero')->values();
-
-        $query = Publicacion::where('workspace_id', $workspace->id)
-            ->whereHas('candidato', fn ($q) => $q->where('es_propio', true))
-            ->with(['candidato', 'perfilSocial', 'ejeTematico', 'pautaEventos']);
-
-        if ($candidatoId) {
-            $query->where('candidato_id', $candidatoId);
-        }
-
-        if ($plataforma) {
-            $platforms = match ($plataforma) {
-                'x_twitter', 'twitter' => ['x_twitter', 'twitter'],
-                default => [$plataforma],
-            };
-
-            $query->whereHas('perfilSocial', fn ($q) => $q->whereIn('plataforma', $platforms));
-        }
-
-        if ($tipoPauta === 'con_huella' || $request->boolean('solo_huella')) {
-            $query->where('tipo_pauta', 'organico')
-                ->where(function ($q) {
-                    $q->where('url_post', 'like', '%fbclid%')
-                        ->orWhere('url_post', 'like', '%ad_id%')
-                        ->orWhere('url_post', 'like', '%adset_id%')
-                        ->orWhere('url_post', 'like', '%campaign_id%')
-                        ->orWhere('url_post', 'like', '%ttclid%')
-                        ->orWhere('url_post', 'like', '%twclid%')
-                        ->orWhere('url_post', 'like', '%gclid%')
-                        ->orWhere('url_post', 'like', '%li_fat_id%')
-                        ->orWhere('url_post', 'like', '%utm_medium=%')
-                        ->orWhere('url_post', 'like', '%facebook.com/ads%')
-                        ->orWhere('contenido_resumen', 'like', '%#publicidad%')
-                        ->orWhere('contenido_resumen', 'like', '%#ad%')
-                        ->orWhere('contenido_resumen', 'like', '%#patrocinado%')
-                        ->orWhere('contenido_resumen', 'like', '%patrocinado%')
-                        ->orWhere('contenido_resumen', 'like', '%colaboración pagada%')
-                        ->orWhere('contenido_resumen', 'like', '%colaboracion pagada%')
-                        ->orWhere('contenido_resumen', 'like', '%paid partnership%')
-                        ->orWhere('insights_internos_propios', 'like', '%huella_pauta%');
-                });
-        } elseif ($tipoPauta) {
-            $query->where('tipo_pauta', $tipoPauta);
-        }
-
-        if ($ejeTematicoId) {
-            $query->where('eje_tematico_id', $ejeTematicoId);
-        }
-
-        if ($anio && $mes) {
-            $query->whereYear('fecha_publicacion', $anio)
-                ->whereMonth('fecha_publicacion', (int) $mes);
-        } elseif ($anio) {
-            $query->whereYear('fecha_publicacion', $anio);
-        } elseif ($mes) {
-            $query->whereMonth('fecha_publicacion', (int) $mes);
-        }
-
-        if ($search) {
-            $query->where('contenido_resumen', 'like', "%{$search}%");
-        }
-
-        $orden = $request->input('orden', 'recientes');
-        if ($orden === 'antiguos') {
-            $query->orderBy('fecha_publicacion', 'asc')->orderBy('id', 'asc');
-        } elseif ($orden === 'interacciones') {
-            $query->orderByDesc('total_likes')->orderByDesc('fecha_publicacion');
-        } else {
-            // Por defecto: Cronología de la red social (publicación más reciente arriba)
-            $query->orderByDesc('fecha_publicacion')->orderByDesc('id');
-        }
-
-        $publicaciones = $query->get()->map(function ($p) {
-            return [
-                'id' => $p->id,
-                'candidato' => [
-                    'id' => $p->candidato?->id,
-                    'nombre_completo' => $p->candidato?->nombre_completo,
-                    'partido_coalicion' => $p->candidato?->partido_coalicion,
-                    'estado_politico' => $p->candidato?->estado_politico,
-                    'es_propio' => $p->candidato?->es_propio,
-                    'color_hex' => $p->candidato?->color_hex,
-                    'avatar_url' => $p->candidato?->avatar_url,
-                ],
-                'perfil_social' => [
-                    'id' => $p->perfilSocial?->id,
-                    'plataforma' => $p->perfilSocial?->plataforma,
-                    'handle_usuario' => $p->perfilSocial?->handle_usuario,
-                ],
-                'eje_tematico' => $p->ejeTematico ? [
-                    'id' => $p->ejeTematico->id,
-                    'pilar_principal' => $p->ejeTematico->pilar_principal,
-                    'nombre' => $p->ejeTematico->nombre,
-                    'color_badge' => $p->ejeTematico->color_badge,
-                    'icono' => $p->ejeTematico->icono,
-                ] : null,
-                'plataforma' => $p->perfilSocial?->plataforma ?: 'facebook',
-                'fecha_publicacion' => $p->fecha_publicacion?->format('d/m/Y H:i'),
-                'fecha_publicacion_raw' => $p->fecha_publicacion?->format('Y-m-d\TH:i'),
-                'fecha_publicacion_humana' => $p->fecha_publicacion ? ($p->fecha_publicacion->year === (int) date('Y') ? $p->fecha_publicacion->locale('es')->isoFormat('D [de] MMMM') : $p->fecha_publicacion->locale('es')->isoFormat('D [de] MMMM [de] YYYY')) : null,
-                'fecha_carga' => $p->created_at?->format('Y-m-d'),
-                'fecha_relativa' => $p->fecha_publicacion?->diffForHumans(),
-                'fecha_confirmada' => (bool) $p->fecha_confirmada,
-                'tipo_formato' => $p->tipo_formato,
-                'tipo_pauta' => $p->tipo_pauta,
-                'monto_invertido_pauta' => (float) $p->monto_invertido_pauta,
-                'vistas_organicas' => $p->vistas_organicas,
-                'vistas_pagadas' => $p->vistas_pagadas,
-                'total_vistas' => $p->total_vistas,
-                'total_likes' => $p->total_likes,
-                'total_comentarios' => $p->total_comentarios,
-                'total_compartidos' => $p->total_compartidos,
-                'total_republicados' => $p->total_republicados,
-                'total_guardados' => $p->total_guardados,
-                'score_impacto_organico' => $p->score_impacto_organico,
-                'tasa_viralidad_pct' => $p->tasa_viralidad_pct,
-                'analisis_traccion' => $p->analisis_traccion,
-                'reacciones_detalladas' => $p->reacciones_detalladas,
-                'aprobacion_neta_pct' => $p->aprobacion_neta_pct,
-                'termometro_humor_social' => $p->termometro_humor_social,
-                'sentimiento_predominante' => $p->sentimiento_predominante,
-                'comentario_destacado' => $p->comentario_destacado,
-                'figura_acompanante' => $p->figura_acompanante,
-                'url_post' => $p->url_post,
-                'media_url' => $p->media_url,
-                'media_embed_url' => $p->media_embed_url,
-                'contenido_resumen' => $p->contenido_resumen,
-                'pauta_eventos' => $p->pautaEventos ? $p->pautaEventos->map(function ($ev) use ($p) {
-                    $deltaLikes = max(0, (int) $p->total_likes - (int) $ev->likes_snapshot);
-                    $deltaComentarios = max(0, (int) $p->total_comentarios - (int) $ev->comentarios_snapshot);
-                    $costoPorLike = ($ev->monto_nuevo > 0 && $deltaLikes > 0)
-                        ? round((float) $ev->monto_nuevo / $deltaLikes, 2)
-                        : null;
-
-                    return [
-                        'id' => $ev->id,
-                        'tipo_pauta_anterior' => $ev->tipo_pauta_anterior,
-                        'tipo_pauta_nuevo' => $ev->tipo_pauta_nuevo,
-                        'monto_anterior' => (float) $ev->monto_anterior,
-                        'monto_nuevo' => (float) $ev->monto_nuevo,
-                        'fecha_evento' => $ev->fecha_evento?->format('d/m/Y H:i'),
-                        'fecha_evento_humana' => $ev->fecha_evento?->diffForHumans(),
-                        'seguidores_canal_snapshot' => (int) $ev->seguidores_canal_snapshot,
-                        'likes_snapshot' => (int) $ev->likes_snapshot,
-                        'comentarios_snapshot' => (int) $ev->comentarios_snapshot,
-                        'vistas_snapshot' => (int) $ev->vistas_snapshot,
-                        'origen' => $ev->origen,
-                        'delta_likes_atribuibles' => $deltaLikes,
-                        'delta_comentarios_atribuibles' => $deltaComentarios,
-                        'costo_por_like' => $costoPorLike,
-                        'notas' => $ev->notas,
-                    ];
-                }) : [],
-            ];
-        });
-
-        $candidatos = Candidato::where('workspace_id', $workspace->id)
-            ->where('es_propio', true)
-            ->orderBy('nombre_completo')
-            ->with('perfilesSociales')
-            ->get();
-
-        $ejes = EjeTematico::where('workspace_id', $workspace->id)
-            ->orderBy('orden')
-            ->orderBy('id')
-            ->get(['id', 'pilar_principal', 'nombre', 'slug', 'color_badge', 'icono', 'orden']);
-
-        return Inertia::render('Publicaciones/Feed', [
-            'publicaciones' => $publicaciones,
-            'candidatos' => $candidatos,
-            'ejes' => $ejes,
-            'anios_disponibles' => $aniosDisponibles,
-            'meses_disponibles' => $mesesDisponibles,
-            'filtros' => [
-                'filtro' => $filtro,
-                'candidato_id' => $candidatoId,
-                'plataforma' => $plataforma,
-                'tipo_pauta' => $tipoPauta,
-                'eje_tematico_id' => $ejeTematicoId,
-                'anio' => $anio,
-                'mes' => $mes,
-                'search' => $search,
-                'orden' => $orden,
-            ],
-            'stats_resumen' => [
-                'total_posts' => $publicaciones->count(),
-                'total_vistas' => $publicaciones->sum('total_vistas'),
-                'total_pauta_invertida' => $publicaciones->sum('monto_invertido_pauta'),
-            ],
-        ]);
+        return Inertia::render('Publicaciones/Feed', $feedData);
     }
 
     /**
@@ -593,7 +139,6 @@ class PublicacionController extends Controller
         $workspace = WorkspaceHelper::activo($request);
         $validated = $request->validated();
 
-        // Resolver o autogenerar el perfil social si vino por plataforma
         $perfilSocialId = $validated['perfil_social_id'] ?? null;
         if (! $perfilSocialId && ! empty($validated['plataforma'])) {
             $candidato = Candidato::findOrFail($validated['candidato_id']);
@@ -615,7 +160,6 @@ class PublicacionController extends Controller
             return redirect()->back()->withErrors(['perfil_social_id' => 'Debes seleccionar o indicar la red social.']);
         }
 
-        // Resolver o autogenerar eje temático si se ingresó nombre
         $ejeId = $validated['eje_tematico_id'] ?? null;
         if (! $ejeId && ! empty($validated['eje_tematico_nombre'])) {
             $ejeNombre = trim($validated['eje_tematico_nombre']);
@@ -633,17 +177,14 @@ class PublicacionController extends Controller
             $ejeId = $eje->id;
         }
 
-        // Canonicalizar URL para unicidad consistente
         $canonicalUrl = ! empty($validated['url_post'])
             ? SocialProfileScraperService::canonicalizePostUrl($validated['url_post'])
             : null;
 
-        // Guardar copia local de la imagen para evitar enlaces vencidos
         $mediaUrlLocal = ! empty($validated['media_url'])
             ? $mediaStorage->guardarMediaLocal($validated['media_url'])
             : null;
 
-        // VERIFICAR UNICIDAD: Evitar publicaciones duplicadas en el workspace
         $duplicado = Publicacion::buscarDuplicado(
             $workspace->id,
             $canonicalUrl ?? $validated['url_post'] ?? null,
@@ -672,9 +213,9 @@ class PublicacionController extends Controller
             : [];
 
         $plataformaResolvida = $validated['plataforma'] ?? $perfil?->plataforma ?? 'instagram';
-        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int) ($validated['total_likes'] ?? 0), $plataformaResolvida);
+        $aiEmocional = $this->syncService->calcularInteligenciaEmocional($validated, (int) ($validated['total_likes'] ?? 0), $plataformaResolvida);
 
-        $publicacion = Publicacion::create([
+        Publicacion::create([
             'workspace_id' => $workspace->id,
             'candidato_id' => $validated['candidato_id'],
             'perfil_social_id' => $perfilSocialId,
@@ -703,7 +244,6 @@ class PublicacionController extends Controller
             'insights_internos_propios' => $aiEmocional['insights_internos_propios'],
         ]);
 
-        // Actualizar contador acumulado del perfil social
         $perfil = PerfilSocial::find($perfilSocialId);
         if ($perfil) {
             $totalPosts = Publicacion::where('perfil_social_id', $perfil->id)->count();
@@ -726,7 +266,6 @@ class PublicacionController extends Controller
 
         $validated = $request->validated();
 
-        // Canonicalizar URL y validar unicidad
         $canonicalUrl = ! empty($validated['url_post'])
             ? SocialProfileScraperService::canonicalizePostUrl($validated['url_post'])
             : $publicacion->url_post;
@@ -749,13 +288,12 @@ class PublicacionController extends Controller
             }
         }
 
-        // Guardar o actualizar copia local de la imagen
         $mediaUrlLocal = array_key_exists('media_url', $validated)
             ? $mediaStorage->guardarMediaLocal($validated['media_url'], $publicacion->media_url)
             : $publicacion->media_url;
 
         $plataformaResolvida = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
-        $aiEmocional = $this->calcularInteligenciaEmocional(
+        $aiEmocional = $this->syncService->calcularInteligenciaEmocional(
             $validated,
             (int) ($validated['total_likes'] ?? $publicacion->total_likes),
             $plataformaResolvida
@@ -783,36 +321,8 @@ class PublicacionController extends Controller
             'insights_internos_propios' => array_merge($publicacion->insights_internos_propios ?? [], $aiEmocional['insights_internos_propios']),
         ];
 
-        // Detectar cambio de tipo_pauta o cambio de presupuesto para registrar snapshot de corte
-        $huboCambioPauta = $validated['tipo_pauta'] !== $publicacion->tipo_pauta
-            || (in_array($validated['tipo_pauta'], Publicacion::TIPOS_CON_INVERSION) && (float) ($validated['monto_invertido_pauta'] ?? 0) !== (float) $publicacion->monto_invertido_pauta);
-
-        if ($huboCambioPauta) {
-            $seguidoresCanal = PerfilSocialMetrica::where('perfil_social_id', $publicacion->perfil_social_id)
-                ->orderByDesc('fecha')
-                ->orderByDesc('id')
-                ->value('seguidores')
-                ?? $publicacion->perfilSocial?->seguidores_actuales
-                ?? 0;
-
-            PublicacionPautaEvento::create([
-                'publicacion_id' => $publicacion->id,
-                'tipo_pauta_anterior' => $publicacion->tipo_pauta,
-                'tipo_pauta_nuevo' => $validated['tipo_pauta'],
-                'monto_anterior' => (float) ($publicacion->monto_invertido_pauta ?? 0),
-                'monto_nuevo' => $validated['tipo_pauta'] !== 'organico' ? (float) ($validated['monto_invertido_pauta'] ?? 0) : 0,
-                'fecha_evento' => Carbon::now(),
-                'seguidores_canal_snapshot' => (int) $seguidoresCanal,
-                'likes_snapshot' => (int) $publicacion->total_likes,
-                'comentarios_snapshot' => (int) $publicacion->total_comentarios,
-                'compartidos_snapshot' => (int) $publicacion->total_compartidos,
-                'vistas_snapshot' => (int) $publicacion->total_vistas,
-                'republicados_snapshot' => (int) ($publicacion->total_republicados ?? 0),
-                'registrado_por' => auth()->id(),
-                'origen' => 'manual',
-                'notas' => "Transición de {$publicacion->tipo_pauta} a {$validated['tipo_pauta']} guardada por usuario.",
-            ]);
-        }
+        // Registrar evento si hubo cambio en pauta o inversión
+        $this->syncService->registrarEventoCambioPauta($publicacion, $validated, auth()->id());
 
         if (! empty($validated['fecha_publicacion'])) {
             $updateData['fecha_publicacion'] = $validated['fecha_publicacion'];
@@ -826,8 +336,7 @@ class PublicacionController extends Controller
     }
 
     /**
-     * Confirmación rápida de fecha de publicación (edición inline desde la tarjeta del Feed).
-     * Solo actualiza fecha_publicacion sin re-calcular métricas emocionales.
+     * Confirmación rápida de fecha de publicación.
      */
     public function actualizarFecha(ActualizarFechaPublicacionRequest $request, Publicacion $publicacion): RedirectResponse
     {
@@ -845,123 +354,6 @@ class PublicacionController extends Controller
     }
 
     /**
-     * Motor de Inteligencia Emocional & Sentimiento Cuantificado.
-     */
-    public function calcularInteligenciaEmocional(array $data, int $totalLikesFallback = 0, ?string $plataforma = null): array
-    {
-        $plat = strtolower($plataforma ?? $data['plataforma'] ?? '');
-
-        // Extraer valores soportando nombres en español y nombres en inglés
-        $meGusta = (int) ($data['me_gusta'] ?? ($data['reacciones_detalladas']['like'] ?? ($data['reacciones_detalladas']['me_gusta'] ?? 0)));
-        $meEncanta = (int) ($data['me_encanta'] ?? ($data['reacciones_detalladas']['love'] ?? ($data['reacciones_detalladas']['me_encanta'] ?? 0)));
-        $meImporta = (int) ($data['me_importa'] ?? ($data['reacciones_detalladas']['care'] ?? ($data['reacciones_detalladas']['me_importa'] ?? 0)));
-        $meDivierte = (int) ($data['me_divierte'] ?? ($data['reacciones_detalladas']['haha'] ?? ($data['reacciones_detalladas']['me_divierte'] ?? 0)));
-        $meAsombra = (int) ($data['me_asombra'] ?? ($data['reacciones_detalladas']['wow'] ?? ($data['reacciones_detalladas']['me_asombra'] ?? 0)));
-        $meEntristece = (int) ($data['me_entristece'] ?? ($data['reacciones_detalladas']['sad'] ?? ($data['reacciones_detalladas']['me_entristece'] ?? 0)));
-        $meEnoja = (int) ($data['me_enoja'] ?? ($data['reacciones_detalladas']['angry'] ?? ($data['reacciones_detalladas']['me_enoja'] ?? 0)));
-
-        $totalReacciones = $meGusta + $meEncanta + $meImporta + $meDivierte + $meAsombra + $meEntristece + $meEnoja;
-
-        // Si es Instagram, TikTok, X/Twitter o YouTube: no utilizan reacciones emocionales estilo Facebook
-        if (in_array($plat, ['instagram', 'tiktok', 'x_twitter', 'youtube']) || ($plat !== 'facebook' && $totalReacciones === 0)) {
-            $totalFinalLikes = $totalLikesFallback > 0 ? $totalLikesFallback : ($totalReacciones > 0 ? $totalReacciones : $meGusta);
-            $termometro = (int) ($data['termometro_humor_social'] ?? 5);
-            $sentimiento = $termometro >= 4 ? 'positivo' : ($termometro === 3 ? 'neutro' : 'negativo');
-
-            return [
-                'total_likes' => $totalFinalLikes,
-                'reacciones_detalladas' => [
-                    'me_gusta' => $totalFinalLikes,
-                    'me_encanta' => 0,
-                    'me_importa' => 0,
-                    'me_divierte' => 0,
-                    'me_asombra' => 0,
-                    'me_entristece' => 0,
-                    'me_enoja' => 0,
-                ],
-                'sentimiento_predominante' => $sentimiento,
-                'termometro_humor_social' => $termometro,
-                'insights_internos_propios' => [
-                    'indice_aprobacion_neta' => 100.0,
-                    'ratio_indignacion' => 0.0,
-                    'alerta_crisis' => false,
-                    'total_reacciones_positivas' => $totalFinalLikes,
-                    'total_reacciones_negativas' => 0,
-                    'total_reacciones_humor' => 0,
-                ],
-            ];
-        }
-
-        // Lógica de cálculo para Facebook o redes con desglose granular
-        if ($totalReacciones === 0 && $totalLikesFallback > 0) {
-            $totalReacciones = $totalLikesFallback;
-            $meGusta = $totalLikesFallback;
-        }
-
-        $tieneDesgloseEmocional = ($meEncanta + $meImporta + $meDivierte + $meAsombra + $meEntristece + $meEnoja) > 0;
-
-        $positivas = $meGusta + $meEncanta + $meImporta;
-        $negativas = $meEnoja + $meEntristece;
-        $humorViral = $meDivierte;
-
-        $indiceAprobacion = ($tieneDesgloseEmocional && $totalReacciones > 0)
-            ? round((($positivas - $negativas) / $totalReacciones) * 100, 1)
-            : null;
-
-        $ratioIndignacion = ($tieneDesgloseEmocional && $totalReacciones > 0)
-            ? round(($meEnoja / $totalReacciones) * 100, 1)
-            : 0.0;
-
-        $alertaCrisis = $ratioIndignacion >= 15.0;
-
-        if ($indiceAprobacion !== null) {
-            if ($indiceAprobacion >= 65) {
-                $termometro = 5;
-                $sentimiento = 'positivo';
-            } elseif ($indiceAprobacion >= 30) {
-                $termometro = 4;
-                $sentimiento = 'positivo';
-            } elseif ($indiceAprobacion >= -10) {
-                $termometro = 3;
-                $sentimiento = 'neutro';
-            } elseif ($indiceAprobacion >= -40) {
-                $termometro = 2;
-                $sentimiento = 'negativo';
-            } else {
-                $termometro = 1;
-                $sentimiento = 'negativo';
-            }
-        } else {
-            $termometro = (int) ($data['termometro_humor_social'] ?? 5);
-            $sentimiento = 'positivo';
-        }
-
-        return [
-            'total_likes' => $totalReacciones,
-            'reacciones_detalladas' => [
-                'me_gusta' => $meGusta,
-                'me_encanta' => $meEncanta,
-                'me_importa' => $meImporta,
-                'me_divierte' => $meDivierte,
-                'me_asombra' => $meAsombra,
-                'me_entristece' => $meEntristece,
-                'me_enoja' => $meEnoja,
-            ],
-            'sentimiento_predominante' => $sentimiento,
-            'termometro_humor_social' => $termometro,
-            'insights_internos_propios' => [
-                'indice_aprobacion_neta' => $indiceAprobacion,
-                'ratio_indignacion' => $ratioIndignacion,
-                'alerta_crisis' => $alertaCrisis,
-                'total_reacciones_positivas' => $positivas,
-                'total_reacciones_negativas' => $negativas,
-                'total_reacciones_humor' => $humorViral,
-                'desglose_verificado' => $tieneDesgloseEmocional,
-            ],
-        ];
-    }
-
-    /**
      * Eliminar publicación.
      */
     public function destroy(Request $request, Publicacion $publicacion): RedirectResponse
@@ -973,5 +365,13 @@ class PublicacionController extends Controller
 
         return redirect()->back()
             ->with('success', 'Publicación eliminada correctamente.');
+    }
+
+    /**
+     * Helper de cálculo emocional (delegado al servicio).
+     */
+    public function calcularInteligenciaEmocional(array $data, int $totalLikesFallback = 0, ?string $plataforma = null): array
+    {
+        return $this->syncService->calcularInteligenciaEmocional($data, $totalLikesFallback, $plataforma);
     }
 }
