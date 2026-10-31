@@ -1,6 +1,6 @@
 # Ranking de complejidad — BrandingPo
 
-> Generado: 2026-10-31 · commit `2a45caf` · rama `main`
+> Generado: 2026-10-31 · commit `fd9de59` · rama `main`
 
 ## Vistas y componentes frontend (Vue) (umbral 500 lín · crítico 800 lín)
 
@@ -47,7 +47,7 @@ Archivos: 15 · sobre umbral: **1** · críticos: **1**
 
 | Líneas | Estado | Archivo | Acceso a datos |
 |---:|---|---|---|
-| 378 | 🔴 Crítico | `app/Http/Controllers/PublicacionController.php` | — |
+| 304 | 🔴 Crítico | `app/Http/Controllers/PublicacionController.php` | — |
 | 200 | 🔵 Moderado | `app/Http/Controllers/CandidatoController.php` | — |
 | 191 | 🔵 Moderado | `app/Http/Controllers/MediosController.php` | — |
 | 168 | 🔵 Moderado | `app/Http/Controllers/CrisisController.php` | — |
@@ -67,7 +67,7 @@ Archivos: 15 · sobre umbral: **1** · críticos: **1**
 
 ## Servicios de negocio (Laravel) (umbral 300 lín · crítico 500 lín)
 
-Archivos: 17 · sobre umbral: **10** · críticos: **5**
+Archivos: 17 · sobre umbral: **10** · críticos: **6**
 
 | Líneas | Estado | Archivo | Acceso a datos |
 |---:|---|---|---|
@@ -75,10 +75,10 @@ Archivos: 17 · sobre umbral: **10** · críticos: **5**
 | 803 | 🔴 Crítico | `app/Services/CanalMetricasService.php` | — |
 | 596 | 🔴 Crítico | `app/Services/TerritorioImpactoService.php` | — |
 | 537 | 🔴 Crítico | `app/Services/ReporteEjecutivoService.php` | — |
+| 523 | 🔴 Crítico | `app/Services/PublicacionSyncService.php` | — |
 | 508 | 🔴 Crítico | `app/Services/DemographicIntelligenceService.php` | — |
 | 440 | 🟡 Sobre umbral | `app/Services/EjesEstrategicosService.php` | — |
 | 413 | 🟡 Sobre umbral | `app/Services/CandidatoPresenterService.php` | — |
-| 413 | 🟡 Sobre umbral | `app/Services/PublicacionSyncService.php` | — |
 | 380 | 🟡 Sobre umbral | `app/Services/GenericMediaScraperService.php` | — |
 | 359 | 🟡 Sobre umbral | `app/Services/MediosClippingService.php` | — |
 | 259 | 🔵 Moderado | `app/Services/PublicacionFeedService.php` | — |
@@ -93,9 +93,9 @@ Archivos: 17 · sobre umbral: **10** · críticos: **5**
 
 ## Control de versiones
 
-- Commits totales: 139
+- Commits totales: 144
 - Convención de commits (últimos 50): **100%**
-- Tags: 0 — **sin tags de versión**
+- Tags: 1 (último: `v1.0.0`)
 
 ## Documentación
 

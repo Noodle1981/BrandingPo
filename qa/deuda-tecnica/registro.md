@@ -10,7 +10,7 @@ Alcance vigente: ver `alcance.md`. Última actualización: 2026-10-31.
 | AUD-003 | Alta | Backend | `PublicacionController.php` acumula 980 lín y scraping acoplado | Thin Controllers < 200 lín | 2026-10-31 | Resuelto | 2026-10-31 | Reducido a 378 lín delegando en `PublicacionSyncService` y `PublicacionFeedService` |
 | AUD-004 | Media | Frontend | Componente `SocialCard.vue` supera umbral crítico (1.065 lín) | Componentes UI < 500 lín | 2026-10-31 | Resuelto | 2026-10-31 | Reducido a 737 lín delegando en 6 subcomponentes dedicados de reacciones, badges y pauta |
 | AUD-005 | Media | Backend | `SocialProfileScraperService.php` monolítico con 1.761 lín | Principio de Responsabilidad Única | 2026-10-31 | Resuelto | 2026-10-31 | Modularizado en `SocialProfileScraper` y `SocialPostScraper`, reduciendo el servicio a ~70 lín |
-| AUD-006 | Baja | Git | Ausencia de etiquetado de versiones (0 tags en repo) | SemVer y trazabilidad de despliegue | 2026-10-31 | Abierto | — | Crear tags versionados en hitos estables |
+| AUD-006 | Baja | Git | Ausencia de etiquetado de versiones (0 tags en repo) | SemVer y trazabilidad de despliegue | 2026-10-31 | Resuelto | 2026-10-31 | Etiquetada versión `v1.0.0` en commit formal y push al repositorio |
 
 ## Notas privadas para fases futuras (no se auditan hoy)
 - Monitoreo de cuotas y proxies rotativos para scraping automatizado a gran escala en caso de despliegue multi-tenant.
@@ -19,4 +19,4 @@ Alcance vigente: ver `alcance.md`. Última actualización: 2026-10-31.
 | # | Fecha | Commit | Alcance | Semáforo | Críticas | Altas | Medias | Bajas | Resueltas |
 |---|---|---|---|---|---|---|---|---|---|
 | 0 | 2026-10-31 | `4334159` | Baseline inicial de instalación QA | 🟡 GO con riesgos | 0 | 3 | 2 | 1 | 0 |
-| 1 | 2026-10-31 | `current` | Resolución de auditorías críticas frontend y backend | 🟢 GO | 0 | 0 | 0 | 1 | 5 |
+| 1 | 2026-10-31 | `v1.0.0` | Resolución total de deuda técnica (100% cerradas) | 🟢 GO | 0 | 0 | 0 | 0 | 6 |

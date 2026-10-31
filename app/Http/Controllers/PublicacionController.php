@@ -17,7 +17,6 @@ use App\Services\SocialProfileScraperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -201,59 +200,14 @@ class PublicacionController extends Controller
             ]);
         }
 
-        $vistasOrg = (int) ($validated['vistas_organicas'] ?? 0);
-        $vistasPag = (int) ($validated['vistas_pagadas'] ?? 0);
-        $totalVistas = $vistasOrg + $vistasPag;
-
-        $comentariosDestacados = ! empty($validated['comentario_destacado'])
-            ? [$validated['comentario_destacado']]
-            : [];
-
-        $figuras = ! empty($validated['figura_acompanante'])
-            ? array_map('trim', explode(',', $validated['figura_acompanante']))
-            : [];
-
-        $plataformaResolvida = $validated['plataforma'] ?? $perfil?->plataforma ?? 'instagram';
-        $aiEmocional = $this->syncService->calcularInteligenciaEmocional($validated, (int) ($validated['total_likes'] ?? 0), $plataformaResolvida);
-
-        DB::transaction(function () use ($workspace, $validated, $perfilSocialId, $ejeId, $canonicalUrl, $mediaUrlLocal, $vistasOrg, $vistasPag, $totalVistas, $aiEmocional, $figuras, $comentariosDestacados) {
-            Publicacion::create([
-                'workspace_id' => $workspace->id,
-                'candidato_id' => $validated['candidato_id'],
-                'perfil_social_id' => $perfilSocialId,
-                'eje_tematico_id' => $ejeId,
-                'fecha_publicacion' => $validated['fecha_publicacion'],
-                'fecha_confirmada' => true,
-                'tipo_formato' => $validated['tipo_formato'],
-                'tipo_pauta' => $validated['tipo_pauta'],
-                'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
-                'url_post' => $canonicalUrl ?? $validated['url_post'] ?? null,
-                'media_url' => $mediaUrlLocal,
-                'vistas_organicas' => $vistasOrg,
-                'vistas_pagadas' => $vistasPag,
-                'contenido_resumen' => $validated['contenido_resumen'],
-                'total_vistas' => $totalVistas,
-                'total_likes' => $aiEmocional['total_likes'],
-                'total_comentarios' => (int) ($validated['total_comentarios'] ?? 0),
-                'total_compartidos' => (int) ($validated['total_compartidos'] ?? 0),
-                'total_republicados' => (int) ($validated['total_republicados'] ?? 0),
-                'total_guardados' => (int) ($validated['total_guardados'] ?? 0),
-                'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
-                'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
-                'figuras_acompanantes' => $figuras,
-                'comentarios_destacados' => $comentariosDestacados,
-                'termometro_humor_social' => $validated['termometro_humor_social'] ?? $aiEmocional['termometro_humor_social'],
-                'insights_internos_propios' => $aiEmocional['insights_internos_propios'],
-            ]);
-
-            $perfil = PerfilSocial::find($perfilSocialId);
-            if ($perfil) {
-                $totalPosts = Publicacion::where('perfil_social_id', $perfil->id)->count();
-                if ($totalPosts > $perfil->publicaciones_totales) {
-                    $perfil->update(['publicaciones_totales' => $totalPosts]);
-                }
-            }
-        });
+        $this->syncService->guardarNuevaPublicacion(
+            $workspace->id,
+            $validated,
+            $canonicalUrl,
+            $mediaUrlLocal,
+            (int) $perfilSocialId,
+            $ejeId ? (int) $ejeId : null
+        );
 
         return redirect()->back()
             ->with('success', 'Publicación registrada con éxito.');
@@ -295,45 +249,13 @@ class PublicacionController extends Controller
             ? $mediaStorage->guardarMediaLocal($validated['media_url'], $publicacion->media_url)
             : $publicacion->media_url;
 
-        $plataformaResolvida = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
-        $aiEmocional = $this->syncService->calcularInteligenciaEmocional(
+        $this->syncService->actualizarPublicacion(
+            $publicacion,
             $validated,
-            (int) ($validated['total_likes'] ?? $publicacion->total_likes),
-            $plataformaResolvida
+            $canonicalUrl,
+            $mediaUrlLocal,
+            auth()->id()
         );
-
-        $updateData = [
-            'contenido_resumen' => $validated['contenido_resumen'],
-            'url_post' => $canonicalUrl ?? $validated['url_post'] ?? null,
-            'media_url' => $mediaUrlLocal,
-            'tipo_formato' => $validated['tipo_formato'],
-            'tipo_pauta' => $validated['tipo_pauta'],
-            'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
-            'eje_tematico_id' => $validated['eje_tematico_id'] ?? null,
-            'vistas_organicas' => (int) ($validated['vistas_organicas'] ?? $publicacion->vistas_organicas),
-            'vistas_pagadas' => (int) ($validated['vistas_pagadas'] ?? $publicacion->vistas_pagadas),
-            'total_vistas' => (int) ($validated['total_vistas'] ?? $publicacion->total_vistas),
-            'total_likes' => $aiEmocional['total_likes'],
-            'total_comentarios' => (int) ($validated['total_comentarios'] ?? $publicacion->total_comentarios),
-            'total_compartidos' => (int) ($validated['total_compartidos'] ?? $publicacion->total_compartidos),
-            'total_republicados' => (int) ($validated['total_republicados'] ?? $publicacion->total_republicados),
-            'total_guardados' => (int) ($validated['total_guardados'] ?? $publicacion->total_guardados),
-            'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
-            'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
-            'termometro_humor_social' => $validated['termometro_humor_social'] ?? $aiEmocional['termometro_humor_social'],
-            'insights_internos_propios' => array_merge($publicacion->insights_internos_propios ?? [], $aiEmocional['insights_internos_propios']),
-        ];
-
-        if (! empty($validated['fecha_publicacion'])) {
-            $updateData['fecha_publicacion'] = $validated['fecha_publicacion'];
-            $updateData['fecha_confirmada'] = true;
-        }
-
-        DB::transaction(function () use ($publicacion, $validated, $updateData) {
-            // Registrar evento si hubo cambio en pauta o inversión
-            $this->syncService->registrarEventoCambioPauta($publicacion, $validated, auth()->id());
-            $publicacion->update($updateData);
-        });
 
         return redirect()->back()
             ->with('success', 'Publicación actualizada correctamente.');

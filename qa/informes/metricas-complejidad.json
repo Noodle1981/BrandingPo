@@ -1,5 +1,5 @@
 {
-  "generado": "2026-10-31T17:28:21.538Z",
+  "generado": "2026-10-31T17:58:41.274Z",
   "proyecto": "BrandingPo",
   "categorias": [
     {
@@ -582,7 +582,7 @@
         {
           "ruta": "app/Http/Controllers/PublicacionController.php",
           "nombre": "PublicacionController.php",
-          "lineas": 378,
+          "lineas": 304,
           "estado": "critico",
           "accesoDatos": []
         },
@@ -729,6 +729,13 @@
           "accesoDatos": []
         },
         {
+          "ruta": "app/Services/PublicacionSyncService.php",
+          "nombre": "PublicacionSyncService.php",
+          "lineas": 523,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
           "ruta": "app/Services/DemographicIntelligenceService.php",
           "nombre": "DemographicIntelligenceService.php",
           "lineas": 508,
@@ -745,13 +752,6 @@
         {
           "ruta": "app/Services/CandidatoPresenterService.php",
           "nombre": "CandidatoPresenterService.php",
-          "lineas": 413,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "app/Services/PublicacionSyncService.php",
-          "nombre": "PublicacionSyncService.php",
           "lineas": 413,
           "estado": "sobre-umbral",
           "accesoDatos": []
@@ -823,20 +823,20 @@
       "resumen": {
         "total": 17,
         "sobreUmbral": 10,
-        "criticos": 5,
+        "criticos": 6,
         "accesoDatos": 0
       }
     }
   ],
   "versiones": {
-    "commitsTotales": 139,
+    "commitsTotales": 144,
     "commitsAnalizados": 50,
     "porcentajeConvencional": 100,
     "noConvencionalesEjemplo": [],
-    "tags": 0,
-    "ultimoTag": null,
+    "tags": 1,
+    "ultimoTag": "v1.0.0",
     "ramaActual": "main",
-    "commitActual": "2a45caf"
+    "commitActual": "fd9de59"
   },
   "documentacion": {
     "rutasDocs": [

@@ -7,6 +7,7 @@ use App\Models\PerfilSocialMetrica;
 use App\Models\Publicacion;
 use App\Models\PublicacionPautaEvento;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PublicacionSyncService
@@ -408,5 +409,114 @@ class PublicacionSyncService
             'origen' => 'manual',
             'notas' => "Transición de {$publicacion->tipo_pauta} a {$validated['tipo_pauta']} guardada por usuario.",
         ]);
+    }
+
+    /**
+     * Crear una nueva publicación de forma transaccional.
+     */
+    public function guardarNuevaPublicacion(int $workspaceId, array $validated, ?string $canonicalUrl, ?string $mediaUrlLocal, int $perfilSocialId, ?int $ejeId): Publicacion
+    {
+        $vistasOrg = (int) ($validated['vistas_organicas'] ?? 0);
+        $vistasPag = (int) ($validated['vistas_pagadas'] ?? 0);
+        $totalVistas = $vistasOrg + $vistasPag;
+
+        $comentariosDestacados = ! empty($validated['comentario_destacado'])
+            ? [$validated['comentario_destacado']]
+            : [];
+
+        $figuras = ! empty($validated['figura_acompanante'])
+            ? array_map('trim', explode(',', $validated['figura_acompanante']))
+            : [];
+
+        $plataformaResolvida = $validated['plataforma'] ?? 'instagram';
+        $aiEmocional = $this->calcularInteligenciaEmocional($validated, (int) ($validated['total_likes'] ?? 0), $plataformaResolvida);
+
+        return DB::transaction(function () use ($workspaceId, $validated, $perfilSocialId, $ejeId, $canonicalUrl, $mediaUrlLocal, $vistasOrg, $vistasPag, $totalVistas, $aiEmocional, $figuras, $comentariosDestacados) {
+            $pub = Publicacion::create([
+                'workspace_id' => $workspaceId,
+                'candidato_id' => $validated['candidato_id'],
+                'perfil_social_id' => $perfilSocialId,
+                'eje_tematico_id' => $ejeId,
+                'fecha_publicacion' => $validated['fecha_publicacion'],
+                'fecha_confirmada' => true,
+                'tipo_formato' => $validated['tipo_formato'],
+                'tipo_pauta' => $validated['tipo_pauta'],
+                'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
+                'url_post' => $canonicalUrl ?? $validated['url_post'] ?? null,
+                'media_url' => $mediaUrlLocal,
+                'vistas_organicas' => $vistasOrg,
+                'vistas_pagadas' => $vistasPag,
+                'contenido_resumen' => $validated['contenido_resumen'],
+                'total_vistas' => $totalVistas,
+                'total_likes' => $aiEmocional['total_likes'],
+                'total_comentarios' => (int) ($validated['total_comentarios'] ?? 0),
+                'total_compartidos' => (int) ($validated['total_compartidos'] ?? 0),
+                'total_republicados' => (int) ($validated['total_republicados'] ?? 0),
+                'total_guardados' => (int) ($validated['total_guardados'] ?? 0),
+                'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
+                'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
+                'figuras_acompanantes' => $figuras,
+                'comentarios_destacados' => $comentariosDestacados,
+                'termometro_humor_social' => $validated['termometro_humor_social'] ?? $aiEmocional['termometro_humor_social'],
+                'insights_internos_propios' => $aiEmocional['insights_internos_propios'],
+            ]);
+
+            $perfil = PerfilSocial::find($perfilSocialId);
+            if ($perfil) {
+                $totalPosts = Publicacion::where('perfil_social_id', $perfil->id)->count();
+                if ($totalPosts > $perfil->publicaciones_totales) {
+                    $perfil->update(['publicaciones_totales' => $totalPosts]);
+                }
+            }
+
+            return $pub;
+        });
+    }
+
+    /**
+     * Actualizar una publicación existente de forma transaccional.
+     */
+    public function actualizarPublicacion(Publicacion $publicacion, array $validated, ?string $canonicalUrl, ?string $mediaUrlLocal, ?int $userId): Publicacion
+    {
+        $plataformaResolvida = $publicacion->perfilSocial?->plataforma ?? $publicacion->plataforma ?? 'instagram';
+        $aiEmocional = $this->calcularInteligenciaEmocional(
+            $validated,
+            (int) ($validated['total_likes'] ?? $publicacion->total_likes),
+            $plataformaResolvida
+        );
+
+        $updateData = [
+            'contenido_resumen' => $validated['contenido_resumen'],
+            'url_post' => $canonicalUrl ?? $validated['url_post'] ?? null,
+            'media_url' => $mediaUrlLocal,
+            'tipo_formato' => $validated['tipo_formato'],
+            'tipo_pauta' => $validated['tipo_pauta'],
+            'monto_invertido_pauta' => $validated['tipo_pauta'] !== 'organico' ? ($validated['monto_invertido_pauta'] ?? 0) : 0,
+            'eje_tematico_id' => $validated['eje_tematico_id'] ?? null,
+            'vistas_organicas' => (int) ($validated['vistas_organicas'] ?? $publicacion->vistas_organicas),
+            'vistas_pagadas' => (int) ($validated['vistas_pagadas'] ?? $publicacion->vistas_pagadas),
+            'total_vistas' => (int) ($validated['total_vistas'] ?? $publicacion->total_vistas),
+            'total_likes' => $aiEmocional['total_likes'],
+            'total_comentarios' => (int) ($validated['total_comentarios'] ?? $publicacion->total_comentarios),
+            'total_compartidos' => (int) ($validated['total_compartidos'] ?? $publicacion->total_compartidos),
+            'total_republicados' => (int) ($validated['total_republicados'] ?? $publicacion->total_republicados),
+            'total_guardados' => (int) ($validated['total_guardados'] ?? $publicacion->total_guardados),
+            'reacciones_detalladas' => $aiEmocional['reacciones_detalladas'],
+            'sentimiento_predominante' => $aiEmocional['sentimiento_predominante'],
+            'termometro_humor_social' => $validated['termometro_humor_social'] ?? $aiEmocional['termometro_humor_social'],
+            'insights_internos_propios' => array_merge($publicacion->insights_internos_propios ?? [], $aiEmocional['insights_internos_propios']),
+        ];
+
+        if (! empty($validated['fecha_publicacion'])) {
+            $updateData['fecha_publicacion'] = $validated['fecha_publicacion'];
+            $updateData['fecha_confirmada'] = true;
+        }
+
+        return DB::transaction(function () use ($publicacion, $validated, $updateData, $userId) {
+            $this->registrarEventoCambioPauta($publicacion, $validated, $userId);
+            $publicacion->update($updateData);
+
+            return $publicacion;
+        });
     }
 }
