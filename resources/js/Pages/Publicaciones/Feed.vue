@@ -3,17 +3,13 @@ import { ref, computed, watch } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import SocialCard from '../../Components/SocialCard.vue';
-import SocialPlatformIcon from '../../Components/SocialPlatformIcon.vue';
 import FeedFastFlowModal from '../../Components/Feed/FeedFastFlowModal.vue';
+import FeedFilterToolbar from '../../Components/Feed/FeedFilterToolbar.vue';
 import { useFormatters } from '../../composables/useFormatters';
 import {
   Radio,
-  Search,
-  Filter,
   Fingerprint,
   Plus,
-  X,
-  Calendar
 } from '@lucide/vue';
 
 const props = defineProps({
@@ -60,16 +56,6 @@ const selectedAnio = ref(props.filtros.anio || '');
 const selectedMes = ref(props.filtros.mes || '');
 const selectedOrden = ref(props.filtros.orden || 'recientes');
 
-const plataformas = [
-  { key: 'facebook', label: 'Facebook', color: '#1877F2' },
-  { key: 'instagram', label: 'Instagram', color: '#E4405F' },
-  { key: 'threads', label: 'Threads', color: '#000000' },
-  { key: 'tiktok', label: 'TikTok', color: '#00F2FE' },
-  { key: 'youtube', label: 'YouTube', color: '#FF0000' },
-  { key: 'x_twitter', label: 'X (Twitter)', color: '#64748b' },
-  { key: 'linkedin', label: 'LinkedIn', color: '#0A66C2' },
-];
-
 const groupedEjes = computed(() => {
   const list = props.ejes || [];
   const groups = {};
@@ -83,13 +69,6 @@ const groupedEjes = computed(() => {
   });
   return groups;
 });
-
-const tiposPauta = [
-  { key: 'organico', label: 'Orgánica Pura', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
-  { key: 'con_huella', label: '🎯 Con Huella de Pauta', color: 'bg-pink-500/10 text-pink-500 border-pink-500/20' },
-  { key: 'organico_impulsado', label: 'Orgánica Impulsada (Boost)', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
-  { key: 'pauta_paga', label: 'Pauta Paga / Dark Post', color: 'bg-violet-500/10 text-violet-500 border-violet-500/20' },
-];
 
 const escaneandoHuellas = ref(false);
 const huellaScanResultado = ref(null);
@@ -253,180 +232,28 @@ const openCreateModal = () => {
         </div>
       </div>
 
-      <!-- Barra de Filtros Avanzados -->
-      <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div class="flex items-center justify-between flex-wrap gap-2">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs font-bold font-mono uppercase text-slate-500 flex items-center gap-1.5">
-              <Filter class="w-3.5 h-3.5 text-cyan-500" />
-              <span>Filtros Operativos</span>
-            </span>
-
-            <!-- Botón Detectar Huellas de Pauta -->
-            <button
-              v-if="canWrite"
-              type="button"
-              @click="detectarHuellasPauta"
-              :disabled="escaneandoHuellas"
-              class="p-1.5 rounded-xl text-xs font-mono font-bold bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 border border-pink-500/30 hover:border-pink-500/60 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 shadow-2xs"
-              :title="escaneandoHuellas ? 'Escaneando...' : 'Escanear publicaciones orgánicas en busca de huellas publicitarias'"
-            >
-              <Fingerprint class="w-4 h-4" :class="escaneandoHuellas ? 'animate-spin' : ''" />
-            </button>
-          </div>
-
-          <!-- Botón Limpiar Filtros -->
-          <button
-            v-if="selectedCandidato || selectedPlataforma || selectedTipoPauta || selectedEje || selectedAnio || selectedMes"
-            type="button"
-            @click="clearFilters"
-            class="text-xs text-rose-500 hover:text-rose-400 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-          >
-            <X class="w-3.5 h-3.5" />
-            <span>Limpiar Filtros</span>
-          </button>
-        </div>
-
-        <!-- Filtros Rápidos por Red Social -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
-          <button
-            type="button"
-            @click="filterByPlatform('')"
-            class="px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border shrink-0"
-            :class="!selectedPlataforma
-              ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent shadow-xs'
-              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'"
-          >
-            🌐 Todas las Redes
-          </button>
-          <button
-            v-for="plat in plataformas"
-            :key="plat.key"
-            type="button"
-            @click="filterByPlatform(plat.key)"
-            class="px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border shrink-0 flex items-center gap-1.5"
-            :class="selectedPlataforma === plat.key
-              ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-xs'
-              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'"
-          >
-            <SocialPlatformIcon :platform="plat.key" size="xs" />
-            <span>{{ plat.label }}</span>
-          </button>
-        </div>
-
-        <!-- Filtros Rápidos por Tipo de Pauta -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
-          <button
-            type="button"
-            @click="filterByPauta('')"
-            class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border shrink-0"
-            :class="!selectedTipoPauta
-              ? 'bg-slate-800 text-slate-100 border-slate-600'
-              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'"
-          >
-            Todo Tipo
-          </button>
-          <button
-            v-for="pauta in tiposPauta"
-            :key="pauta.key"
-            type="button"
-            @click="filterByPauta(pauta.key)"
-            class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border shrink-0"
-            :class="selectedTipoPauta === pauta.key
-              ? 'bg-cyan-500 text-slate-950 border-cyan-400'
-              : pauta.color"
-          >
-            {{ pauta.label }}
-          </button>
-        </div>
-
-        <!-- Selectores Secundarios en una sola línea (Candidato, Eje, Pauta, Año, Mes, Orden) -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" :class="candidatos.length > 1 ? 'lg:grid-cols-6' : 'lg:grid-cols-5'">
-          <!-- Selector Candidato (si hay más de 1 candidato) -->
-          <select
-            v-if="candidatos.length > 1"
-            v-model="selectedCandidato"
-            @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
-          >
-            <option value="">👤 Candidato (Todos)</option>
-            <option v-for="c in candidatos" :key="c.id" :value="c.id">
-              {{ c.nombre_completo }}
-            </option>
-          </select>
-
-          <!-- Selector Eje Temático Agrupado por Pilar Estratégico -->
-          <select
-            v-model="selectedEje"
-            @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
-          >
-            <option value="">Eje Temático (Todos)</option>
-            <optgroup v-for="(ejesInGroup, pilar) in groupedEjes" :key="pilar" :label="pilar">
-              <option v-for="eje in ejesInGroup" :key="eje.id" :value="eje.id">
-                • {{ eje.nombre }}
-              </option>
-            </optgroup>
-          </select>
-
-          <!-- Selector de Tipo de Pauta -->
-          <select
-            v-model="selectedTipoPauta"
-            @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
-          >
-            <option value="">Orgánico & Pauta</option>
-            <option value="con_huella">🎯 Sospechosos con Huella</option>
-            <option value="organico">Orgánico Puro</option>
-            <option value="organico_impulsado">Orgánico Impulsado</option>
-            <option value="pauta_paga">Anuncio / Pauta</option>
-          </select>
-
-          <!-- Selector de Año -->
-          <select
-            v-model="selectedAnio"
-            @change="onAnioChange"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
-          >
-            <option value="">Año (Todos)</option>
-            <option
-              v-for="a in anios_disponibles"
-              :key="a"
-              :value="a"
-            >
-              {{ a }}
-            </option>
-          </select>
-
-          <!-- Selector de Mes -->
-          <select
-            v-model="selectedMes"
-            @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
-          >
-            <option value="">Mes (Todos)</option>
-            <option
-              v-for="m in meses_disponibles"
-              :key="m.numero"
-              :value="m.numero"
-            >
-              {{ m.nombre }}
-            </option>
-          </select>
-
-          <!-- Selector de Orden Cronológico -->
-          <select
-            v-model="selectedOrden"
-            @change="applyFilters"
-            class="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-cyan-500 w-full"
-            title="Orden de las publicaciones"
-          >
-            <option value="recientes">🕒 Más Recientes</option>
-            <option value="antiguos">⏳ Más Antiguos</option>
-            <option value="interacciones">🔥 Más Interacciones</option>
-          </select>
-        </div>
-      </div>
+      <!-- Barra de Filtros Avanzados Delegada -->
+      <FeedFilterToolbar
+        :candidatos="candidatos"
+        :anios-disponibles="anios_disponibles"
+        :meses-disponibles="meses_disponibles"
+        :grouped-ejes="groupedEjes"
+        v-model:selected-candidato="selectedCandidato"
+        v-model:selected-plataforma="selectedPlataforma"
+        v-model:selected-tipo-pauta="selectedTipoPauta"
+        v-model:selected-eje="selectedEje"
+        v-model:selected-anio="selectedAnio"
+        v-model:selected-mes="selectedMes"
+        v-model:selected-orden="selectedOrden"
+        :can-write="canWrite"
+        :escaneando-huellas="escaneandoHuellas"
+        @apply-filters="applyFilters"
+        @clear-filters="clearFilters"
+        @filter-by-platform="filterByPlatform"
+        @filter-by-pauta="filterByPauta"
+        @on-anio-change="onAnioChange"
+        @detectar-huellas-pauta="detectarHuellasPauta"
+      />
 
       <!-- Banner de Resultado de Detección de Huellas de Pauta -->
       <div

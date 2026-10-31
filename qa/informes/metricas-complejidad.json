@@ -1,5 +1,5 @@
 {
-  "generado": "2026-10-31T17:58:41.274Z",
+  "generado": "2026-10-31T18:32:30.098Z",
   "proyecto": "BrandingPo",
   "categorias": [
     {
@@ -13,91 +13,21 @@
         {
           "ruta": "resources/js/Components/SocialCardEditModal.vue",
           "nombre": "SocialCardEditModal.vue",
-          "lineas": 795,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Components/SocialCard.vue",
-          "nombre": "SocialCard.vue",
-          "lineas": 737,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Pages/Ejes/Index.vue",
-          "nombre": "Index.vue",
-          "lineas": 715,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Pages/Reportes/Ejecutivo.vue",
-          "nombre": "Ejecutivo.vue",
-          "lineas": 658,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Pages/Calendario/Index.vue",
-          "nombre": "Index.vue",
-          "lineas": 655,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Pages/Candidatos/MetricasCanal.vue",
-          "nombre": "MetricasCanal.vue",
-          "lineas": 638,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Pages/Territorios/Index.vue",
-          "nombre": "Index.vue",
-          "lineas": 623,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Components/Candidatos/CandidatoCanalFicha.vue",
-          "nombre": "CandidatoCanalFicha.vue",
-          "lineas": 623,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Components/Medios/MedioNotaModal.vue",
-          "nombre": "MedioNotaModal.vue",
-          "lineas": 587,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Pages/Crisis/Index.vue",
-          "nombre": "Index.vue",
-          "lineas": 553,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Components/Feed/FeedFastFlowModal.vue",
-          "nombre": "FeedFastFlowModal.vue",
-          "lineas": 541,
-          "estado": "sobre-umbral",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Pages/Publicaciones/Feed.vue",
-          "nombre": "Feed.vue",
-          "lineas": 521,
-          "estado": "sobre-umbral",
+          "lineas": 485,
+          "estado": "moderado",
           "accesoDatos": []
         },
         {
           "ruta": "resources/js/Components/Candidatos/CandidatoCanalConfigModal.vue",
           "nombre": "CandidatoCanalConfigModal.vue",
           "lineas": 451,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioNotaModal.vue",
+          "nombre": "MedioNotaModal.vue",
+          "lineas": 440,
           "estado": "moderado",
           "accesoDatos": []
         },
@@ -123,6 +53,27 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Pages/Calendario/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 405,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Territorios/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 391,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Ejes/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 390,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/Dashboard/Charts/DashboardChartFullscreenModal.vue",
           "nombre": "DashboardChartFullscreenModal.vue",
           "lineas": 386,
@@ -130,9 +81,37 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Feed/FeedFastFlowModal.vue",
+          "nombre": "FeedFastFlowModal.vue",
+          "lineas": 385,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/Dashboard/DashboardKpis.vue",
           "nombre": "DashboardKpis.vue",
           "lineas": 382,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Social/SocialEditMetricsPanels.vue",
+          "nombre": "SocialEditMetricsPanels.vue",
+          "lineas": 374,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Crisis/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 368,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Candidatos/CandidatoCanalFicha.vue",
+          "nombre": "CandidatoCanalFicha.vue",
+          "lineas": 357,
           "estado": "moderado",
           "accesoDatos": []
         },
@@ -151,9 +130,37 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Pages/Publicaciones/Feed.vue",
+          "nombre": "Feed.vue",
+          "lineas": 348,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/Dashboard/Charts/DashboardEvolutionTrilogy.vue",
           "nombre": "DashboardEvolutionTrilogy.vue",
           "lineas": 339,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Reportes/Ejecutivo.vue",
+          "nombre": "Ejecutivo.vue",
+          "lineas": 322,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/SocialCard.vue",
+          "nombre": "SocialCard.vue",
+          "lineas": 322,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Candidatos/MetricasCanal.vue",
+          "nombre": "MetricasCanal.vue",
+          "lineas": 312,
           "estado": "moderado",
           "accesoDatos": []
         },
@@ -175,6 +182,27 @@
           "ruta": "resources/js/Pages/Medios/Index.vue",
           "nombre": "Index.vue",
           "lineas": 291,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Ejes/EjesPilarBattleRoom.vue",
+          "nombre": "EjesPilarBattleRoom.vue",
+          "lineas": 288,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Social/SocialCardHeader.vue",
+          "nombre": "SocialCardHeader.vue",
+          "lineas": 286,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Territorios/TerritorioFormModal.vue",
+          "nombre": "TerritorioFormModal.vue",
+          "lineas": 285,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -203,6 +231,13 @@
           "ruta": "resources/js/Components/Candidatos/CandidatoKpisTerritoriales.vue",
           "nombre": "CandidatoKpisTerritoriales.vue",
           "lineas": 272,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Feed/FeedFilterToolbar.vue",
+          "nombre": "FeedFilterToolbar.vue",
+          "lineas": 267,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -249,6 +284,13 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Feed/Inputs/FastFlowPostDetailsForm.vue",
+          "nombre": "FastFlowPostDetailsForm.vue",
+          "lineas": 240,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Pages/Territorios/Components/ElectoralDonutsSection.vue",
           "nombre": "ElectoralDonutsSection.vue",
           "lineas": 237,
@@ -280,6 +322,13 @@
           "ruta": "resources/js/Pages/Dashboard.vue",
           "nombre": "Dashboard.vue",
           "lineas": 209,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Reportes/ReporteTacticoEcosistema.vue",
+          "nombre": "ReporteTacticoEcosistema.vue",
+          "lineas": 200,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -319,9 +368,30 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Candidatos/CandidatoCanalSyncModal.vue",
+          "nombre": "CandidatoCanalSyncModal.vue",
+          "lineas": 181,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/Dashboard/DashboardHeader.vue",
           "nombre": "DashboardHeader.vue",
           "lineas": 179,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Calendario/CalendarioEventoModal.vue",
+          "nombre": "CalendarioEventoModal.vue",
+          "lineas": 176,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Reportes/ReportePilaresYEvolucion.vue",
+          "nombre": "ReportePilaresYEvolucion.vue",
+          "lineas": 170,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -368,6 +438,20 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Calendario/CalendarioAgendaGrid.vue",
+          "nombre": "CalendarioAgendaGrid.vue",
+          "lineas": 144,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Candidatos/CandidatoCanalPuntoCeroGrid.vue",
+          "nombre": "CandidatoCanalPuntoCeroGrid.vue",
+          "lineas": 144,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/MetricasCanal/OrganicoVsPautaSection.vue",
           "nombre": "OrganicoVsPautaSection.vue",
           "lineas": 144,
@@ -385,6 +469,27 @@
           "ruta": "resources/js/Pages/Briefings/Show.vue",
           "nombre": "Show.vue",
           "lineas": 135,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioNotaCreacionCampos.vue",
+          "nombre": "MedioNotaCreacionCampos.vue",
+          "lineas": 131,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Crisis/CrisisModal.vue",
+          "nombre": "CrisisModal.vue",
+          "lineas": 125,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Crisis/CrisisAlianzaModal.vue",
+          "nombre": "CrisisAlianzaModal.vue",
+          "lineas": 123,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -438,6 +543,13 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Social/SocialCardBody.vue",
+          "nombre": "SocialCardBody.vue",
+          "lineas": 102,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/Social/SocialAdBadge.vue",
           "nombre": "SocialAdBadge.vue",
           "lineas": 99,
@@ -459,9 +571,23 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Medios/MedioNotaContextoHeader.vue",
+          "nombre": "MedioNotaContextoHeader.vue",
+          "lineas": 90,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/Dashboard/DashboardCanalesGrid.vue",
           "nombre": "DashboardCanalesGrid.vue",
           "lineas": 89,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Ejes/EjesHistoricoTable.vue",
+          "nombre": "EjesHistoricoTable.vue",
+          "lineas": 84,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -565,8 +691,8 @@
         }
       ],
       "resumen": {
-        "total": 79,
-        "sobreUmbral": 12,
+        "total": 97,
+        "sobreUmbral": 0,
         "criticos": 0,
         "accesoDatos": 0
       }
@@ -829,14 +955,14 @@
     }
   ],
   "versiones": {
-    "commitsTotales": 144,
+    "commitsTotales": 145,
     "commitsAnalizados": 50,
     "porcentajeConvencional": 100,
     "noConvencionalesEjemplo": [],
     "tags": 1,
     "ultimoTag": "v1.0.0",
     "ramaActual": "main",
-    "commitActual": "fd9de59"
+    "commitActual": "deaf417"
   },
   "documentacion": {
     "rutasDocs": [

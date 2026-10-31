@@ -1,45 +1,43 @@
 # Ranking de complejidad — BrandingPo
 
-> Generado: 2026-10-31 · commit `fd9de59` · rama `main`
+> Generado: 2026-10-31 · commit `deaf417` · rama `main`
 
 ## Vistas y componentes frontend (Vue) (umbral 500 lín · crítico 800 lín)
 
-Archivos: 79 · sobre umbral: **12** · críticos: **0**
+Archivos: 97 · sobre umbral: **0** · críticos: **0**
 
 | Líneas | Estado | Archivo | Acceso a datos |
 |---:|---|---|---|
-| 795 | 🟡 Sobre umbral | `resources/js/Components/SocialCardEditModal.vue` | — |
-| 737 | 🟡 Sobre umbral | `resources/js/Components/SocialCard.vue` | — |
-| 715 | 🟡 Sobre umbral | `resources/js/Pages/Ejes/Index.vue` | — |
-| 658 | 🟡 Sobre umbral | `resources/js/Pages/Reportes/Ejecutivo.vue` | — |
-| 655 | 🟡 Sobre umbral | `resources/js/Pages/Calendario/Index.vue` | — |
-| 638 | 🟡 Sobre umbral | `resources/js/Pages/Candidatos/MetricasCanal.vue` | — |
-| 623 | 🟡 Sobre umbral | `resources/js/Pages/Territorios/Index.vue` | — |
-| 623 | 🟡 Sobre umbral | `resources/js/Components/Candidatos/CandidatoCanalFicha.vue` | — |
-| 587 | 🟡 Sobre umbral | `resources/js/Components/Medios/MedioNotaModal.vue` | — |
-| 553 | 🟡 Sobre umbral | `resources/js/Pages/Crisis/Index.vue` | — |
-| 541 | 🟡 Sobre umbral | `resources/js/Components/Feed/FeedFastFlowModal.vue` | — |
-| 521 | 🟡 Sobre umbral | `resources/js/Pages/Publicaciones/Feed.vue` | — |
+| 485 | 🔵 Moderado | `resources/js/Components/SocialCardEditModal.vue` | — |
 | 451 | 🔵 Moderado | `resources/js/Components/Candidatos/CandidatoCanalConfigModal.vue` | — |
+| 440 | 🔵 Moderado | `resources/js/Components/Medios/MedioNotaModal.vue` | — |
 | 438 | 🔵 Moderado | `resources/js/Pages/Analytics/Index.vue` | — |
 | 436 | 🔵 Moderado | `resources/js/Components/Medios/MedioFormModal.vue` | — |
 | 425 | 🔵 Moderado | `resources/js/Pages/Territorios/ImpactoElectoral.vue` | — |
+| 405 | 🔵 Moderado | `resources/js/Pages/Calendario/Index.vue` | — |
+| 391 | 🔵 Moderado | `resources/js/Pages/Territorios/Index.vue` | — |
+| 390 | 🔵 Moderado | `resources/js/Pages/Ejes/Index.vue` | — |
 | 386 | 🔵 Moderado | `resources/js/Components/Dashboard/Charts/DashboardChartFullscreenModal.vue` | — |
+| 385 | 🔵 Moderado | `resources/js/Components/Feed/FeedFastFlowModal.vue` | — |
 | 382 | 🔵 Moderado | `resources/js/Components/Dashboard/DashboardKpis.vue` | — |
+| 374 | 🔵 Moderado | `resources/js/Components/Social/SocialEditMetricsPanels.vue` | — |
+| 368 | 🔵 Moderado | `resources/js/Pages/Crisis/Index.vue` | — |
+| 357 | 🔵 Moderado | `resources/js/Components/Candidatos/CandidatoCanalFicha.vue` | — |
 | 353 | 🔵 Moderado | `resources/js/Components/Feed/Inputs/FeedPlatformMetricsForm.vue` | — |
 | 351 | 🔵 Moderado | `resources/js/Components/MetricasCanal/MetricasChartModal.vue` | — |
+| 348 | 🔵 Moderado | `resources/js/Pages/Publicaciones/Feed.vue` | — |
 | 339 | 🔵 Moderado | `resources/js/Components/Dashboard/Charts/DashboardEvolutionTrilogy.vue` | — |
+| 322 | 🔵 Moderado | `resources/js/Pages/Reportes/Ejecutivo.vue` | — |
+| 322 | 🔵 Moderado | `resources/js/Components/SocialCard.vue` | — |
+| 312 | 🔵 Moderado | `resources/js/Pages/Candidatos/MetricasCanal.vue` | — |
 | 309 | 🔵 Moderado | `resources/js/Pages/Presupuesto/Index.vue` | — |
 | 309 | 🔵 Moderado | `resources/js/Components/MetricasCanal/ConsistenciaYHistoricoSection.vue` | — |
 | 291 | 🟢 Óptimo | `resources/js/Pages/Medios/Index.vue` | — |
+| 288 | 🟢 Óptimo | `resources/js/Components/Ejes/EjesPilarBattleRoom.vue` | — |
+| 286 | 🟢 Óptimo | `resources/js/Components/Social/SocialCardHeader.vue` | — |
+| 285 | 🟢 Óptimo | `resources/js/Components/Territorios/TerritorioFormModal.vue` | — |
 | 283 | 🟢 Óptimo | `resources/js/Components/MetricasCanal/MetricasCanalHeader.vue` | — |
 | 275 | 🟢 Óptimo | `resources/js/Components/Medios/MedioFacebookFeed.vue` | — |
-| 274 | 🟢 Óptimo | `resources/js/Pages/Usuarios/Index.vue` | — |
-| 272 | 🟢 Óptimo | `resources/js/Components/Candidatos/CandidatoKpisTerritoriales.vue` | — |
-| 265 | 🟢 Óptimo | `resources/js/Components/Badge.vue` | — |
-| 264 | 🟢 Óptimo | `resources/js/Components/Medios/MedioDirectorioGrid.vue` | — |
-
-**Acción sugerida:** Extraer subcomponentes a Components/ o lógica reactiva a composables/
 
 ## Controladores backend (Laravel) (umbral 200 lín · crítico 300 lín)
 
@@ -93,7 +91,7 @@ Archivos: 17 · sobre umbral: **10** · críticos: **6**
 
 ## Control de versiones
 
-- Commits totales: 144
+- Commits totales: 145
 - Convención de commits (últimos 50): **100%**
 - Tags: 1 (último: `v1.0.0`)
 

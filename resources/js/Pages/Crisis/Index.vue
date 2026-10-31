@@ -3,6 +3,8 @@ import { ref, computed } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import WarRoomLayout from '../../Layouts/WarRoomLayout.vue';
 import Badge from '../../Components/Badge.vue';
+import CrisisModal from '../../Components/Crisis/CrisisModal.vue';
+import CrisisAlianzaModal from '../../Components/Crisis/CrisisAlianzaModal.vue';
 import {
   ShieldAlert,
   Flame,
@@ -11,7 +13,6 @@ import {
   AlertTriangle,
   Users,
   Plus,
-  X,
   Trash2,
   ThumbsUp,
   ThumbsDown,
@@ -345,208 +346,22 @@ const deleteAlianza = (a) => {
       </div>
     </div>
 
-    <!-- Modal: New Crisis Incident -->
-    <div
-      v-if="isCrisisModalOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs"
-    >
-      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative">
-        <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100">
-            Reportar Evento de Crisis
-          </h3>
-          <button @click="isCrisisModalOpen = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
+    <!-- Modal: New Crisis Incident Delegado -->
+    <CrisisModal
+      :show="isCrisisModalOpen"
+      :form="crisisForm"
+      :candidatos="candidatos"
+      @close="isCrisisModalOpen = false"
+      @submit="submitCrisis"
+    />
 
-        <form @submit.prevent="submitCrisis" class="mt-4 space-y-4 text-sm">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-              Candidato Afectado *
-            </label>
-            <select
-              v-model="crisisForm.candidato_id"
-              required
-              class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-cyan-500"
-            >
-              <option v-for="c in candidatos" :key="c.id" :value="c.id">{{ c.nombre_completo }}</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-              Título / Motivo del Incidente *
-            </label>
-            <input
-              v-model="crisisForm.titulo"
-              type="text"
-              required
-              placeholder="ej. Denuncia en redes por corte de servicio"
-              class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-cyan-500"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-                Nivel de Gravedad *
-              </label>
-              <select
-                v-model="crisisForm.nivel_gravedad"
-                required
-                class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-cyan-500 font-bold"
-              >
-                <option value="leve">🟢 Leve</option>
-                <option value="moderado">🟡 Moderado</option>
-                <option value="critico">🔴 Crítico</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-                Tiempo Reacción (min)
-              </label>
-              <input
-                v-model="crisisForm.minutos_tiempo_respuesta"
-                type="number"
-                min="0"
-                class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm font-mono"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-              Estrategia de Contención
-            </label>
-            <textarea
-              v-model="crisisForm.estrategia_contencion"
-              rows="3"
-              placeholder="Acciones operativas, vocerías y réplica en redes..."
-              class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-cyan-500"
-            ></textarea>
-          </div>
-
-          <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
-            <button
-              type="button"
-              @click="isCrisisModalOpen = false"
-              class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              :disabled="crisisForm.processing"
-              class="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold text-sm shadow-md"
-            >
-              Guardar Incidente
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Modal: New Alliance -->
-    <div
-      v-if="isAlianzaModalOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs"
-    >
-      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative">
-        <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100">
-            Registrar Padrino / Alianza Política
-          </h3>
-          <button @click="isAlianzaModalOpen = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <form @submit.prevent="submitAlianza" class="mt-4 space-y-4 text-sm">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-              Candidato *
-            </label>
-            <select
-              v-model="alianzaForm.candidato_id"
-              required
-              class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-cyan-500"
-            >
-              <option v-for="c in candidatos" :key="c.id" :value="c.id">{{ c.nombre_completo }}</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-              Nombre de la Figura *
-            </label>
-            <input
-              v-model="alianzaForm.nombre_figura"
-              type="text"
-              required
-              placeholder="ej. Gobernador Provincial"
-              class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-cyan-500"
-            />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-              Cargo o Rol *
-            </label>
-            <input
-              v-model="alianzaForm.cargo_o_rol"
-              type="text"
-              required
-              placeholder="ej. Mandatario Provincial / Referente"
-              class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-cyan-500"
-            />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-              Impacto en la Campaña *
-            </label>
-            <select
-              v-model="alianzaForm.tipo_impacto"
-              required
-              class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-cyan-500 font-bold"
-            >
-              <option value="suma">🟢 + Suma (Aporte Positivo)</option>
-              <option value="neutro">🟡 = Neutro</option>
-              <option value="resta">🔴 - Resta (Costo Político / Desgaste)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
-              Notas y Justificación
-            </label>
-            <textarea
-              v-model="alianzaForm.notas_observacion"
-              rows="2"
-              class="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:ring-2 focus:ring-cyan-500"
-            ></textarea>
-          </div>
-
-          <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
-            <button
-              type="button"
-              @click="isAlianzaModalOpen = false"
-              class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-sm"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              :disabled="alianzaForm.processing"
-              class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm shadow-md"
-            >
-              Guardar Alianza
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <!-- Modal: New Alliance Delegado -->
+    <CrisisAlianzaModal
+      :show="isAlianzaModalOpen"
+      :form="alianzaForm"
+      :candidatos="candidatos"
+      @close="isAlianzaModalOpen = false"
+      @submit="submitAlianza"
+    />
   </WarRoomLayout>
 </template>
