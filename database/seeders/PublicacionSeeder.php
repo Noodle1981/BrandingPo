@@ -16,6 +16,14 @@ class PublicacionSeeder extends Seeder
      */
     public function run(): void
     {
+        // Regla de Negocio Estricta (datos-reales-publicaciones):
+        // En entornos reales (local, producción, staging) está terminantemente prohibido
+        // inyectar publicaciones sintéticas. Solo se permite en el entorno aislado de testing (PHPUnit).
+        if (! app()->environment('testing')) {
+            $this->command?->warn('Omitido: Por directiva de BrandingPo, las publicaciones no se generan mediante seeders sintéticos.');
+            return;
+        }
+
         if (Publicacion::exists()) {
             // Preservar publicaciones originales existentes
             return;

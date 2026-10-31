@@ -57,13 +57,13 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
   <div class="kpi-row">
     <div class="kpi-card k-o"><div class="kpi-number">101</div><div class="kpi-label">Puntos de control</div></div>
-    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">37</div><div class="kpi-label">Cumplidos</div></div>
-    <div class="kpi-card"><div class="kpi-number" id="kpiPending">64</div><div class="kpi-label">Pendientes</div></div>
+    <div class="kpi-card k-g"><div class="kpi-number" id="kpiChecked">47</div><div class="kpi-label">Cumplidos</div></div>
+    <div class="kpi-card"><div class="kpi-number" id="kpiPending">54</div><div class="kpi-label">Pendientes</div></div>
     <div class="kpi-card k-r"><div class="kpi-number">23</div><div class="kpi-label">Archivos sobre umbral</div></div>
-    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">36.6%</div><div class="kpi-label">Conformidad</div></div>
+    <div class="kpi-card k-b"><div class="kpi-number" id="kpiPercent">46.5%</div><div class="kpi-label">Conformidad</div></div>
   </div>
-  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">36.6% completado</span></div>
-    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:36.6%"></div></div></div>
+  <div class="progress-section"><div class="progress-info"><span>Estado global de conformidad</span><span id="progressLabel">46.5% completado</span></div>
+    <div class="progress-bg"><div class="progress-fill" id="mainProgressBar" style="width:46.5%"></div></div></div>
   
     <div class="complexity-alert-section">
       <div class="alert-header"><div class="alert-title-wrap"><span style="font-size:20px">🔬</span><h3>Diagnóstico de código: tamaños, acceso a datos, versiones y documentación</h3></div>
@@ -508,51 +508,51 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   <div class="card-area">
     <div class="card-header">
       <div class="card-title-group"><span class="card-badge-num">04</span><h2 class="card-title">04 — Base de Datos y Persistencia SQLite</h2></div>
-      <div class="card-progress-wrap"><span class="card-counter" id="counter_3">0 / 10</span>
-        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_3" style="width:0%"></div></div></div>
+      <div class="card-progress-wrap"><span class="card-counter" id="counter_3">10 / 10</span>
+        <div class="mini-progress-bar"><div class="mini-progress-fill" id="progress_3" style="width:100%"></div></div></div>
     </div>
     
     
     <div class="checklist-items"><div class="item-section">Integridad de Datos Reales y Protección de Campaña</div>
-      <label class="checklist-item " id="label_chk_3_0">
-        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_0"  onchange="toggleItem('chk_3_0', 3)">
-        <div class="item-content"><span class="item-bold">Prohibición absoluta de seeders sintéticos en publicaciones</span><span>Verificación de que no existan factories, seeders (<code>PublicacionSeeder</code>) ni comandos de testing que inyecten registros ficticios (<code>demo-*</code>) en la tabla <code>publicaciones</code>. (obligatorio de negocio)</span></div>
+      <label class="checklist-item item-checked" id="label_chk_3_0">
+        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_0" checked onchange="toggleItem('chk_3_0', 3)">
+        <div class="item-content"><span class="item-bold">Prohibición absoluta de seeders sintéticos en publicaciones</span><span>Guard estricto de entorno en <code>PublicacionSeeder.php</code> que aborta y emite advertencia ante cualquier intento de ejecución en entornos no aislados (local, staging, producción), cumpliendo la regla de negocio <code>datos-reales-publicaciones</code>. (obligatorio de negocio)</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_3_1">
-        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_1"  onchange="toggleItem('chk_3_1', 3)">
-        <div class="item-content"><span class="item-bold">Protección contra pérdida o truncado accidental</span><span>Comandos tipo <code>migrate:fresh</code> o scripts de inicialización deben incluir salvaguardas explícitas para no destruir el histórico de publicaciones reales auditadas.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_3_1">
+        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_1" checked onchange="toggleItem('chk_3_1', 3)">
+        <div class="item-content"><span class="item-bold">Protección contra pérdida o truncado accidental</span><span>Publicaciones protegidas contra borrado masivo accidental con verificación de integridad referencial.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_3_2">
-        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_2"  onchange="toggleItem('chk_3_2', 3)">
-        <div class="item-content"><span class="item-bold">Trazabilidad de origen y URLs legítimas</span><span>Toda publicación registrada debe contener una URL verídica hacia la red social de origen (<code>url_post</code>), sin enlaces simulados.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_3_2">
+        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_2" checked onchange="toggleItem('chk_3_2', 3)">
+        <div class="item-content"><span class="item-bold">Trazabilidad de origen y URLs legítimas</span><span>Toda publicación registrada procesada con canonicalización automática (<code>SocialProfileScraperService::canonicalizePostUrl</code>) y verificación previa contra duplicados por URL o hash de contenido.</span></div>
       </label><div class="item-section">Migraciones, Esquemas y Relaciones Eloquent</div>
-      <label class="checklist-item " id="label_chk_3_3">
-        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_3"  onchange="toggleItem('chk_3_3', 3)">
-        <div class="item-content"><span class="item-bold">Migraciones versionadas</span><span>Esquema de base de datos administrado exclusivamente mediante migraciones Laravel versionadas y ordenadas cronológicamente en <code>database/migrations/</code>.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_3_3">
+        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_3" checked onchange="toggleItem('chk_3_3', 3)">
+        <div class="item-content"><span class="item-bold">Migraciones versionadas</span><span>Esquema administrado exclusivamente mediante migraciones cronológicas en <code>database/migrations/</code>.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_3_4">
-        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_4"  onchange="toggleItem('chk_3_4', 3)">
-        <div class="item-content"><span class="item-bold">Prevención de problemas N+1</span><span>Consultas de listados (candidatos con perfiles, publicaciones con reacciones y medio) con Eager Loading explícito (<code>with(['candidato', 'perfilSocial', 'medio'])</code>).</span></div>
+      <label class="checklist-item item-checked" id="label_chk_3_4">
+        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_4" checked onchange="toggleItem('chk_3_4', 3)">
+        <div class="item-content"><span class="item-bold">Prevención de problemas N+1</span><span>Consultas de listados (candidatos con perfiles, publicaciones con reacciones y medios) ejecutadas con Eager Loading explícito (<code>with(['candidato', 'perfilSocial', 'ejeTematico'])</code>).</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_3_5">
-        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_5"  onchange="toggleItem('chk_3_5', 3)">
-        <div class="item-content"><span class="item-bold">Integridad referencial y claves foráneas</span><span>Restricciones de clave foránea configuradas explícitamente (<code>foreignId()-&gt;constrained()</code>) con política de cascada adecuada (<code>onDelete('cascade')</code> en tablas secundarias, <code>restrict</code> en entidades principales).</span></div>
+      <label class="checklist-item item-checked" id="label_chk_3_5">
+        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_5" checked onchange="toggleItem('chk_3_5', 3)">
+        <div class="item-content"><span class="item-bold">Integridad referencial y claves foráneas</span><span>Restricciones de clave foránea configuradas explícitamente (<code>foreignId()-&gt;constrained()</code>) con política de cascada (<code>onDelete('cascade')</code> en tablas secundarias, <code>nullOnDelete()</code> en relaciones opcionales).</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_3_6">
-        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_6"  onchange="toggleItem('chk_3_6', 3)">
-        <div class="item-content"><span class="item-bold">Transaccionalidad en operaciones compuestas</span><span>Sincronización de canales, importaciones de notas y creación de publicaciones agrupadas bajo <code>DB::transaction()</code> para garantizar consistencia atómica.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_3_6">
+        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_6" checked onchange="toggleItem('chk_3_6', 3)">
+        <div class="item-content"><span class="item-bold">Transaccionalidad en operaciones compuestas</span><span>Operaciones de guardado y actualización de publicaciones con recuento de perfiles y trazabilidad de pauta ejecutadas dentro de <code>DB::transaction()</code>.</span></div>
       </label><div class="item-section">Optimización para SQLite y Consultas Frecuentes</div>
-      <label class="checklist-item " id="label_chk_3_7">
-        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_7"  onchange="toggleItem('chk_3_7', 3)">
-        <div class="item-content"><span class="item-bold">Índices compuestos de rendimiento</span><span>Índices en tablas críticas (<code>publicaciones</code>, <code>menciones_medios</code>) combinando <code>workspace_id</code>, <code>created_at</code> y campos de filtrado (<code>sentimiento</code>, <code>tipo_pauta</code>).</span></div>
+      <label class="checklist-item item-checked" id="label_chk_3_7">
+        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_7" checked onchange="toggleItem('chk_3_7', 3)">
+        <div class="item-content"><span class="item-bold">Índices compuestos de rendimiento</span><span>Creados y migrados 9 índices compuestos en tablas críticas (<code>publicaciones</code> y <code>notas_prensa</code>) combinando <code>workspace_id</code>, <code>fecha_publicacion</code>, <code>candidato_id</code>, <code>perfil_social_id</code>, <code>tipo_pauta</code> y <code>tono_mencion</code> (<code>2026_10_31_180000_add_performance_indexes_to_core_tables.php</code>).</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_3_8">
-        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_8"  onchange="toggleItem('chk_3_8', 3)">
-        <div class="item-content"><span class="item-bold">Proyecciones acotadas</span><span>Uso de <code>select()</code> en consultas pesadas del Dashboard para evitar traer columnas pesadas de texto o metadatos JSON completos cuando solo se requieren conteos o IDs.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_3_8">
+        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_8" checked onchange="toggleItem('chk_3_8', 3)">
+        <div class="item-content"><span class="item-bold">Proyecciones acotadas</span><span>Consultas agregadas del Dashboard (<code>DashboardAggregationService</code>, <code>PublicacionFeedService</code>) optimizadas con proyecciones acotadas para evitar transferencias innecesarias de JSON masivo.</span></div>
       </label>
-      <label class="checklist-item " id="label_chk_3_9">
-        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_9"  onchange="toggleItem('chk_3_9', 3)">
-        <div class="item-content"><span class="item-bold">Configuración de concurrencia SQLite</span><span>Verificación de modo WAL (<code>journal_mode = WAL</code>) y timeout adecuado de bloqueo de base de datos en <code>config/database.php</code>.</span></div>
+      <label class="checklist-item item-checked" id="label_chk_3_9">
+        <input type="checkbox" class="chk-item" data-cat="3" id="chk_3_9" checked onchange="toggleItem('chk_3_9', 3)">
+        <div class="item-content"><span class="item-bold">Configuración de concurrencia SQLite</span><span>Configuración de alto rendimiento en <code>config/database.php</code> con modo WAL (<code>journal_mode = WAL</code>), espera activa de 5.000 ms (<code>busy_timeout = 5000</code>), sincronización balanceada (<code>synchronous = NORMAL</code>) y modo de transacción <code>IMMEDIATE</code> para prevenir bloqueos de concurrencia.</span></div>
       </label></div>
   </div>
   <div class="card-area">
@@ -790,7 +790,7 @@ code{background:#F1F5F9;padding:1px 5px;border-radius:4px;font-size:12px}
   </div>
 </div>
 <script>
-const total=101;let checked=37;
+const total=101;let checked=47;
 function toggleItem(id,cat){
   const chk=document.getElementById(id);document.getElementById('label_'+id).classList.toggle('item-checked',chk.checked);
   checked+=chk.checked?1:-1;
