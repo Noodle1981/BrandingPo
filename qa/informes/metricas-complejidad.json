@@ -1,5 +1,5 @@
 {
-  "generado": "2026-10-31T16:58:44.154Z",
+  "generado": "2026-10-31T17:28:21.538Z",
   "proyecto": "BrandingPo",
   "categorias": [
     {
@@ -11,37 +11,16 @@
       "accion": "Extraer subcomponentes a Components/ o lógica reactiva a composables/",
       "archivos": [
         {
-          "ruta": "resources/js/Components/Dashboard/DashboardChartsSection.vue",
-          "nombre": "DashboardChartsSection.vue",
-          "lineas": 1938,
-          "estado": "critico",
+          "ruta": "resources/js/Components/SocialCardEditModal.vue",
+          "nombre": "SocialCardEditModal.vue",
+          "lineas": 795,
+          "estado": "sobre-umbral",
           "accesoDatos": []
         },
         {
           "ruta": "resources/js/Components/SocialCard.vue",
           "nombre": "SocialCard.vue",
-          "lineas": 1065,
-          "estado": "critico",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Pages/Territorios/ImpactoElectoral.vue",
-          "nombre": "ImpactoElectoral.vue",
-          "lineas": 989,
-          "estado": "critico",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Components/Feed/FeedFastFlowModal.vue",
-          "nombre": "FeedFastFlowModal.vue",
-          "lineas": 971,
-          "estado": "critico",
-          "accesoDatos": []
-        },
-        {
-          "ruta": "resources/js/Components/SocialCardEditModal.vue",
-          "nombre": "SocialCardEditModal.vue",
-          "lineas": 795,
+          "lineas": 737,
           "estado": "sobre-umbral",
           "accesoDatos": []
         },
@@ -102,6 +81,13 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Feed/FeedFastFlowModal.vue",
+          "nombre": "FeedFastFlowModal.vue",
+          "lineas": 541,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Pages/Publicaciones/Feed.vue",
           "nombre": "Feed.vue",
           "lineas": 521,
@@ -130,6 +116,20 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Pages/Territorios/ImpactoElectoral.vue",
+          "nombre": "ImpactoElectoral.vue",
+          "lineas": 425,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Dashboard/Charts/DashboardChartFullscreenModal.vue",
+          "nombre": "DashboardChartFullscreenModal.vue",
+          "lineas": 386,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/Dashboard/DashboardKpis.vue",
           "nombre": "DashboardKpis.vue",
           "lineas": 382,
@@ -147,6 +147,13 @@
           "ruta": "resources/js/Components/MetricasCanal/MetricasChartModal.vue",
           "nombre": "MetricasChartModal.vue",
           "lineas": 351,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Dashboard/Charts/DashboardEvolutionTrilogy.vue",
+          "nombre": "DashboardEvolutionTrilogy.vue",
+          "lineas": 339,
           "estado": "moderado",
           "accesoDatos": []
         },
@@ -242,6 +249,13 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Pages/Territorios/Components/ElectoralDonutsSection.vue",
+          "nombre": "ElectoralDonutsSection.vue",
+          "lineas": 237,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/MetricasCanal/RadiografiaDemograficaSection.vue",
           "nombre": "RadiografiaDemograficaSection.vue",
           "lineas": 228,
@@ -277,6 +291,20 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Social/SocialReactionsBar.vue",
+          "nombre": "SocialReactionsBar.vue",
+          "lineas": 187,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Dashboard/DashboardChartsSection.vue",
+          "nombre": "DashboardChartsSection.vue",
+          "lineas": 184,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/Medios/MedioSesgoMatriz.vue",
           "nombre": "MedioSesgoMatriz.vue",
           "lineas": 184,
@@ -305,6 +333,20 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Dashboard/Charts/DashboardSocialDistribution.vue",
+          "nombre": "DashboardSocialDistribution.vue",
+          "lineas": 165,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Territorios/Components/ElectoralBudgetSimulator.vue",
+          "nombre": "ElectoralBudgetSimulator.vue",
+          "lineas": 163,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/SocialPlatformIcon.vue",
           "nombre": "SocialPlatformIcon.vue",
           "lineas": 152,
@@ -315,6 +357,13 @@
           "ruta": "resources/js/Components/MetricasCanal/FormatosYReelsSection.vue",
           "nombre": "FormatosYReelsSection.vue",
           "lineas": 148,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Dashboard/Charts/DashboardThemeEjesGrid.vue",
+          "nombre": "DashboardThemeEjesGrid.vue",
+          "lineas": 147,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -382,9 +431,30 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Feed/Inputs/FastFlowPautaSection.vue",
+          "nombre": "FastFlowPautaSection.vue",
+          "lineas": 105,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Social/SocialAdBadge.vue",
+          "nombre": "SocialAdBadge.vue",
+          "lineas": 99,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/MetricCard.vue",
           "nombre": "MetricCard.vue",
           "lineas": 95,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Territorios/Components/ElectoralCampaignTiming.vue",
+          "nombre": "ElectoralCampaignTiming.vue",
+          "lineas": 93,
           "estado": "optimo",
           "accesoDatos": []
         },
@@ -403,6 +473,34 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Social/SocialPautaHistory.vue",
+          "nombre": "SocialPautaHistory.vue",
+          "lineas": 83,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Territorios/Components/ElectoralDemographicPyramid.vue",
+          "nombre": "ElectoralDemographicPyramid.vue",
+          "lineas": 81,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Territorios/Components/ElectoralTiersMatrix.vue",
+          "nombre": "ElectoralTiersMatrix.vue",
+          "lineas": 73,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Social/SocialDeleteModal.vue",
+          "nombre": "SocialDeleteModal.vue",
+          "lineas": 72,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/Medios/MedioHeader.vue",
           "nombre": "MedioHeader.vue",
           "lineas": 64,
@@ -417,17 +515,59 @@
           "accesoDatos": []
         },
         {
+          "ruta": "resources/js/Components/Social/SocialPautaAlertModal.vue",
+          "nombre": "SocialPautaAlertModal.vue",
+          "lineas": 59,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Feed/Inputs/FastFlowAdBanner.vue",
+          "nombre": "FastFlowAdBanner.vue",
+          "lineas": 54,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Social/SocialCommentsThermometer.vue",
+          "nombre": "SocialCommentsThermometer.vue",
+          "lineas": 47,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Feed/Inputs/FastFlowMediaPreview.vue",
+          "nombre": "FastFlowMediaPreview.vue",
+          "lineas": 42,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
           "ruta": "resources/js/Components/ThemeToggle.vue",
           "nombre": "ThemeToggle.vue",
           "lineas": 41,
           "estado": "optimo",
           "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Feed/Inputs/FastFlowLastPostInfo.vue",
+          "nombre": "FastFlowLastPostInfo.vue",
+          "lineas": 39,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Feed/Inputs/FastFlowDuplicateAlert.vue",
+          "nombre": "FastFlowDuplicateAlert.vue",
+          "lineas": 32,
+          "estado": "optimo",
+          "accesoDatos": []
         }
       ],
       "resumen": {
-        "total": 59,
-        "sobreUmbral": 14,
-        "criticos": 4,
+        "total": 79,
+        "sobreUmbral": 12,
+        "criticos": 0,
         "accesoDatos": 0
       }
     },
@@ -689,14 +829,14 @@
     }
   ],
   "versiones": {
-    "commitsTotales": 138,
+    "commitsTotales": 139,
     "commitsAnalizados": 50,
     "porcentajeConvencional": 100,
     "noConvencionalesEjemplo": [],
     "tags": 0,
     "ultimoTag": null,
     "ramaActual": "main",
-    "commitActual": "585eb2a"
+    "commitActual": "2a45caf"
   },
   "documentacion": {
     "rutasDocs": [

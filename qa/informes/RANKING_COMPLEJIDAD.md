@@ -1,18 +1,15 @@
 # Ranking de complejidad — BrandingPo
 
-> Generado: 2026-10-31 · commit `585eb2a` · rama `main`
+> Generado: 2026-10-31 · commit `2a45caf` · rama `main`
 
 ## Vistas y componentes frontend (Vue) (umbral 500 lín · crítico 800 lín)
 
-Archivos: 59 · sobre umbral: **14** · críticos: **4**
+Archivos: 79 · sobre umbral: **12** · críticos: **0**
 
 | Líneas | Estado | Archivo | Acceso a datos |
 |---:|---|---|---|
-| 1938 | 🔴 Crítico | `resources/js/Components/Dashboard/DashboardChartsSection.vue` | — |
-| 1065 | 🔴 Crítico | `resources/js/Components/SocialCard.vue` | — |
-| 989 | 🔴 Crítico | `resources/js/Pages/Territorios/ImpactoElectoral.vue` | — |
-| 971 | 🔴 Crítico | `resources/js/Components/Feed/FeedFastFlowModal.vue` | — |
 | 795 | 🟡 Sobre umbral | `resources/js/Components/SocialCardEditModal.vue` | — |
+| 737 | 🟡 Sobre umbral | `resources/js/Components/SocialCard.vue` | — |
 | 715 | 🟡 Sobre umbral | `resources/js/Pages/Ejes/Index.vue` | — |
 | 658 | 🟡 Sobre umbral | `resources/js/Pages/Reportes/Ejecutivo.vue` | — |
 | 655 | 🟡 Sobre umbral | `resources/js/Pages/Calendario/Index.vue` | — |
@@ -21,13 +18,17 @@ Archivos: 59 · sobre umbral: **14** · críticos: **4**
 | 623 | 🟡 Sobre umbral | `resources/js/Components/Candidatos/CandidatoCanalFicha.vue` | — |
 | 587 | 🟡 Sobre umbral | `resources/js/Components/Medios/MedioNotaModal.vue` | — |
 | 553 | 🟡 Sobre umbral | `resources/js/Pages/Crisis/Index.vue` | — |
+| 541 | 🟡 Sobre umbral | `resources/js/Components/Feed/FeedFastFlowModal.vue` | — |
 | 521 | 🟡 Sobre umbral | `resources/js/Pages/Publicaciones/Feed.vue` | — |
 | 451 | 🔵 Moderado | `resources/js/Components/Candidatos/CandidatoCanalConfigModal.vue` | — |
 | 438 | 🔵 Moderado | `resources/js/Pages/Analytics/Index.vue` | — |
 | 436 | 🔵 Moderado | `resources/js/Components/Medios/MedioFormModal.vue` | — |
+| 425 | 🔵 Moderado | `resources/js/Pages/Territorios/ImpactoElectoral.vue` | — |
+| 386 | 🔵 Moderado | `resources/js/Components/Dashboard/Charts/DashboardChartFullscreenModal.vue` | — |
 | 382 | 🔵 Moderado | `resources/js/Components/Dashboard/DashboardKpis.vue` | — |
 | 353 | 🔵 Moderado | `resources/js/Components/Feed/Inputs/FeedPlatformMetricsForm.vue` | — |
 | 351 | 🔵 Moderado | `resources/js/Components/MetricasCanal/MetricasChartModal.vue` | — |
+| 339 | 🔵 Moderado | `resources/js/Components/Dashboard/Charts/DashboardEvolutionTrilogy.vue` | — |
 | 309 | 🔵 Moderado | `resources/js/Pages/Presupuesto/Index.vue` | — |
 | 309 | 🔵 Moderado | `resources/js/Components/MetricasCanal/ConsistenciaYHistoricoSection.vue` | — |
 | 291 | 🟢 Óptimo | `resources/js/Pages/Medios/Index.vue` | — |
@@ -37,7 +38,6 @@ Archivos: 59 · sobre umbral: **14** · críticos: **4**
 | 272 | 🟢 Óptimo | `resources/js/Components/Candidatos/CandidatoKpisTerritoriales.vue` | — |
 | 265 | 🟢 Óptimo | `resources/js/Components/Badge.vue` | — |
 | 264 | 🟢 Óptimo | `resources/js/Components/Medios/MedioDirectorioGrid.vue` | — |
-| 263 | 🟢 Óptimo | `resources/js/Components/Candidatos/CandidatoFeedSection.vue` | — |
 
 **Acción sugerida:** Extraer subcomponentes a Components/ o lógica reactiva a composables/
 
@@ -93,7 +93,7 @@ Archivos: 17 · sobre umbral: **10** · críticos: **5**
 
 ## Control de versiones
 
-- Commits totales: 138
+- Commits totales: 139
 - Convención de commits (últimos 50): **100%**
 - Tags: 0 — **sin tags de versión**
 

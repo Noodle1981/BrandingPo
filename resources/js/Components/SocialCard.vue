@@ -2,32 +2,24 @@
 import { ref, computed, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import {
-  Eye,
-  MessageCircle,
-  Share2,
-  Sparkles,
-  Fingerprint,
-  DollarSign,
-  Star,
-  Edit3,
-  Trash2,
-  X,
-  Check,
-  Link2,
-  Activity,
   Calendar,
-  Bookmark,
-  Flame,
-  Target,
-  Heart,
-  Repeat,
-  Send,
-  AlertCircle,
-  RefreshCw
+  Check,
+  DollarSign,
+  Edit3,
+  RefreshCw,
+  Sparkles,
+  Trash2,
+  X
 } from '@lucide/vue';
 import Badge from './Badge.vue';
 import MediaEmbed from './MediaEmbed.vue';
 import SocialCardEditModal from './SocialCardEditModal.vue';
+import SocialAdBadge from './Social/SocialAdBadge.vue';
+import SocialReactionsBar from './Social/SocialReactionsBar.vue';
+import SocialCommentsThermometer from './Social/SocialCommentsThermometer.vue';
+import SocialPautaHistory from './Social/SocialPautaHistory.vue';
+import SocialDeleteModal from './Social/SocialDeleteModal.vue';
+import SocialPautaAlertModal from './Social/SocialPautaAlertModal.vue';
 import { useFormatters } from '../composables/useFormatters';
 
 const props = defineProps({
@@ -66,7 +58,6 @@ const groupedEjes = computed(() => {
 });
 
 const showComments = ref(false);
-const showPautaHistorial = ref(false);
 const isEditing = ref(false);
 const editandoFecha = ref(false);
 const fechaEditada = ref('');
@@ -597,73 +588,15 @@ const cardPautaStyles = computed(() => {
           </button>
         </div>
 
-        <!-- Pauta & Estado de Sincronización (derecha) -->
-        <div class="flex flex-wrap items-center gap-1.5 font-mono justify-end shrink-0">
-          <Badge
-            variant="pauta"
-            :value="post.tipo_pauta || 'organico'"
-            size="sm"
-          />
-
-          <!-- Badge de Huella de Pauta Detectada -->
-          <span
-            v-if="post.tipo_pauta === 'organico' && post.huella_pauta?.tiene_huella"
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-pink-500/15 text-pink-600 dark:text-pink-300 text-[10px] font-black border border-pink-500/30 whitespace-nowrap shadow-2xs animate-pulse"
-            :title="post.huella_pauta.motivo"
-          >
-            <Fingerprint class="w-3 h-3 text-pink-500" />
-            <span>Huella: {{ post.huella_pauta.token_detectado }}</span>
-          </span>
-
-          <button
-            v-if="post.tipo_pauta === 'organico' && post.huella_pauta?.tiene_huella && canWrite"
-            type="button"
-            @click="convertirAPostImpulsado"
-            class="px-2 py-0.5 rounded-md bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-bold shadow-xs transition-all cursor-pointer flex items-center gap-1"
-            title="Convertir a Booster (Orgánica Impulsada) y registrar punto de corte"
-          >
-            <Sparkles class="w-2.5 h-2.5" />
-            <span>Poner Booster</span>
-          </button>
-
-          <!-- Badge Estratégico Especial: Fuego u Oro -->
-          <span
-            v-if="cardPautaStyles.estadoEstrategico === 'fuego'"
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-300 text-[10px] font-black border border-rose-500/30 animate-pulse whitespace-nowrap"
-            title="Oportunidad de Boost: Publicación orgánica con tracción destacada (Score >= 60/100) dentro de los 10 días"
-          >
-            <span>🔥 Oportunidad Boost</span>
-          </span>
-          <span
-            v-else-if="cardPautaStyles.estadoEstrategico === 'dorado'"
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[10px] font-black border border-amber-400/40 shadow-2xs whitespace-nowrap"
-            title="Post Estrella Consagrado: Tracción electoral sobresaliente (Score >= 75/100)"
-          >
-            <span>✨ Estrella ({{ (post.tipo_pauta || 'organico') === 'organico' ? 'Viral' : 'Boost' }})</span>
-          </span>
-
-          <span
-            v-if="esFechaSinConfirmar"
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold whitespace-nowrap"
-          >
-            <span>⚠️ Por confirmar</span>
-          </span>
-          <span
-            v-else-if="isPostInActiveWindow"
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold whitespace-nowrap"
-            title="En ventana de sincronización activa (menos de 15 días)"
-          >
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>En vivo (15d)</span>
-          </span>
-          <span
-            v-else
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px] whitespace-nowrap"
-            title="Métrica histórica consolidada"
-          >
-            <span>🔒 Histórico</span>
-          </span>
-        </div>
+        <!-- Pauta & Estado de Sincronización (derecha delegada) -->
+        <SocialAdBadge
+          :post="post"
+          :card-pauta-styles="cardPautaStyles"
+          :can-write="canWrite"
+          :es-fecha-sin-confirmar="esFechaSinConfirmar"
+          :is-post-in-active-window="isPostInActiveWindow"
+          @convertir-booster="convertirAPostImpulsado"
+        />
       </div>
     </div>
 
@@ -744,215 +677,35 @@ const cardPautaStyles = computed(() => {
       </div>
     </div>
 
-    <!-- Reactions & Metrics Bar (Adaptativo por Plataforma) -->
-    <div class="px-4 sm:px-5 py-3 bg-slate-50/70 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-400">
-      <!-- Left: Native Reactions / Likes -->
-      <div class="flex items-center gap-2 flex-wrap">
-        
-        <!-- INSTAGRAM: Solo Me Gusta / Corazones ❤️ -->
-        <div v-if="isInstagram" class="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-[11px] shadow-2xs">
-          <span class="inline-flex items-center gap-1.5 font-bold text-rose-500">
-            <Heart class="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
-            <span class="text-slate-800 dark:text-slate-200">{{ formatNumber(post.total_likes || 0) }}</span>
-            <span class="text-slate-400 font-normal text-[10px]">Me gusta</span>
-          </span>
-        </div>
+    <!-- Reactions & Metrics Bar Delegada -->
+    <SocialReactionsBar
+      :post="post"
+      :is-instagram="isInstagram"
+      :is-tik-tok="isTikTok"
+      :is-twitter="isTwitter"
+      :is-threads="isThreads"
+      :is-you-tube="isYouTube"
+      :has-emotional-breakdown="hasEmotionalBreakdown"
+      :current-reacciones="currentReacciones"
+      :card-pauta-styles="cardPautaStyles"
+      :is-rival="isRival"
+      :score-impacto="scoreImpacto"
+      :show-comments="showComments"
+      @toggle-comments="showComments = !showComments"
+    />
 
-        <!-- TIKTOK, X (TWITTER) o THREADS: Me Gusta ❤️ -->
-        <div v-else-if="isTikTok || isTwitter || isThreads" class="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-[11px] shadow-2xs">
-          <span class="inline-flex items-center gap-1.5 font-bold text-rose-500">
-            <Heart class="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
-            <span class="text-slate-800 dark:text-slate-200">{{ formatNumber(post.total_likes || 0) }}</span>
-            <span class="text-slate-400 font-normal text-[10px]">Me gusta</span>
-          </span>
-        </div>
-
-        <!-- YOUTUBE: Me Gusta 👍 -->
-        <div v-else-if="isYouTube" class="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-[11px] shadow-2xs">
-          <span class="inline-flex items-center gap-1.5 font-bold text-red-500">
-            <span class="text-xs">👍</span>
-            <span class="text-slate-800 dark:text-slate-200">{{ formatNumber(post.total_likes || 0) }}</span>
-            <span class="text-slate-400 font-normal text-[10px]">Me gusta</span>
-          </span>
-        </div>
-
-        <!-- FACEBOOK / MULTI-EMOJI -->
-        <div v-else class="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-[11px] shadow-2xs">
-          <span class="inline-flex items-center gap-1.5 font-bold text-blue-600 dark:text-blue-400">
-            <span class="text-xs">👍/❤️</span>
-            <span class="text-slate-800 dark:text-slate-200">{{ formatNumber(post.total_likes || 0) }}</span>
-            <span class="text-slate-400 font-normal text-[10px]">Reacciones</span>
-          </span>
-          <template v-if="hasEmotionalBreakdown">
-            <span v-if="currentReacciones.me_encanta" title="Me encanta" class="inline-flex items-center gap-0.5 text-rose-500">❤️ {{ formatNumber(currentReacciones.me_encanta) }}</span>
-            <span v-if="currentReacciones.me_importa" title="Me importa" class="inline-flex items-center gap-0.5 text-amber-500">🥰 {{ formatNumber(currentReacciones.me_importa) }}</span>
-            <span v-if="currentReacciones.me_divierte" title="Me divierte" class="inline-flex items-center gap-0.5 text-amber-400">😂 {{ formatNumber(currentReacciones.me_divierte) }}</span>
-            <span v-if="currentReacciones.me_asombra" title="Me asombra" class="inline-flex items-center gap-0.5 text-blue-400">😮 {{ formatNumber(currentReacciones.me_asombra) }}</span>
-            <span v-if="currentReacciones.me_entristece" title="Me entristece" class="inline-flex items-center gap-0.5 text-blue-500">😢 {{ formatNumber(currentReacciones.me_entristece) }}</span>
-            <span v-if="currentReacciones.me_enoja" title="Me enoja" class="inline-flex items-center gap-0.5 text-rose-600 font-bold">😡 {{ formatNumber(currentReacciones.me_enoja) }}</span>
-          </template>
-        </div>
-      </div>
-
-      <!-- Quick Metrics: Interacciones Totales, Views, Comments, Reposts, Shares -->
-      <div class="flex items-center gap-3.5 flex-wrap">
-        <!-- 🎯 Tracción Política Normalizada (Indexada 0 a 100 por Tier de Seguidores) -->
-        <div
-          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono font-bold text-xs transition-colors border"
-          :class="cardPautaStyles.scoreBadge"
-          :title="`Tracción Electoral: ${post.analisis_traccion?.score_traccion_indexado ?? 50}/100 (${post.analisis_traccion?.etiqueta_calidad ?? 'Estándar Electoral'}) — Normalizado para cuenta ${post.analisis_traccion?.tier?.toUpperCase() ?? 'CANAL'}. TAP: ${post.analisis_traccion?.tap_politica_real ?? 0}%. VTP Ponderado: ${formatNumber(post.analisis_traccion?.vtp_ponderado ?? scoreImpacto)} pts.`"
-        >
-          <Flame v-if="cardPautaStyles.estadoEstrategico === 'fuego'" class="w-3.5 h-3.5 fill-current text-rose-500 animate-pulse" />
-          <Sparkles v-else-if="cardPautaStyles.estadoEstrategico === 'dorado'" class="w-3.5 h-3.5 fill-current text-amber-500" />
-          <Target v-else class="w-3.5 h-3.5 text-cyan-500" />
-          <span class="text-slate-800 dark:text-slate-100">{{ post.analisis_traccion?.score_traccion_indexado ?? 50 }}</span>
-          <span class="text-[10px] font-normal opacity-70">/100 Tracción</span>
-        </div>
-
-        <!-- ⚠️ Alerta Forense de Bots o Anomalía de Interacciones (Exclusivo para Contrincantes / Oposición) -->
-        <div
-          v-if="isRival && post.analisis_traccion?.sospecha_de_bots"
-          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/30 text-[11px] font-bold shadow-2xs"
-          :title="`Auditoría Oposición: ${post.analisis_traccion.alertas_forenses.join(' | ')}`"
-        >
-          <AlertCircle class="w-3.5 h-3.5 text-violet-500 shrink-0" />
-          <span>Anomalía / Posible Inflado Rival</span>
-        </div>
-
-        <div class="flex items-center gap-1" title="Visualizaciones / Alcance">
-          <Eye class="w-4 h-4 text-slate-400 dark:text-slate-500" />
-          <span class="font-mono font-medium">{{ formatNumber(post.total_vistas || 0) }}</span>
-        </div>
-
-        <button
-          type="button"
-          @click="showComments = !showComments"
-          class="flex items-center gap-1 hover:text-cyan-500 transition-colors cursor-pointer"
-          title="Ver comentarios destacados"
-        >
-          <MessageCircle class="w-4 h-4 text-blue-500" />
-          <span class="font-mono font-medium">{{ formatNumber(post.total_comentarios || 0) }}</span>
-        </button>
-
-        <!-- Republicaciones / Reposts (Separado) -->
-        <div v-if="isInstagram || isTwitter || isThreads || post.total_republicados > 0" class="flex items-center gap-1" title="Republicaciones (Reposts / Retweets)">
-          <Repeat class="w-4 h-4 text-emerald-500" />
-          <span class="font-mono font-medium">{{ formatNumber(post.total_republicados || 0) }}</span>
-        </div>
-
-        <!-- Compartidos / Envíos (Separado) -->
-        <div class="flex items-center gap-1" :title="isInstagram || isThreads ? 'Compartidos / Envíos' : 'Compartidos / Shares'">
-          <Send v-if="isInstagram || isThreads" class="w-3.5 h-3.5 text-indigo-500" />
-          <Share2 v-else class="w-4 h-4 text-indigo-500" />
-          <span class="font-mono font-medium">{{ formatNumber(post.total_compartidos || 0) }}</span>
-        </div>
-
-        <!-- Item Propio de Auditoría: Guardado Interno de Campaña -->
-        <div
-          v-if="post.total_guardados > 0"
-          class="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs"
-          title="Guardado propio en auditoría de campaña"
-        >
-          <Bookmark class="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-          <span class="font-mono font-medium text-[11px]">{{ formatNumber(post.total_guardados || 0) }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Highlighted Comments & Social Humor Thermometer (Collapsible) -->
-    <div
+    <!-- Termómetro de Humor Social & Comentarios Destacados Delegado -->
+    <SocialCommentsThermometer
       v-if="showComments || (post.comentarios_destacados && post.comentarios_destacados.length)"
-      class="p-4 bg-slate-100/60 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800 space-y-2.5 text-xs"
-    >
-      <!-- Thermometer Rating -->
-      <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
-        <span class="font-semibold text-slate-700 dark:text-slate-300">Termómetro de Humor Social:</span>
-        <div class="flex items-center gap-0.5 text-amber-400">
-          <Star
-            v-for="star in 5"
-            :key="star"
-            class="w-3.5 h-3.5"
-            :class="star <= (post.termometro_humor_social || 5) ? 'fill-amber-400' : 'text-slate-300 dark:text-slate-600'"
-          />
-          <span class="ml-1 font-mono font-bold text-slate-700 dark:text-slate-300">
-            {{ post.termometro_humor_social || 5 }}/5
-          </span>
-        </div>
-      </div>
+      :termometro-humor-social="post.termometro_humor_social || 5"
+      :comentarios-destacados="post.comentarios_destacados || []"
+    />
 
-      <!-- Top Comments List -->
-      <div v-if="post.comentarios_destacados && post.comentarios_destacados.length" class="space-y-1.5">
-        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Comentarios más votados:</p>
-        <div
-          v-for="(comentario, idx) in post.comentarios_destacados"
-          :key="idx"
-          class="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 leading-snug"
-        >
-          💬 "{{ comentario }}"
-        </div>
-      </div>
-    </div>
-
-    <!-- Historial de Pauta & Atribución de Impacto (Si tiene eventos registrados) -->
-    <div v-if="post.pauta_eventos && post.pauta_eventos.length > 0" class="border-t border-slate-100 dark:border-slate-800/80">
-      <button
-        type="button"
-        @click="showPautaHistorial = !showPautaHistorial"
-        class="w-full px-4 sm:px-5 py-2.5 flex items-center justify-between text-xs font-mono font-bold bg-slate-50/70 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
-      >
-        <span class="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400">
-          <Sparkles class="w-3.5 h-3.5" />
-          <span>Historial de Pauta & Atribución de ROI ({{ post.pauta_eventos.length }} {{ post.pauta_eventos.length === 1 ? 'corte' : 'cortes' }})</span>
-        </span>
-        <span class="text-[10px] text-slate-400 font-normal">
-          {{ showPautaHistorial ? 'Ocultar ▲' : 'Ver cortes ▼' }}
-        </span>
-      </button>
-
-      <div v-if="showPautaHistorial" class="p-3.5 sm:p-4 bg-slate-100/50 dark:bg-slate-950/70 space-y-2.5 text-xs font-mono">
-        <div
-          v-for="ev in post.pauta_eventos"
-          :key="ev.id"
-          class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-2xs"
-        >
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <div class="flex items-center gap-1.5 font-bold">
-              <Badge variant="pauta" :value="ev.tipo_pauta_anterior" size="sm" />
-              <span class="text-cyan-500 font-black">➔</span>
-              <Badge variant="pauta" :value="ev.tipo_pauta_nuevo" size="sm" />
-            </div>
-            <span class="text-[10px] text-slate-400">
-              {{ ev.fecha_evento }} ({{ ev.fecha_evento_humana }})
-            </span>
-          </div>
-
-          <!-- Métricas del snapshot vs incremento actual -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-[11px] text-slate-600 dark:text-slate-400">
-            <div>
-              <span class="text-[9px] uppercase tracking-wider text-slate-400 block">Base en Corte:</span>
-              <span class="font-bold text-slate-800 dark:text-slate-200">{{ formatNumber(ev.likes_snapshot) }} likes</span>
-            </div>
-            <div>
-              <span class="text-[9px] uppercase tracking-wider text-slate-400 block">Seguidores Canal:</span>
-              <span class="font-bold text-slate-800 dark:text-slate-200">{{ formatNumber(ev.seguidores_canal_snapshot) }}</span>
-            </div>
-            <div>
-              <span class="text-[9px] uppercase tracking-wider text-cyan-500 block">Ganados con Pauta:</span>
-              <span class="font-bold text-emerald-500">
-                +{{ formatNumber(Math.max(0, Number(post.total_likes || 0) - Number(ev.likes_snapshot || 0))) }} likes
-              </span>
-            </div>
-          </div>
-
-          <div v-if="ev.monto_nuevo > 0" class="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-slate-800/80 text-[10px]">
-            <span class="text-slate-400">Inversión: <strong class="text-slate-800 dark:text-slate-200 font-mono">{{ formatCurrency(ev.monto_nuevo) }}</strong></span>
-            <span v-if="Math.max(0, Number(post.total_likes || 0) - Number(ev.likes_snapshot || 0)) > 0" class="text-cyan-600 dark:text-cyan-400 font-bold">
-              CPL: ${{ (Number(ev.monto_nuevo) / Math.max(1, Number(post.total_likes || 0) - Number(ev.likes_snapshot || 0))).toFixed(2) }} / like atribuible
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Historial de Pauta & Atribución de Impacto Delegado -->
+    <SocialPautaHistory
+      :pauta-eventos="post.pauta_eventos || []"
+      :total-likes="post.total_likes || 0"
+    />
 
     <!-- Modal de Edición Delegado (SocialCardEditModal) -->
     <SocialCardEditModal
@@ -964,101 +717,20 @@ const cardPautaStyles = computed(() => {
       @saved="isEditing = false"
     />
 
-    <!-- Modal de Confirmación de Eliminación de Publicación -->
-    <div
-      v-if="showDeleteModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity"
-      @click.self="showDeleteModal = false"
-    >
-      <div
-        class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative"
-      >
-        <!-- Icono de Advertencia y Título -->
-        <div class="flex items-start gap-3.5">
-          <div class="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center shrink-0">
-            <Trash2 class="w-5 h-5" />
-          </div>
-          <div class="space-y-1">
-            <h3 class="text-base font-extrabold text-slate-900 dark:text-slate-100 leading-snug">
-              ¿Estás seguro que deseas eliminar la publicación?
-            </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Esta acción eliminará permanentemente este post y todas sus métricas asociadas de la base de datos.
-            </p>
-          </div>
-        </div>
+    <!-- Modal de Confirmación de Eliminación Delegado -->
+    <SocialDeleteModal
+      :show="showDeleteModal"
+      :resumen="post.contenido_resumen || ''"
+      :deleting="deleting"
+      @close="showDeleteModal = false"
+      @confirm="confirmDelete"
+    />
 
-        <!-- Extracto del post para contexto -->
-        <div v-if="post.contenido_resumen" class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 text-xs text-slate-600 dark:text-slate-400 line-clamp-2 italic">
-          "{{ post.contenido_resumen }}"
-        </div>
-
-        <!-- Botones de Acción: Cancelar y Eliminar -->
-        <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <button
-            type="button"
-            @click="showDeleteModal = false"
-            :disabled="deleting"
-            class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            @click="confirmDelete"
-            :disabled="deleting"
-            class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/25 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-          >
-            <Trash2 class="w-3.5 h-3.5" />
-            <span>{{ deleting ? 'Eliminando...' : 'Eliminar' }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Interactivo de Sugerencia de Pauta Activa (Detectada tras sincronización) -->
-    <div
-      v-if="sugerenciaPautaModal?.visible"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity"
-      @click.self="sugerenciaPautaModal = null"
-    >
-      <div class="bg-white dark:bg-slate-900 border border-violet-500/40 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
-        <div class="flex items-start gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 flex items-center justify-center shrink-0">
-            <DollarSign class="w-5 h-5" />
-          </div>
-          <div class="space-y-1">
-            <h3 class="text-base font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-              <span>🎯 Sospecha de Pauta Activa</span>
-            </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              {{ sugerenciaPautaModal.motivo }}
-            </p>
-          </div>
-        </div>
-
-        <div class="p-3 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-900 dark:text-violet-200 leading-relaxed">
-          Esta publicación estaba registrada como <strong>Orgánica Pura</strong>. Si está en circulación paga, convertirla a <strong>Orgánica Impulsada (Boosted Post)</strong> registrará el punto de inflexión para el cálculo de ROI.
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <button
-            type="button"
-            @click="sugerenciaPautaModal = null; router.reload({ preserveScroll: true })"
-            class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            Mantener Orgánica
-          </button>
-          <button
-            type="button"
-            @click="convertirAPostImpulsado"
-            class="px-4 py-2 rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-600/25 transition-all cursor-pointer flex items-center gap-1.5"
-          >
-            <Sparkles class="w-3.5 h-3.5" />
-            <span>Convertir a Boosted Post</span>
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Modal Interactivo de Sugerencia de Pauta Activa Delegado -->
+    <SocialPautaAlertModal
+      :modal="sugerenciaPautaModal"
+      @close="sugerenciaPautaModal = null; router.reload({ preserveScroll: true })"
+      @convertir="convertirAPostImpulsado"
+    />
   </div>
 </template>

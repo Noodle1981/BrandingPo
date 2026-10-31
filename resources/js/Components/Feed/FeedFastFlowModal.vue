@@ -1,22 +1,21 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import {
   Sparkles,
   X,
   AlertCircle,
-  Calendar,
   RefreshCw,
   CheckCircle2,
-  DollarSign,
-  Eye,
-  Heart,
-  MessageCircle,
-  Repeat,
-  Bookmark,
-  Send
+  DollarSign
 } from '@lucide/vue';
 import FeedPlatformMetricsForm from './Inputs/FeedPlatformMetricsForm.vue';
+import FastFlowAdBanner from './Inputs/FastFlowAdBanner.vue';
+import FastFlowDuplicateAlert from './Inputs/FastFlowDuplicateAlert.vue';
+import FastFlowLastPostInfo from './Inputs/FastFlowLastPostInfo.vue';
+import FastFlowMediaPreview from './Inputs/FastFlowMediaPreview.vue';
+import FastFlowPautaSection from './Inputs/FastFlowPautaSection.vue';
+import { useFastFlowScraper } from '../../composables/useFastFlowScraper';
 
 const props = defineProps({
   modelValue: {
@@ -55,12 +54,6 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'created']);
 
-const isScraping = ref(false);
-const scrapeSuccessMsg = ref('');
-const scrapeErrorMsg = ref('');
-const duplicateDetectedPost = ref(null);
-const adDetectionAlert = ref(null);
-
 const createForm = useForm({
   candidato_id: '',
   perfil_social_id: '',
@@ -93,11 +86,31 @@ const createForm = useForm({
   },
 });
 
+const perfilesCandidatoSeleccionado = computed(() => {
+  const c = props.candidatos.find(cand => cand.id === Number(createForm.candidato_id));
+  return c?.perfiles_sociales || c?.perfilesSociales || [];
+});
+
+const {
+  isScraping,
+  scrapeSuccessMsg,
+  scrapeErrorMsg,
+  adDetectionAlert,
+  normalizarUrlPegada,
+  platformMeta,
+  duplicateAlert,
+  ultimaPublicacionRegistrada,
+  autocompletarScrape,
+  aplicarPautaDetectada,
+  limpiarAlertas,
+} = useFastFlowScraper({
+  createForm,
+  props,
+  perfilesCandidatoSeleccionado
+});
+
 const initForm = () => {
-  duplicateDetectedPost.value = null;
-  adDetectionAlert.value = null;
-  scrapeSuccessMsg.value = '';
-  scrapeErrorMsg.value = '';
+  limpiarAlertas();
 
   // 1. Candidato
   if (props.initialCandidatoId) {
@@ -145,197 +158,6 @@ watch(() => props.modelValue, (isOpen) => {
   }
 });
 
-const perfilesCandidatoSeleccionado = computed(() => {
-  const c = props.candidatos.find(cand => cand.id === Number(createForm.candidato_id));
-  return c?.perfiles_sociales || c?.perfilesSociales || [];
-});
-
-const platformMeta = computed(() => {
-  const plat = (createForm.plataforma || 'instagram').toLowerCase();
-  switch (plat) {
-    case 'facebook':
-      return {
-        label: '🔗 Enlace o código embed de la publicación de Facebook:',
-        placeholder: 'https://www.facebook.com/... o pega el código <iframe> del plugin',
-        nombre: 'Facebook',
-      };
-    case 'tiktok':
-      return {
-        label: '🔗 Enlace del Video de TikTok:',
-        placeholder: 'https://www.tiktok.com/@.../video/...',
-        nombre: 'TikTok',
-      };
-    case 'x_twitter':
-    case 'twitter':
-      return {
-        label: '🔗 Enlace del Post / Tweet de X (Twitter):',
-        placeholder: 'https://x.com/.../status/...',
-        nombre: 'X (Twitter)',
-      };
-    case 'youtube':
-      return {
-        label: '🔗 Enlace del Video o Short de YouTube:',
-        placeholder: 'https://www.youtube.com/watch?v=... o https://youtu.be/...',
-        nombre: 'YouTube',
-      };
-    case 'threads':
-      return {
-        label: '🔗 Enlace del Post de Threads:',
-        placeholder: 'https://www.threads.net/@.../post/...',
-        nombre: 'Threads',
-      };
-    case 'linkedin':
-      return {
-        label: '🔗 Enlace de la Publicación de LinkedIn:',
-        placeholder: 'https://www.linkedin.com/posts/...',
-        nombre: 'LinkedIn',
-      };
-    case 'instagram':
-    default:
-      return {
-        label: '🔗 Enlace de la Publicación o Reel de Instagram:',
-        placeholder: 'https://www.instagram.com/p/... o /reel/...',
-        nombre: 'Instagram',
-      };
-  }
-});
-
-/**
- * Normaliza cualquier texto pegado en el campo URL/embed del Fast-Flow.
- * Soporta: URL directa, <iframe> FB plugin, plugin URL directa (sin iframe),
- * <blockquote> de Instagram, embed de Twitter/X, y cualquier URL suelta.
- * @param {string} raw - El texto crudo que el usuario pegó
- * @returns {string} La URL limpia y directa de la publicación
- */
-const normalizarUrlPegada = (raw) => {
-  if (!raw || typeof raw !== 'string') return raw;
-  const txt = raw.trim();
-  if (txt.length < 8) return txt;
-
-  // Caso 1: Twitter/X status (máxima prioridad)
-  const twitterMatch = txt.match(/(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/(\d+)/i);
-  if (twitterMatch) {
-    const url = twitterMatch[0];
-    return url.startsWith('http') ? url : 'https://' + url;
-  }
-
-  // Caso 2: Facebook plugin URL dentro de un <iframe src="...">
-  const fbIframeMatch = txt.match(/src=["']([^"']+plugins\/(?:post|video)\.php[^"']*)['"]/i);
-  if (fbIframeMatch) {
-    const pluginSrc = fbIframeMatch[1].replace(/&amp;/g, '&');
-    const hrefMatch = pluginSrc.match(/\bhref=([^&"']+)/i);
-    if (hrefMatch) return decodeURIComponent(hrefMatch[1]);
-  }
-
-  // Caso 3: Facebook plugin URL directa (sin <iframe>)
-  // Ejemplo: https://www.facebook.com/plugins/post.php?href=https%3A...&show_text=true
-  const fbPluginDirecto = txt.match(/plugins\/(?:post|video)\.php[^"'<\s]*\bhref=([^&"'<\s]+)/i);
-  if (fbPluginDirecto) return decodeURIComponent(fbPluginDirecto[1]);
-
-  // Caso 4: Instagram blockquote embed
-  const igBlockquote = txt.match(/data-instgrm-permalink="([^"]+)"/i);
-  if (igBlockquote) return igBlockquote[1].replace(/&amp;/g, '&');
-
-  // Caso 5: Twitter/X blockquote embed (href del último <a> con /status/)
-  if (txt.includes('twitter-tweet') || txt.includes('class="tweet"')) {
-    const tweetLinks = [...txt.matchAll(/href="(https?:\/\/(?:twitter\.com|x\.com)\/[^"]+)"/gi)];
-    if (tweetLinks.length) {
-      const last = tweetLinks[tweetLinks.length - 1][1];
-      if (last.includes('/status/')) return last.replace(/&amp;/g, '&');
-    }
-  }
-
-  // Caso 6: <iframe src="..."> genérico
-  const iframeMatch = txt.match(/(?:iframe|frame)[^>]+src=["']([^"']+)['"]/i);
-  if (iframeMatch) return iframeMatch[1].replace(/&amp;/g, '&');
-
-  // Caso 7: href="..." en cualquier etiqueta HTML
-  const hrefMatch = txt.match(/href=["']([^"']+)['"]/i);
-  if (hrefMatch) {
-    try {
-      const u = new URL(hrefMatch[1]);
-      return u.href;
-    } catch {}
-  }
-
-  // Caso 8: URL suelta en el texto (fallback universal)
-  const urlMatch = txt.match(/https?:\/\/[^\s"'<>]+/i);
-  if (urlMatch) return urlMatch[0].replace(/[.,;:)\]}>]+$/, '');
-
-  // Sin coincidencia: devolver tal cual
-  return txt;
-};
-
-watch(() => createForm.url_post, (newUrl) => {
-  if (!newUrl || typeof newUrl !== 'string' || newUrl.trim().length < 8) return;
-
-  // Limpiar embeds/iframes automáticamente — si el valor cambió, actualizar el campo
-  const cleaned = normalizarUrlPegada(newUrl);
-  if (cleaned !== newUrl) {
-    createForm.url_post = cleaned;
-    return; // El watcher se re-ejecutará con el valor limpio
-  }
-
-  const lower = newUrl.toLowerCase();
-  let detectedPlatform = null;
-  if (lower.includes('facebook.com') || lower.includes('fb.watch') || lower.includes('fb.com')) {
-    detectedPlatform = 'facebook';
-  } else if (lower.includes('instagram.com')) {
-    detectedPlatform = 'instagram';
-  } else if (lower.includes('tiktok.com')) {
-    detectedPlatform = 'tiktok';
-  } else if (lower.includes('twitter.com') || lower.includes('x.com')) {
-    detectedPlatform = 'x_twitter';
-  } else if (lower.includes('threads.net') || lower.includes('threads.com')) {
-    detectedPlatform = 'threads';
-  } else if (lower.includes('youtube.com') || lower.includes('youtu.be')) {
-    detectedPlatform = 'youtube';
-  } else if (lower.includes('linkedin.com')) {
-    detectedPlatform = 'linkedin';
-  }
-
-  if (detectedPlatform && detectedPlatform !== createForm.plataforma) {
-    createForm.plataforma = detectedPlatform;
-    const cand = props.candidatos.find(c => c.id === Number(createForm.candidato_id));
-    const perfiles = cand?.perfiles_sociales || cand?.perfilesSociales || [];
-    const matching = perfiles.find(p => p.plataforma.toLowerCase() === detectedPlatform);
-    if (matching) {
-      createForm.perfil_social_id = matching.id;
-    }
-  }
-});
-
-const localDuplicatePost = computed(() => {
-  if (!createForm.url_post || createForm.url_post.trim().length < 10) return null;
-  const cleanUrl = createForm.url_post.trim().toLowerCase().replace(/\?.*$/, '').replace(/\/+$/, '');
-  return props.publicaciones.find(p => {
-    if (!p.url_post) return false;
-    const pClean = p.url_post.trim().toLowerCase().replace(/\?.*$/, '').replace(/\/+$/, '');
-    return pClean === cleanUrl;
-  });
-});
-
-const duplicateAlert = computed(() => localDuplicatePost.value || duplicateDetectedPost.value);
-
-const ultimaPublicacionRegistrada = computed(() => {
-  const cid = Number(createForm.candidato_id);
-  const plat = (createForm.plataforma || '').toLowerCase();
-
-  const matches = props.publicaciones.filter(p => {
-    const matchCand = !cid || p.candidato?.id === cid;
-    const matchPlat = !plat || (p.plataforma || p.perfil_social?.plataforma || '').toLowerCase() === plat;
-    return matchCand && matchPlat;
-  });
-
-  if (matches.length === 0) return null;
-
-  return [...matches].sort((a, b) => {
-    const dateA = new Date(a.fecha_publicacion_raw || a.fecha_publicacion || 0);
-    const dateB = new Date(b.fecha_publicacion_raw || b.fecha_publicacion || 0);
-    return dateB - dateA;
-  })[0];
-});
-
 const onCandidatoChange = () => {
   const cand = props.candidatos.find(c => c.id === Number(createForm.candidato_id));
   const perfiles = cand?.perfiles_sociales || cand?.perfilesSociales || [];
@@ -363,100 +185,6 @@ const onPerfilChange = () => {
   const p = perfiles.find(item => item.id === Number(createForm.perfil_social_id));
   if (p) {
     createForm.plataforma = p.plataforma;
-  }
-};
-
-const autocompletarScrape = async () => {
-  if (!createForm.url_post) {
-    scrapeErrorMsg.value = 'Ingresa primero la URL de la publicación de Instagram, TikTok o Facebook.';
-    return;
-  }
-
-  isScraping.value = true;
-  scrapeSuccessMsg.value = '';
-  scrapeErrorMsg.value = '';
-
-  try {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    const response = await fetch('/publicaciones/scrape-post', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': csrfToken || '',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({
-        url_post: createForm.url_post,
-        plataforma: createForm.plataforma,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok && data.success) {
-      if (data.data.tipo_formato) createForm.tipo_formato = data.data.tipo_formato;
-      if (data.data.total_likes > 0 || !createForm.total_likes) {
-        createForm.total_likes = data.data.total_likes || 0;
-      }
-      if (data.data.total_comentarios > 0 || !createForm.total_comentarios) {
-        createForm.total_comentarios = data.data.total_comentarios || 0;
-      }
-      if (data.data.total_vistas || data.data.vistas_organicas) {
-        createForm.vistas_organicas = data.data.total_vistas || data.data.vistas_organicas;
-      }
-      if (data.data.contenido_resumen) createForm.contenido_resumen = data.data.contenido_resumen;
-      if (data.data.fecha_publicacion) createForm.fecha_publicacion = data.data.fecha_publicacion.slice(0, 16);
-      if (data.data.url_post) createForm.url_post = data.data.url_post;
-      if (data.data.media_url) createForm.media_url = data.data.media_url;
-      if (data.data.plataforma) {
-        createForm.plataforma = data.data.plataforma;
-        const matchingPerfil = perfilesCandidatoSeleccionado.value.find(p => p.plataforma.toLowerCase() === data.data.plataforma.toLowerCase());
-        if (matchingPerfil) {
-          createForm.perfil_social_id = matchingPerfil.id;
-        }
-      }
-
-      const lk = data.data.total_likes || 0;
-      if (createForm.plataforma === 'facebook') {
-        createForm.reacciones_detalladas.like = lk;
-        createForm.reacciones_detalladas.love = 0;
-        createForm.reacciones_detalladas.care = 0;
-        createForm.reacciones_detalladas.haha = 0;
-        createForm.reacciones_detalladas.wow = 0;
-        createForm.reacciones_detalladas.sad = 0;
-        createForm.reacciones_detalladas.angry = 0;
-      } else {
-        createForm.total_likes = lk;
-      }
-
-      if (data.data.sospecha_pauta) {
-        adDetectionAlert.value = {
-          motivo: data.data.motivo_sospecha_pauta || 'Detectados parámetros de campaña publicitaria o de anuncio en el enlace.',
-          sugerido: data.data.tipo_pauta_sugerido || 'organico_impulsado',
-        };
-      } else {
-        adDetectionAlert.value = null;
-      }
-
-      scrapeSuccessMsg.value = '✅ ¡Datos, texto e imagen extraídos exitosamente!';
-    } else {
-      if (data.ya_registrada) {
-        duplicateDetectedPost.value = data;
-      }
-      scrapeErrorMsg.value = data.error || data.mensaje || 'No se pudieron extraer los datos automáticamente. Puedes completarlos a mano.';
-    }
-  } catch (err) {
-    scrapeErrorMsg.value = 'Error al consultar el lector de redes. Completa los datos a mano.';
-  } finally {
-    isScraping.value = false;
-  }
-};
-
-const aplicarPautaDetectada = () => {
-  if (adDetectionAlert.value?.sugerido) {
-    createForm.tipo_pauta = adDetectionAlert.value.sugerido;
-  } else {
-    createForm.tipo_pauta = 'organico_impulsado';
   }
 };
 
@@ -526,90 +254,99 @@ const submitCreatePost = () => {
   <!-- MODAL DE CARGA INTELIGENTE DE PUBLICACIÓN (+ AUTOCOMPLETAR 1 CLIC) -->
   <div
     v-if="modelValue"
-    class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-hidden"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-fade-in"
+    @click.self="emit('update:modelValue', false)"
   >
-    <div class="relative w-full max-w-5xl max-h-[90vh] sm:max-h-[86vh] flex flex-col rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
-      
+    <div
+      class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto"
+    >
       <!-- Modal Header -->
-      <div class="flex items-center justify-between px-6 py-3.5 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/70 dark:bg-slate-950/70">
-        <div class="flex items-center gap-2.5">
-          <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
-            <Sparkles class="w-4 h-4 text-cyan-500" />
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-950/50">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center">
+            <Sparkles class="w-5 h-5" />
           </div>
           <div>
-            <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-              Cargar Nueva Publicación en el Feed
-            </h3>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400">
-              Pega el enlace para autocompletar con 1 clic o ingresa los datos de campaña manualmente.
+            <h2 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>Carga Rápida de Publicación (Fast-Flow)</span>
+              <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-bold border border-cyan-500/20">
+                Lector de Redes 1 Clic
+              </span>
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Pega el enlace de Instagram, Facebook o TikTok y el sistema extraerá automáticamente texto, imagen y métricas.
             </p>
           </div>
         </div>
         <button
-          type="button"
           @click="emit('update:modelValue', false)"
-          class="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
-          title="Cerrar ventana"
+          class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
         >
           <X class="w-5 h-5" />
         </button>
       </div>
 
       <!-- Modal Form -->
-      <form @submit.prevent="submitCreatePost" class="flex flex-col flex-1 overflow-hidden">
+      <form @submit.prevent="submitCreatePost" class="flex flex-col flex-1 min-h-0 overflow-hidden">
         
         <!-- Scrollable Body Container -->
-        <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4 text-xs font-sans">
+        <div class="flex-1 overflow-y-auto p-6 space-y-4">
           
           <!-- Banner de Errores de Validación -->
           <div
-            v-if="createForm.hasErrors"
-            class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 space-y-1.5 animate-shake"
+            v-if="Object.keys(createForm.errors).length > 0"
+            class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs flex items-start gap-2.5"
           >
-            <div class="flex items-center gap-2 font-bold text-xs">
-              <AlertCircle class="w-4 h-4 text-rose-500 shrink-0" />
-              <span>No se pudo guardar la publicación. Revisa los siguientes campos:</span>
+            <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+              <div class="font-bold">Por favor revisa los campos requeridos:</div>
+              <ul class="list-disc list-inside mt-1 space-y-0.5 text-[11px]">
+                <li v-for="(err, field) in createForm.errors" :key="field">
+                  {{ err }}
+                </li>
+              </ul>
             </div>
-            <ul class="list-disc list-inside text-[11px] space-y-0.5 pl-1">
-              <li v-for="(errorMsg, fieldKey) in createForm.errors" :key="fieldKey">
-                <strong class="capitalize">{{ fieldKey.replace('_', ' ') }}:</strong> {{ errorMsg }}
-              </li>
-            </ul>
           </div>
 
           <!-- Grilla 2 Columnas -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
             
             <!-- COLUMNA IZQUIERDA (7 cols) -->
-            <div class="lg:col-span-7 space-y-3.5">
+            <div class="lg:col-span-7 space-y-4">
               
               <!-- Fila 1: Candidato y Red Social -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Candidato *</label>
+                <div class="space-y-1">
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Candidato <span class="text-rose-500">*</span>
+                  </label>
                   <select
                     v-model="createForm.candidato_id"
                     @change="onCandidatoChange"
-                    class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-bold focus:ring-2 focus:ring-cyan-500"
+                    class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:ring-2 focus:ring-cyan-500"
                     :class="createForm.errors.candidato_id ? 'border-rose-500 ring-1 ring-rose-500' : ''"
                   >
+                    <option value="" disabled>Seleccionar candidato...</option>
                     <option v-for="cand in candidatos" :key="cand.id" :value="cand.id">
-                      {{ cand.es_propio ? '⭐ ' : '' }}{{ cand.nombre_completo }}
+                      {{ cand.nombre_completo }} ({{ cand.es_propio ? 'Propio' : 'Rival' }})
                     </option>
                   </select>
                   <span v-if="createForm.errors.candidato_id" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.candidato_id }}</span>
                 </div>
 
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Canal Social / Red *</label>
+                <div class="space-y-1">
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Canal / Red Social <span class="text-rose-500">*</span>
+                  </label>
                   <select
                     v-model="createForm.perfil_social_id"
                     @change="onPerfilChange"
-                    class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-bold focus:ring-2 focus:ring-cyan-500"
+                    class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:ring-2 focus:ring-cyan-500 capitalize"
                     :class="createForm.errors.perfil_social_id ? 'border-rose-500 ring-1 ring-rose-500' : ''"
                   >
-                    <option v-for="p in perfilesCandidatoSeleccionado" :key="p.id" :value="p.id">
-                      {{ p.plataforma.toUpperCase() }} ({{ p.handle_usuario }})
+                    <option value="" disabled>Seleccionar canal...</option>
+                    <option v-for="perfil in perfilesCandidatoSeleccionado" :key="perfil.id" :value="perfil.id">
+                      {{ perfil.plataforma }} ({{ perfil.handle_usuario || 'Sin handle' }})
                     </option>
                   </select>
                   <span v-if="createForm.errors.perfil_social_id" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.perfil_social_id }}</span>
@@ -617,45 +354,15 @@ const submitCreatePost = () => {
               </div>
 
               <!-- Tarjeta Auxiliar: Última publicación -->
-              <div
-                v-if="ultimaPublicacionRegistrada"
-                class="p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 flex items-start gap-2.5"
-              >
-                <div class="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5">
-                  <Calendar class="w-3.5 h-3.5" />
-                </div>
-                <div class="text-[11px] leading-tight flex-1 min-w-0">
-                  <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">
-                    <span>Último post en {{ (createForm.plataforma || 'red').toUpperCase() }}:</span>
-                    <span class="text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md font-bold text-xs">
-                      🗓️ {{ ultimaPublicacionRegistrada.fecha_publicacion_humana || ultimaPublicacionRegistrada.fecha_publicacion }}
-                    </span>
-                    <span class="text-slate-400 font-normal">({{ ultimaPublicacionRegistrada.fecha_relativa }})</span>
-                  </div>
-                  <p class="text-slate-500 dark:text-slate-400 mt-1 truncate italic">
-                    "{{ ultimaPublicacionRegistrada.contenido_resumen }}"
-                  </p>
-                </div>
-              </div>
+              <FastFlowLastPostInfo
+                :ultima-publicacion-registrada="ultimaPublicacionRegistrada"
+                :plataforma="createForm.plataforma"
+              />
 
               <!-- Alerta Inmediata si se detecta URL duplicada -->
-              <div
-                v-if="duplicateAlert"
-                class="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-900 dark:text-amber-200 space-y-1 animate-fade-in"
-              >
-                <div class="flex items-center gap-1.5 font-bold text-xs">
-                  <AlertCircle class="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>⚠️ Esta publicación ya está registrada en el sistema</span>
-                </div>
-                <p class="text-[11px] text-amber-800 dark:text-amber-300 font-mono">
-                  <strong>ID:</strong> #{{ duplicateAlert.id || duplicateAlert.publicacion_id }} • 
-                  <strong>Fecha de Origen:</strong> {{ duplicateAlert.fecha_publicacion }} • 
-                  <strong>Autor:</strong> {{ duplicateAlert.autor || duplicateAlert.candidato?.nombre_completo }}
-                </p>
-                <p v-if="duplicateAlert.contenido_resumen" class="text-[11px] text-slate-500 dark:text-slate-400 italic truncate">
-                  "{{ duplicateAlert.contenido_resumen }}"
-                </p>
-              </div>
+              <FastFlowDuplicateAlert
+                :duplicate-alert="duplicateAlert"
+              />
 
               <!-- Fila 2: URL del Post + Botón Scraper 1 Clic -->
               <div class="p-3.5 rounded-2xl bg-cyan-500/5 dark:bg-cyan-500/10 border border-cyan-500/20 space-y-2">
@@ -692,39 +399,11 @@ const submitCreatePost = () => {
                 </div>
 
                 <!-- Banner Interactivo: Detección Temprana de Pauta -->
-                <div
-                  v-if="adDetectionAlert"
-                  class="p-3 rounded-xl bg-violet-500/15 border border-violet-500/40 text-violet-900 dark:text-violet-200 space-y-2 animate-fade-in"
-                >
-                  <div class="flex items-start justify-between gap-2">
-                    <div class="flex items-start gap-2">
-                      <DollarSign class="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
-                      <div>
-                        <p class="font-bold text-xs flex items-center gap-1">
-                          <span>🎯 Sospecha de Pauta Activa / Boosted Post</span>
-                          <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-violet-500/20 text-violet-700 dark:text-violet-300 font-black uppercase">Detectada</span>
-                        </p>
-                        <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 leading-snug">
-                          {{ adDetectionAlert.motivo }}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      v-if="createForm.tipo_pauta === 'organico'"
-                      type="button"
-                      @click="aplicarPautaDetectada"
-                      class="px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold text-[11px] shrink-0 transition-all shadow-xs cursor-pointer"
-                    >
-                      ⚡ Clasificar como Boosted
-                    </button>
-                    <span
-                      v-else
-                      class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0"
-                    >
-                      <CheckCircle2 class="w-3 h-3" /> Clasificada
-                    </span>
-                  </div>
-                </div>
+                <FastFlowAdBanner
+                  :ad-detection-alert="adDetectionAlert"
+                  :tipo-pauta="createForm.tipo_pauta"
+                  @aplicar-pauta="aplicarPautaDetectada"
+                />
 
                 <div v-if="scrapeErrorMsg" class="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
                   <AlertCircle class="w-3.5 h-3.5 shrink-0" />
@@ -738,150 +417,71 @@ const submitCreatePost = () => {
 
               <!-- Fila 3: Eje Temático, Formato y Fecha -->
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Eje Temático</label>
+                <div class="space-y-1">
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Eje Temático
+                  </label>
                   <select
                     v-model="createForm.eje_tematico_id"
-                    class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-semibold"
+                    class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:ring-2 focus:ring-cyan-500"
                   >
-                    <option value="">-- Sin Eje Temático --</option>
-                    <optgroup v-for="(ejesInGroup, pilar) in groupedEjes" :key="pilar" :label="pilar">
-                      <option v-for="e in ejesInGroup" :key="e.id" :value="e.id">
-                        • {{ e.nombre }}
+                    <option value="">Sin eje asignado</option>
+                    <optgroup v-for="(ejes, cat) in groupedEjes" :key="cat" :label="cat">
+                      <option v-for="eje in ejes" :key="eje.id" :value="eje.id">
+                        {{ eje.nombre }}
                       </option>
                     </optgroup>
                   </select>
                 </div>
 
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Formato *</label>
+                <div class="space-y-1">
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Formato <span class="text-rose-500">*</span>
+                  </label>
                   <select
                     v-model="createForm.tipo_formato"
-                    class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800"
+                    class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:ring-2 focus:ring-cyan-500"
                   >
-                    <option value="Reel">Reel / Short / TikTok</option>
-                    <option value="Video">Video Largo</option>
+                    <option value="Reel">Reel / Video Vertical</option>
+                    <option value="Video">Video Horizontal</option>
                     <option value="Foto">Foto Única</option>
                     <option value="Carrusel">Carrusel / Álbum</option>
-                    <option value="Historia">Historia / Story</option>
-                    <option value="Tweet">Post Texto / Tweet</option>
+                    <option value="Historia">Historia / Temporal</option>
+                    <option value="Texto">Texto / Hilo</option>
+                    <option value="Short">Short</option>
                   </select>
                 </div>
 
-                <div>
-                  <div class="flex items-center justify-between gap-1 mb-1">
-                    <label class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 text-xs">
-                      <Calendar class="w-3.5 h-3.5 text-cyan-500" />
-                      <span>Fecha de Publicación *</span>
-                    </label>
-                    <span
-                      v-if="!createForm.fecha_publicacion"
-                      class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0"
-                    >
-                      Requerida
-                    </span>
-                    <span
-                      v-else
-                      class="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 shrink-0"
-                    >
-                      <CheckCircle2 class="w-3 h-3" />
-                      Lista
-                    </span>
-                  </div>
+                <div class="space-y-1">
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Fecha y Hora <span class="text-rose-500">*</span>
+                  </label>
                   <input
                     v-model="createForm.fecha_publicacion"
                     type="datetime-local"
-                    required
-                    class="w-full px-3 py-2 rounded-xl font-mono text-xs transition-all bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-cyan-500"
-                    :class="[
-                      createForm.errors.fecha_publicacion ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50 dark:bg-rose-950/30' :
-                      !createForm.fecha_publicacion ? 'border-amber-400/80 bg-amber-500/5 ring-1 ring-amber-400/40' :
-                      ''
-                    ]"
+                    class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold font-mono focus:ring-2 focus:ring-cyan-500"
+                    :class="createForm.errors.fecha_publicacion ? 'border-rose-500 ring-1 ring-rose-500' : ''"
                   />
                   <span v-if="createForm.errors.fecha_publicacion" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.fecha_publicacion }}</span>
-                  <p class="text-[10px] text-slate-400 mt-1">
-                    La fecha y hora que figura en la red social
-                  </p>
                 </div>
               </div>
 
-              <!-- Fila 4: Tipo de Pauta y Monto Invertido -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tipo de Pauta *</label>
-                  <select
-                    v-model="createForm.tipo_pauta"
-                    class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-semibold"
-                  >
-                    <option value="organico">Orgánica Pura ($0)</option>
-                    <option value="organico_impulsado">Orgánica Impulsada (Boost)</option>
-                    <option value="pauta_paga">Anuncio Directo / Dark Post</option>
-                    <option value="colaboracion_pagada">🌟 Colaboración Pagada / Influencer</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Inversión Publicitaria (ARS):</label>
-                  <input
-                    v-model.number="createForm.monto_invertido_pauta"
-                    type="number"
-                    min="0"
-                    step="500"
-                    :disabled="createForm.tipo_pauta === 'organico'"
-                    placeholder="$0"
-                    class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono disabled:opacity-50"
-                  />
-                </div>
-              </div>
-
-              <!-- Vistas separadas cuando hay inversión publicitaria -->
-              <div v-if="createForm.tipo_pauta !== 'organico'" class="grid grid-cols-2 gap-2 mt-2">
-                <div>
-                  <label class="block text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-0.5 flex items-center gap-1">
-                    <Eye class="w-3 h-3 text-emerald-500" />
-                    Vistas Orgánicas
-                  </label>
-                  <input
-                    v-model.number="createForm.vistas_organicas"
-                    type="number"
-                    min="0"
-                    placeholder="ej. 1200"
-                    class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono text-xs text-emerald-600 dark:text-emerald-400"
-                  />
-                </div>
-                <div>
-                  <label class="block text-[10px] font-bold text-violet-600 dark:text-violet-400 mb-0.5 flex items-center gap-1">
-                    <Eye class="w-3 h-3 text-violet-500" />
-                    Vistas Pagadas (Alcance Pauta)
-                  </label>
-                  <input
-                    v-model.number="createForm.vistas_pagadas"
-                    type="number"
-                    min="0"
-                    placeholder="ej. 8500"
-                    class="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-violet-500/40 font-mono text-xs text-violet-600 dark:text-violet-400"
-                    :class="createForm.monto_invertido_pauta > 0 && createForm.vistas_pagadas === 0 ? 'border-amber-400 ring-1 ring-amber-300' : ''"
-                  />
-                  <p v-if="createForm.monto_invertido_pauta > 0 && createForm.vistas_pagadas === 0"
-                     class="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
-                    ⚠️ Hay inversión registrada pero sin vistas pagadas cargadas
-                  </p>
-                </div>
-              </div>
+              <!-- Fila 4: Tipo de Pauta y Monto Invertido DELEGADA -->
+              <FastFlowPautaSection
+                :form="createForm"
+              />
 
               <!-- Fila 5: Resumen del Contenido / Copy -->
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="block font-bold text-slate-700 dark:text-slate-300">Texto / Copy del Post *</label>
-                  <span class="text-[11px] text-slate-400 font-mono">{{ createForm.contenido_resumen?.length || 0 }} caracteres</span>
-                </div>
+              <div class="space-y-1">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>Texto / Copy de la Publicación <span class="text-rose-500">*</span></span>
+                  <span class="text-[10px] font-mono text-slate-400">{{ createForm.contenido_resumen.length }} caracteres</span>
+                </label>
                 <textarea
                   v-model="createForm.contenido_resumen"
                   rows="3"
-                  required
-                  placeholder="Escribe o pega aquí el texto completo o resumen de la publicación..."
-                  class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 leading-relaxed text-xs focus:ring-2 focus:ring-cyan-500"
+                  placeholder="Pega o escribe el contenido de la publicación..."
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs focus:ring-2 focus:ring-cyan-500"
                   :class="createForm.errors.contenido_resumen ? 'border-rose-500 ring-1 ring-rose-500' : ''"
                 ></textarea>
                 <span v-if="createForm.errors.contenido_resumen" class="text-[11px] font-bold text-rose-500 block mt-0.5">{{ createForm.errors.contenido_resumen }}</span>
@@ -893,32 +493,9 @@ const submitCreatePost = () => {
             <div class="lg:col-span-5 space-y-3.5">
               
               <!-- Preview de Imagen / Portada -->
-              <div v-if="createForm.media_url" class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">🖼️ Portada / Imagen Detectada</span>
-                  <button
-                    type="button"
-                    @click="createForm.media_url = ''"
-                    class="text-[10px] text-slate-400 hover:text-rose-500 cursor-pointer"
-                  >
-                    Quitar (✕)
-                  </button>
-                </div>
-                <div class="flex items-center gap-3">
-                  <img
-                    :src="createForm.media_url"
-                    alt="Vista previa de imagen"
-                    referrerpolicy="no-referrer"
-                    class="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs shrink-0"
-                  />
-                  <input
-                    v-model="createForm.media_url"
-                    type="url"
-                    placeholder="https://..."
-                    class="flex-1 px-2.5 py-1.5 text-[11px] font-mono rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 truncate"
-                  />
-                </div>
-              </div>
+              <FastFlowMediaPreview
+                v-model="createForm.media_url"
+              />
 
               <!-- Formularios de Métricas por Plataforma (Instagram, Facebook, TikTok, Threads, Twitter, etc.) -->
               <FeedPlatformMetricsForm
@@ -933,38 +510,31 @@ const submitCreatePost = () => {
 
         <!-- Sticky Footer -->
         <div class="flex items-center justify-between px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-md shrink-0 sticky bottom-0 z-20">
-          <div>
-            <span v-if="createForm.hasErrors" class="text-xs font-bold text-rose-500 flex items-center gap-1.5">
-              <AlertCircle class="w-4 h-4 text-rose-500 animate-bounce" />
-              <span>Corrige los errores antes de guardar</span>
-            </span>
-            <span v-else class="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <Sparkles class="w-3.5 h-3.5 text-cyan-500" />
-              <span>Canal: <strong class="text-slate-800 dark:text-slate-200 uppercase">{{ createForm.plataforma }}</strong></span>
-            </span>
-          </div>
+          <button
+            type="button"
+            @click="emit('update:modelValue', false)"
+            class="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
 
-          <div class="flex items-center gap-2.5">
-            <button
-              type="button"
-              @click="emit('update:modelValue', false)"
-              class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold transition-all cursor-pointer text-xs"
-            >
-              Cancelar
-            </button>
+          <div class="flex items-center gap-3">
+            <span v-if="createForm.processing" class="text-xs text-slate-400 font-mono animate-pulse">
+              Guardando publicación...
+            </span>
+
             <button
               type="submit"
               :disabled="createForm.processing"
-              class="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-1.5 hover:scale-102 transition-all"
+              class="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs flex items-center gap-2 transition-all shadow-md hover:scale-102 disabled:opacity-50 cursor-pointer"
             >
-              <RefreshCw v-if="createForm.processing" class="w-3.5 h-3.5 animate-spin" />
-              <span>{{ createForm.processing ? 'Guardando en Feed...' : 'Publicar en Feed' }}</span>
+              <Sparkles class="w-4 h-4" />
+              <span>Guardar en el Feed</span>
             </button>
           </div>
         </div>
 
       </form>
-
     </div>
   </div>
 </template>
