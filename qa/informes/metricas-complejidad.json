@@ -1,0 +1,722 @@
+{
+  "generado": "2026-10-31T15:27:48.316Z",
+  "proyecto": "BrandingPo",
+  "categorias": [
+    {
+      "id": "vistas",
+      "nombre": "Vistas y componentes frontend (Vue)",
+      "checklist": "03-frontend-vue.md",
+      "umbralAdvertencia": 500,
+      "umbralCritico": 800,
+      "accion": "Extraer subcomponentes a Components/ o lógica reactiva a composables/",
+      "archivos": [
+        {
+          "ruta": "resources/js/Components/Dashboard/DashboardChartsSection.vue",
+          "nombre": "DashboardChartsSection.vue",
+          "lineas": 1938,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/SocialCard.vue",
+          "nombre": "SocialCard.vue",
+          "lineas": 1065,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Territorios/ImpactoElectoral.vue",
+          "nombre": "ImpactoElectoral.vue",
+          "lineas": 989,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Feed/FeedFastFlowModal.vue",
+          "nombre": "FeedFastFlowModal.vue",
+          "lineas": 971,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/SocialCardEditModal.vue",
+          "nombre": "SocialCardEditModal.vue",
+          "lineas": 795,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Ejes/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 715,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Reportes/Ejecutivo.vue",
+          "nombre": "Ejecutivo.vue",
+          "lineas": 658,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Calendario/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 655,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Candidatos/MetricasCanal.vue",
+          "nombre": "MetricasCanal.vue",
+          "lineas": 638,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Territorios/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 623,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Candidatos/CandidatoCanalFicha.vue",
+          "nombre": "CandidatoCanalFicha.vue",
+          "lineas": 623,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioNotaModal.vue",
+          "nombre": "MedioNotaModal.vue",
+          "lineas": 587,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Crisis/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 553,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Publicaciones/Feed.vue",
+          "nombre": "Feed.vue",
+          "lineas": 521,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Candidatos/CandidatoCanalConfigModal.vue",
+          "nombre": "CandidatoCanalConfigModal.vue",
+          "lineas": 451,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Analytics/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 438,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioFormModal.vue",
+          "nombre": "MedioFormModal.vue",
+          "lineas": 436,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Dashboard/DashboardKpis.vue",
+          "nombre": "DashboardKpis.vue",
+          "lineas": 382,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Feed/Inputs/FeedPlatformMetricsForm.vue",
+          "nombre": "FeedPlatformMetricsForm.vue",
+          "lineas": 353,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/MetricasCanal/MetricasChartModal.vue",
+          "nombre": "MetricasChartModal.vue",
+          "lineas": 351,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Presupuesto/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 309,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/MetricasCanal/ConsistenciaYHistoricoSection.vue",
+          "nombre": "ConsistenciaYHistoricoSection.vue",
+          "lineas": 309,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Medios/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 291,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/MetricasCanal/MetricasCanalHeader.vue",
+          "nombre": "MetricasCanalHeader.vue",
+          "lineas": 283,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioFacebookFeed.vue",
+          "nombre": "MedioFacebookFeed.vue",
+          "lineas": 275,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Usuarios/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 274,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Candidatos/CandidatoKpisTerritoriales.vue",
+          "nombre": "CandidatoKpisTerritoriales.vue",
+          "lineas": 272,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Badge.vue",
+          "nombre": "Badge.vue",
+          "lineas": 265,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioDirectorioGrid.vue",
+          "nombre": "MedioDirectorioGrid.vue",
+          "lineas": 264,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Candidatos/CandidatoFeedSection.vue",
+          "nombre": "CandidatoFeedSection.vue",
+          "lineas": 263,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Briefings/Index.vue",
+          "nombre": "Index.vue",
+          "lineas": 255,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Candidatos/CandidatoEditarModal.vue",
+          "nombre": "CandidatoEditarModal.vue",
+          "lineas": 250,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioFiltrosBar.vue",
+          "nombre": "MedioFiltrosBar.vue",
+          "lineas": 242,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/MetricasCanal/RadiografiaDemograficaSection.vue",
+          "nombre": "RadiografiaDemograficaSection.vue",
+          "lineas": 228,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioWebFeed.vue",
+          "nombre": "MedioWebFeed.vue",
+          "lineas": 225,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/MetricasCanal/SemaforoPadronGrid.vue",
+          "nombre": "SemaforoPadronGrid.vue",
+          "lineas": 225,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Dashboard.vue",
+          "nombre": "Dashboard.vue",
+          "lineas": 209,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Dashboard/DashboardRoiSection.vue",
+          "nombre": "DashboardRoiSection.vue",
+          "lineas": 196,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioSesgoMatriz.vue",
+          "nombre": "MedioSesgoMatriz.vue",
+          "lineas": 184,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Dashboard/DashboardHeader.vue",
+          "nombre": "DashboardHeader.vue",
+          "lineas": 179,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Auth/Login.vue",
+          "nombre": "Login.vue",
+          "lineas": 176,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioFacebookReaccionesInput.vue",
+          "nombre": "MedioFacebookReaccionesInput.vue",
+          "lineas": 169,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/SocialPlatformIcon.vue",
+          "nombre": "SocialPlatformIcon.vue",
+          "lineas": 152,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/MetricasCanal/FormatosYReelsSection.vue",
+          "nombre": "FormatosYReelsSection.vue",
+          "lineas": 148,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/MetricasCanal/OrganicoVsPautaSection.vue",
+          "nombre": "OrganicoVsPautaSection.vue",
+          "lineas": 144,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/MediaEmbed.vue",
+          "nombre": "MediaEmbed.vue",
+          "lineas": 139,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Briefings/Show.vue",
+          "nombre": "Show.vue",
+          "lineas": 135,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Candidatos/Show.vue",
+          "nombre": "Show.vue",
+          "lineas": 121,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Pages/Candidatos/MiPerfil.vue",
+          "nombre": "MiPerfil.vue",
+          "lineas": 112,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioPestanasNav.vue",
+          "nombre": "MedioPestanasNav.vue",
+          "lineas": 112,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Candidatos/CandidatoCanalesGrid.vue",
+          "nombre": "CandidatoCanalesGrid.vue",
+          "lineas": 109,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/MetricasCanal/BenchmarksIndustriaSection.vue",
+          "nombre": "BenchmarksIndustriaSection.vue",
+          "lineas": 107,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Candidatos/CandidatoHeader.vue",
+          "nombre": "CandidatoHeader.vue",
+          "lineas": 106,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/MetricCard.vue",
+          "nombre": "MetricCard.vue",
+          "lineas": 95,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Dashboard/DashboardCanalesGrid.vue",
+          "nombre": "DashboardCanalesGrid.vue",
+          "lineas": 89,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioUmbralAlerta.vue",
+          "nombre": "MedioUmbralAlerta.vue",
+          "lineas": 84,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Medios/MedioHeader.vue",
+          "nombre": "MedioHeader.vue",
+          "lineas": 64,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/Dashboard/DashboardClippingSummary.vue",
+          "nombre": "DashboardClippingSummary.vue",
+          "lineas": 62,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "resources/js/Components/ThemeToggle.vue",
+          "nombre": "ThemeToggle.vue",
+          "lineas": 41,
+          "estado": "optimo",
+          "accesoDatos": []
+        }
+      ],
+      "resumen": {
+        "total": 59,
+        "sobreUmbral": 14,
+        "criticos": 4,
+        "accesoDatos": 0
+      }
+    },
+    {
+      "id": "controladores",
+      "nombre": "Controladores backend (Laravel)",
+      "checklist": "02-backend-laravel.md",
+      "umbralAdvertencia": 200,
+      "umbralCritico": 300,
+      "accion": "Mover lógica a app/Services o FormRequests; el controlador solo adapta HTTP",
+      "archivos": [
+        {
+          "ruta": "app/Http/Controllers/DashboardController.php",
+          "nombre": "DashboardController.php",
+          "lineas": 1192,
+          "estado": "critico",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 34
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/PublicacionController.php",
+          "nombre": "PublicacionController.php",
+          "lineas": 980,
+          "estado": "critico",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 174
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/TerritorioController.php",
+          "nombre": "TerritorioController.php",
+          "lineas": 723,
+          "estado": "critico",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 39
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/CandidatoController.php",
+          "nombre": "CandidatoController.php",
+          "lineas": 513,
+          "estado": "critico",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 57
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/MediosController.php",
+          "nombre": "MediosController.php",
+          "lineas": 496,
+          "estado": "critico",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 46
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/EjesEstrategicosController.php",
+          "nombre": "EjesEstrategicosController.php",
+          "lineas": 486,
+          "estado": "critico",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 27
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/CalendarioController.php",
+          "nombre": "CalendarioController.php",
+          "lineas": 206,
+          "estado": "sobre-umbral",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 34
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/CrisisController.php",
+          "nombre": "CrisisController.php",
+          "lineas": 168,
+          "estado": "moderado",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 36
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/PresupuestoController.php",
+          "nombre": "PresupuestoController.php",
+          "lineas": 125,
+          "estado": "moderado",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 29
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/AnalyticsController.php",
+          "nombre": "AnalyticsController.php",
+          "lineas": 117,
+          "estado": "optimo",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 44
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/UserController.php",
+          "nombre": "UserController.php",
+          "lineas": 117,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Http/Controllers/BriefingController.php",
+          "nombre": "BriefingController.php",
+          "lineas": 116,
+          "estado": "optimo",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 30
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/AuthController.php",
+          "nombre": "AuthController.php",
+          "lineas": 112,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Http/Controllers/ReporteController.php",
+          "nombre": "ReporteController.php",
+          "lineas": 51,
+          "estado": "optimo",
+          "accesoDatos": [
+            {
+              "patron": "->where\\(",
+              "linea": 32
+            }
+          ]
+        },
+        {
+          "ruta": "app/Http/Controllers/Controller.php",
+          "nombre": "Controller.php",
+          "lineas": 9,
+          "estado": "optimo",
+          "accesoDatos": []
+        }
+      ],
+      "resumen": {
+        "total": 15,
+        "sobreUmbral": 7,
+        "criticos": 6,
+        "accesoDatos": 12
+      }
+    },
+    {
+      "id": "servicios",
+      "nombre": "Servicios de negocio (Laravel)",
+      "checklist": "02-backend-laravel.md",
+      "umbralAdvertencia": 300,
+      "umbralCritico": 500,
+      "accion": "Dividir responsabilidades y extraer scrapers o procesadores específicos",
+      "archivos": [
+        {
+          "ruta": "app/Services/SocialProfileScraperService.php",
+          "nombre": "SocialProfileScraperService.php",
+          "lineas": 1761,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/CanalMetricasService.php",
+          "nombre": "CanalMetricasService.php",
+          "lineas": 1028,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/GenericMediaScraperService.php",
+          "nombre": "GenericMediaScraperService.php",
+          "lineas": 732,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/ReporteEjecutivoService.php",
+          "nombre": "ReporteEjecutivoService.php",
+          "lineas": 537,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/DemographicIntelligenceService.php",
+          "nombre": "DemographicIntelligenceService.php",
+          "lineas": 508,
+          "estado": "critico",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/CandidatoPresenterService.php",
+          "nombre": "CandidatoPresenterService.php",
+          "lineas": 310,
+          "estado": "sobre-umbral",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/MediaStorageService.php",
+          "nombre": "MediaStorageService.php",
+          "lineas": 192,
+          "estado": "moderado",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/PoliticaEngagementService.php",
+          "nombre": "PoliticaEngagementService.php",
+          "lineas": 162,
+          "estado": "optimo",
+          "accesoDatos": []
+        },
+        {
+          "ruta": "app/Services/AdsImpactPredictorService.php",
+          "nombre": "AdsImpactPredictorService.php",
+          "lineas": 126,
+          "estado": "optimo",
+          "accesoDatos": []
+        }
+      ],
+      "resumen": {
+        "total": 9,
+        "sobreUmbral": 6,
+        "criticos": 5,
+        "accesoDatos": 0
+      }
+    }
+  ],
+  "versiones": {
+    "commitsTotales": 135,
+    "commitsAnalizados": 50,
+    "porcentajeConvencional": 100,
+    "noConvencionalesEjemplo": [],
+    "tags": 0,
+    "ultimoTag": null,
+    "ramaActual": "main",
+    "commitActual": "4334159"
+  },
+  "documentacion": {
+    "rutasDocs": [
+      "README.md",
+      "doc",
+      "GEMINI.md",
+      "plan_flujo.md",
+      "plan_maestro.md"
+    ],
+    "rutasCodigo": [
+      "app",
+      "resources/js"
+    ],
+    "ultimaActualizacionDocs": null,
+    "ultimoCambioCodigo": null,
+    "commitsDeCodigoSinActualizarDocs": null,
+    "desactualizada": false
+  }
+}

@@ -5,6 +5,13 @@ import { Radio, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, Eye, Sparkles } 
 import ThemeToggle from '../../Components/ThemeToggle.vue';
 import Badge from '../../Components/Badge.vue';
 
+const props = defineProps({
+  allowQuickLogin: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 const form = useForm({
   email: '',
   password: '',
@@ -113,7 +120,7 @@ const quickLogin = (role) => {
         </form>
 
         <!-- Quick Access Demo Buttons (Role Switching for Evaluation) -->
-        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 text-center">
+        <div v-if="allowQuickLogin" class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 text-center">
           <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center justify-center gap-1.5">
             <Sparkles class="w-3.5 h-3.5 text-cyan-500" />
             <span>Acceso Rápido por Rol (Demostración)</span>

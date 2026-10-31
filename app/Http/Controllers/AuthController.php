@@ -21,7 +21,9 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
 
-        return Inertia::render('Auth/Login');
+        return Inertia::render('Auth/Login', [
+            'allowQuickLogin' => app()->environment('local', 'testing'),
+        ]);
     }
 
     /**
@@ -57,8 +59,8 @@ class AuthController extends Controller
      */
     public function quickLogin(Request $request): RedirectResponse
     {
-        if (app()->isProduction()) {
-            abort(403, 'El acceso rápido de demostración está deshabilitado en entorno de producción.');
+        if (! app()->environment('local', 'testing')) {
+            abort(403, 'El acceso rápido de demostración está deshabilitado en este entorno.');
         }
 
         $validated = $request->validate([

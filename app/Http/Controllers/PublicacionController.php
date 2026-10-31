@@ -832,9 +832,7 @@ class PublicacionController extends Controller
     public function actualizarFecha(ActualizarFechaPublicacionRequest $request, Publicacion $publicacion): RedirectResponse
     {
         $workspace = WorkspaceHelper::activo($request);
-
-        // Verificar que la publicación pertenece al workspace activo
-        abort_unless($publicacion->workspace_id === $workspace->id, 403);
+        WorkspaceHelper::validarPertenencia($publicacion, $workspace);
 
         $validated = $request->validated();
 

@@ -67,8 +67,8 @@ Route::middleware(['auth', 'workspace_active'])->group(function () {
     // Inteligencia Demográfica & Mapa de Situación Territorial
     Route::get('/territorios', [TerritorioController::class, 'index'])->name('territorios.index');
     Route::get('/territorios/impacto-electoral', [TerritorioController::class, 'impactoElectoral'])->name('territorios.impacto-electoral');
-    Route::post('/territorios/auto-detect', [TerritorioController::class, 'autoDetect'])->middleware('throttle:scraping')->name('territorios.auto-detect');
     Route::middleware(['can_write'])->group(function () {
+        Route::post('/territorios/auto-detect', [TerritorioController::class, 'autoDetect'])->middleware('throttle:scraping')->name('territorios.auto-detect');
         Route::post('/territorios', [TerritorioController::class, 'store'])->name('territorios.store');
         Route::put('/territorios/{territorio}', [TerritorioController::class, 'update'])->name('territorios.update');
     });
